@@ -8,7 +8,7 @@ spec:
     namespace: e2esdk-dev
   project: default
   source:
-    repoURL: git@github.com/SocialGouv/manifests.git
+    repoURL: git@github.com/SocialGouv/infra-apps.git
     targetRevision: master
     path: e2esdk-dev
   syncPolicy:

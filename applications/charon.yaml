@@ -33,7 +33,7 @@ spec:
         namespace: "{{ .namespace }}"
       project: default
       source:
-        repoURL: git@github.com/SocialGouv/manifests.git
+        repoURL: git@github.com/SocialGouv/infra-apps.git
         targetRevision: master
         path: "charon"
         directory:

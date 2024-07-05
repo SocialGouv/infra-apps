@@ -43,7 +43,7 @@ spec:
 
       source:
         path: kubesight
-        repoURL: git@github.com/SocialGouv/manifests.git
+        repoURL: git@github.com/SocialGouv/infra-apps.git
         targetRevision: master
         helm:
           parameters:

@@ -9,7 +9,7 @@ spec:
     namespace: arc-systems
   source:
     path: arc-systems
-    repoURL: "git@github.com:SocialGouv/manifests.git"
+    repoURL: "git@github.com:SocialGouv/infra-apps.git"
     targetRevision: master
   syncPolicy:
     syncOptions:
