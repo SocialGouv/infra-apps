@@ -8,7 +8,7 @@ spec:
     - git:
         # https://argo-cd.readthedocs.io/en/stable/operator-manual/applicationset/GoTemplate/#git-generators
         # pathParamPrefix: env
-        repoURL: git@github.com/SocialGouv/infra-apps.git
+        repoURL: https://github.com/SocialGouv/infra-apps.git
         revision: master
         files:
           - path: "startups/*/apps/*/envs/*/config.yaml"
@@ -28,7 +28,7 @@ spec:
         namespace: "startup-{{ .values.startup }}--{{ .values.app }}-{{ .values.env }}"
       project: default
       source:
-        repoURL: git@github.com/SocialGouv/infra-apps.git
+        repoURL: https://github.com/SocialGouv/infra-apps.git
         targetRevision: master
         path: "startups/{{ .values.startup }}/apps/{{ .values.app }}"
         helm:

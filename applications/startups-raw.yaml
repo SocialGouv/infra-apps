@@ -8,13 +8,13 @@ spec:
         generators:
           - git:
               pathParamPrefix: startup
-              repoURL: git@github.com/SocialGouv/infra-apps.git
+              repoURL: https://github.com/SocialGouv/infra-apps.git
               revision: master
               directories:
                 - path: "startups/*"
           - git:
               pathParamPrefix: cluster
-              repoURL: git@github.com/SocialGouv/infra-apps.git
+              repoURL: https://github.com/SocialGouv/infra-apps.git
               revision: master
               directories:
                 - path: "{{ startup.path }}/raw/clusters/*"
@@ -29,7 +29,7 @@ spec:
         name: "{{ cluster.path.basename }}"
       project: default
       source:
-        repoURL: git@github.com/SocialGouv/infra-apps.git
+        repoURL: https://github.com/SocialGouv/infra-apps.git
         targetRevision: master
         path: "{{ cluster.path }}"
         directory:

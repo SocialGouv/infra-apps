@@ -25,7 +25,7 @@ spec:
         namespace: "{{ .namespace }}"
       project: default
       source:
-        repoURL: git@github.com/SocialGouv/infra-apps.git
+        repoURL: https://github.com/SocialGouv/infra-apps.git
         targetRevision: master
         path: "openebs/nfs"
         helm:

@@ -9,7 +9,7 @@ spec:
     namespace: arc-runners
   source:
     path: arc-runners
-    repoURL: "git@github.com:SocialGouv/infra-apps.git"
+    repoURL: https://github.com/SocialGouv/infra-apps.git
     targetRevision: master
   syncPolicy:
     syncOptions:

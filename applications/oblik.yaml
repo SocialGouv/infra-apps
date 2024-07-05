@@ -6,7 +6,7 @@ spec:
   goTemplate: true
   generators:
     - git:
-        repoURL: git@github.com/SocialGouv/infra-apps.git
+        repoURL: https://github.com/SocialGouv/infra-apps.git
         revision: master
         files:
           - path: "oblik/envs/*/config.yaml"
@@ -23,7 +23,7 @@ spec:
         namespace: "oblik"
       project: default
       source:
-        repoURL: git@github.com/SocialGouv/infra-apps.git
+        repoURL: https://github.com/SocialGouv/infra-apps.git
         targetRevision: master
         path: "oblik"
         helm:
