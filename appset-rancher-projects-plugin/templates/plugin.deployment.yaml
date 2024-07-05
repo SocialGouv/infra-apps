@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: appset-rancher-projects-plugin
+  labels:
+    app: appset-rancher-projects-plugin
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: appset-rancher-projects-plugin
+  template:
+    metadata:
+      labels:
+        app: appset-rancher-projects-plugin
+    spec:
+      containers:
+      - name: server
+        image: ghcr.io/socialgouv/appset-rancher-projects-plugin:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 3000
+          name: http
+        env:
+        - name: RANCHER_SERVER
+          value: {{ .Values.rancherServer }}
+        - name: RANCHER_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.rancherTokenSecretName }}
+              key: {{ .Values.rancherTokenSecretKey }}
+        - name: API_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.apiTokenSecretName }}
+              key: {{ .Values.apiTokenSecretKey }}
+        - name: ENABLE_CLUSTER_LIST
+          value: {{ .Values.enableClusterList | toJson | quote }}

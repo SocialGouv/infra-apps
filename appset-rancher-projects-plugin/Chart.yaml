@@ -1,0 +1,3 @@
+apiVersion: v2
+name: appset-rancher-projects-plugin
+version: 1.0.0

@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: github-backup
+  namespace: github-backup
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 60Gi
+  storageClassName: csi-cinder-high-speed
+  volumeName: ovh-managed-kubernetes-s1zif5-pvc-ef57e19f-b7b0-48ac-be38-090369e63cd2

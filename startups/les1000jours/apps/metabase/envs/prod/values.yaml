@@ -1,0 +1,34 @@
+metabase:
+  host: metabase-les1000jours.fabrique.social.gouv.fr
+  ingress:
+    annotations:
+      cert-manager.io: cluster-issuer
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+      kubernetes.io/tls-acme: true
+
+pastek-mirror:
+  cnpg-cluster:
+    persistence:
+      # storageClass: "" # disable for local cluster
+      # size: 5Gi
+      size: 20Gi
+    bootstrap:
+      initdb:
+        owner: app
+        database: app
+    backup:
+      enabled: false
+    postInitApplicationSQLRefs:
+      secretRefs:
+        - name: psql-init
+          key: init.sql
+      configMapRefs:
+        - name: create-view
+          key: view.sql
+    superuserSecret:
+      name: ""
+
+final-appset:
+  importSecretsFromStartup: true
+  importSreSecretsList:
+    - matomo-key

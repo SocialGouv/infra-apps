@@ -1,0 +1,16 @@
+apiVersion: bitnami.com/v1alpha1
+kind: SealedSecret
+metadata:
+  annotations:
+    sealedsecrets.bitnami.com/namespace-wide: "true"
+  name: db-creds
+  namespace: bitwarden
+spec:
+  encryptedData:
+    uri: AgAVKsL1u3494hMnM97X4FYvdHwDTOZ/5Jo4cHgBxPo50AjBJF/vvVKmRH2Kvoae2LV9VQtUTWDZrPI2Sw5L/eEc55FsGx9C8ME6x171W9J74KXuEduD/ezpiEfLLYn5C+tFuQ8rXpbJb8XQKFBzNpn8JtsedTYRaCsXJ61dYUGNYitjQaq2thUV24Uyd+Shg2eH98rz9jBjiw5MHbMrDGjc+jq6VLWL7uUa8GX3Lvm1kYSKjjN288/VE+Ia/NGFeyieWIihwSHklOrNVjwT7G8F3F967utMkVHg1UKOH08UBIYNr2xHofceVLvWTq3skHNQvYG9s8CdMdodSsSET6lJgjgbap6XMD/9BHN35J8CPXjDfmx2BUt3SV9A5VpDDSD729D370cqZP8fAxXuEOWsbJ9iA7uPJByBSzkBfUAIb1rJgKpfh8OGPDI3ncMT9BOMTDvKvpGNfzviwaxmTosTwLkkBXuTNslITGalYsCe280g+0ZKBj7z43hcUDLWTPxCxxblCdLtVtCP6Cnk4OV7OhkNZgwkKcBVQzszrWGCOFqmTvcmyftVuh4JUEg2w1zQBNddfBEi/J+HceeoynX+OkDbN76fkFQohKyHkvv7R/0erslStMH5Duag4jjxFdyr8CsaY/fnDoQGVGsV9FbS3xNn2kz9/taVkZOhT1DANTBRTFg2Ixzc6oqCdmXLzzslzKcBU49QuwZXCYO1IXp3LgkamPihTW6nBoYK/KyRG32PfWT4v4ril1qtBd3Si/tAt1s0NLByt9ln0M1iq+MdyKKbUgitUAsRaeeEUJxalW9mNi9ZdCuJW7Esxa/sCks=
+  template:
+    metadata:
+      annotations:
+        sealedsecrets.bitnami.com/namespace-wide: "true"
+      name: db-creds
+    type: Opaque

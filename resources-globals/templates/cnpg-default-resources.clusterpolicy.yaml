@@ -1,0 +1,34 @@
+{{ if .Values.cnpgDefaultResourcesClusterPolicy.enabled }}
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: resources-globals-cnpg-default
+spec:
+  background: true
+  validationFailureAction: Enforce
+  mutateExistingOnPolicyUpdate: true
+  useServerSideApply: true
+  rules:
+    - name: mutate-resources-cnpg
+      skipBackgroundRequests: true
+      match:
+        any:
+        - resources:
+            kinds:
+              - postgresql.cnpg.io/v1/Cluster
+      preconditions:
+        all:
+          - key: '{{`{{`}} request.object.metadata.annotations."ressource.socialgouv.io/enforced" || '''' {{`}}`}}'
+            operator: NotEquals
+            value: "true"
+      mutate:
+        targets:
+          - kind: Cluster
+            apiVersion: postgresql.cnpg.io/v1
+            name: '{{"{{request.object.metadata.name}}"}}'
+        patchStrategicMerge:
+          spec:
+            resources:
+              requests:
+                memory: "{{ .Values.cnpgDefaultResourcesClusterPolicy.memoryRequest }}"
+{{ end }}

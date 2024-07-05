@@ -1,0 +1,15 @@
+metabase:
+  host: metabase-jardinmental.fabrique.social.gouv.fr
+  ingress:
+    annotations:
+      cert-manager.io: cluster-issuer
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+      kubernetes.io/tls-acme: true
+
+final-appset:
+  importSecretsFromStartup: false
+  importSreSecretsList:
+    - matomo-key
+  namespace:
+    labels:
+      sre.socialgouv.github.io/startup: monsuivipsy

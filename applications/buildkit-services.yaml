@@ -1,0 +1,64 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: buildkit-services
+spec:
+  generators:
+    - list:
+        elements:
+          - name: buildkit-service-prod
+            namespace: buildkit-service
+            cluster: ovh-prod
+            providerValuesFile: values.ovh.yaml
+            tlsEnable: true
+          # - name: buildkit-service-preprod
+          #   namespace: buildkit-service
+          #   cluster: preprod
+          #   providerValuesFile: values.aks.yaml
+          #   tlsEnable: false
+          # - name: buildkit-service-tools
+          #   namespace: buildkit-service
+          #   cluster: tools
+  goTemplate: true
+  template:
+    metadata:
+      name: "{{ .name }}"
+      annotations:
+        argocd.argoproj.io/manifest-generate-paths: .
+        notifications.argoproj.io/subscribe.mattermost: moojipgstjgsixs6mgycxpe5ua
+      # labels:
+    spec:
+      destination:
+        name: "{{ .cluster }}"
+        namespace: "{{ .namespace }}"
+      project: default
+      source:
+        repoURL: git@github.com/SocialGouv/manifests.git
+        targetRevision: master
+        path: "buildkit-service"
+        helm:
+          releaseName: buildkit-service
+          valueFiles:
+            - "values.yaml"
+            - "{{ .providerValuesFile }}"
+          parameters:
+            - name: buildkit-service.tls.enabled
+              value: "{{ .tlsEnable }}"
+      ignoreDifferences:
+        - group: ""
+          kind: Service
+          jsonPointers: # for 3s operator
+            - /spec/selector
+      syncPolicy:
+        syncOptions:
+          - CreateNamespace=true
+          #- Replace=true
+        automated: null
+        #   prune: false # Specifies if resources should be pruned during auto-syncing ( false by default ).
+        #   selfHeal: false # Specifies if partial app sync should be executed when resources are changed only in target Kubernetes cluster and no git change detected ( false by default ).
+        retry:
+          limit: 5
+          backoff:
+            duration: 5s
+            factor: 2
+            maxDuration: 3m

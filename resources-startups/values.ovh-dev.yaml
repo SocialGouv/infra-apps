@@ -1,0 +1,12 @@
+cnpgClusters:
+  {}
+  # sample
+  # carnet
+  # - rancherProjectName: cdtn
+  #   repositoryName: cdtn-admin # as label "application" of the namespace
+  #   name: pg
+  #   memory: 768Mi
+# for helm testing
+# rancherProjects:
+#   - projectName: cdtn
+#     projectId: "1234"

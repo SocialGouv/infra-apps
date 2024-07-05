@@ -1,0 +1,31 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: copy-wildcard-secret
+  annotations:
+    policies.kyverno.io/title: Sync wildcard-crt
+    policies.kyverno.io/category: SRE
+    policies.kyverno.io/subject: Secret
+    policies.kyverno.io/minversion: 1.6.0
+    policies.kyverno.io/description: >-
+      Copy cert-manager's wildcard cert to all app namespaces
+spec:
+  rules:
+    - name: sync-wildcard-crt
+      match:
+        any:
+          - resources:
+              kinds:
+                - Namespace
+              selector:
+                matchLabels:
+                  cert: wildcard
+      generate:
+        apiVersion: v1
+        kind: Secret
+        name: wildcard-crt
+        namespace: "{{`{{`}}request.object.metadata.name{{`}}`}}"
+        clone:
+          namespace: cert-manager
+          name: wildcard-crt
+        synchronize: true  

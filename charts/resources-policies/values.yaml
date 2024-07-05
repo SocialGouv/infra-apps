@@ -1,0 +1,28 @@
+policies: []
+# policies:
+# - namespace: carnets
+#   kind: Cluster
+#   apiVersion: postgresql.cnpg.io/v1
+#   labels:
+#     app.kubernetes.io/name: pg
+#   resources:
+#     requests:
+#       cpu: 500m
+#       memory: 1Gi
+#     limits:
+#       cpu: "1"
+#       memory: 1Gi
+# - namespace: carnets
+#   labels:
+#     component: app
+#   resources:
+#     requests:
+#       cpu: 500m
+#       memory: 1Gi
+#     limits:
+#       cpu: "1"
+#       memory: 1Gi
+
+global:
+  appset:
+    startup:

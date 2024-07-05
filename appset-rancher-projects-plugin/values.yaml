@@ -1,0 +1,6 @@
+rancherServer: https://rancher.***.fr
+enableClusterList: 
+rancherTokenSecretName: rancher-token
+rancherTokenSecretKey: token
+apiTokenSecretName: api-token
+apiTokenSecretKey: token

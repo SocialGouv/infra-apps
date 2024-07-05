@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: docs-form
+  namespace: enfants-du-spectacle-preprod
+spec:
+  storageClassName: csi-cinder-high-speed
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi

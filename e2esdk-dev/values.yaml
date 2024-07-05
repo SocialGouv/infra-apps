@@ -1,0 +1,36 @@
+namespace: e2esdk-dev
+
+redis:
+  fullnameOverride: e2esdk-dev-redis
+  architecture: standalone
+  auth:
+    enabled: false
+
+cnpg-cluster:
+  fullnameOverride: e2esdk-dev-cnpg2
+  image:
+    repository: ghcr.io/cloudnative-pg/postgresql
+    tag: "15"
+  backup:
+    enabled: false
+
+pgweb:
+  ingress:
+    enabled: true
+    annotations:
+      kubernetes.io/ingress.class: nginx
+    hosts:
+      - host: pgweb-e2esdk.ovh.fabrique.social.gouv.fr
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: wildcard-crt
+        hosts:
+          - pgweb-e2esdk.ovh.fabrique.social.gouv.fr
+  podSecurityContext:
+    fsGroup: 1000
+    runAsGroup: 1000
+    runAsUser: 1000
+  securityContext:
+    allowPrivilegeEscalation: false

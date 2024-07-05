@@ -1,0 +1,11 @@
+apiVersion: v2
+name: metabase-matomo-sync
+version: 0.0.0
+dependencies:
+  - name: common
+    version: 0.0.0
+    repository: file://./charts/common
+  - name: cnpg-cluster
+    version: 1.23.0
+    repository: https://socialgouv.github.io/helm-charts
+    condition: cnpg-cluster.enabled

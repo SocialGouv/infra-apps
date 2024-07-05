@@ -1,0 +1,4 @@
+apiVersion: v2
+name: resources-policies
+version: 0.1.0
+description: A Helm chart for resources management

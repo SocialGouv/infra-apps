@@ -1,0 +1,10 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: charon
+data:
+  CHARON_CLIENT_0_WILDCARDS: |
+    http://localhost:3000,
+    https://pgadmin-*.ovh.fabrique.social.gouv.fr
+  CHARON_CLIENT_0_PROVIDER: github
+  CHARON_PUBLIC_HOST: https://charon-pgadmin.ovh.fabrique.social.gouv.fr

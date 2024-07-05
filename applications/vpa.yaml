@@ -1,0 +1,36 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: vpa
+spec:
+  generators:
+    - list:
+        elements:
+          - name: vpa-dev
+            cluster: ovh-dev
+          - name: vpa-prod
+            cluster: ovh-prod
+  goTemplate: true
+  template:
+    metadata:
+      name: "{{ .name }}"
+    spec:
+      destination:
+        name: "{{ .cluster }}"
+      project: default
+      source:
+        repoURL: git@github.com/SocialGouv/manifests.git
+        targetRevision: master
+        path: "vpa/raw"
+        directory:
+          recurse: true
+      syncPolicy:
+        # automated:
+        #   prune: true
+        #   selfHeal: false
+        retry:
+          limit: 5
+          backoff:
+            duration: 5s
+            factor: 2
+            maxDuration: 3m

@@ -1,0 +1,8 @@
+apiVersion: v2
+name: oblik
+version: 0.1.0
+description: A Helm chart for Oblik
+dependencies:
+  - name: final-appset
+    repository: file://./charts/final-appset
+    version: 0.0.0

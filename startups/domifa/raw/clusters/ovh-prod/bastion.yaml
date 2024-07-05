@@ -1,0 +1,46 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: socat-bastion
+  namespace: domifa
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: socat-bastion
+  template:
+    metadata:
+      labels:
+        app: socat-bastion
+    spec:
+      containers:
+      - name: socat-bastion
+        image: alpine/socat:1.8.0.0
+        command:
+          - /bin/sh
+          - -c
+          - |
+              socat TCP-LISTEN:5432,fork TCP:$PGHOST:$PGPORT
+        env:
+          - name: PGHOST
+            valueFrom:
+              secretKeyRef:
+                name: pg-app
+                key: PGHOST
+          - name: PGPORT
+            valueFrom:
+              secretKeyRef:
+                name: pg-app
+                key: PGPORT
+        resources:
+          requests:
+            memory: 128Mi
+            cpu: 200m
+          limits:
+            memory: 128Mi
+            cpu: 200m
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+---

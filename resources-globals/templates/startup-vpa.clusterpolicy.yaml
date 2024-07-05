@@ -1,0 +1,62 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: startup-vpa
+spec:
+  background: true
+  generateExisting: true
+  mutateExistingOnPolicyUpdate: true
+  useServerSideApply: true
+  rules:
+    - name: create-vpas
+      skipBackgroundRequests: true
+      match:
+        any:
+          - resources:
+              kinds:
+                - Deployment
+                - StatefulSet
+                - CronJob
+      exclude:
+        resources:
+          kinds:
+            - Deployment
+            - StatefulSet
+            - CronJob
+          namespaceSelector:
+            matchExpressions:
+              - key: "field.cattle.io/projectId"
+                operator: DoesNotExist
+      preconditions:
+        all:
+          - key: '{{`{{`}} request.object.metadata.annotations."kontinuous/deployment" || '''' {{`}}`}}'
+            operator: NotEquals
+            value: ""
+      context:
+        - name: annotations
+          variable:
+            jmesPath: request.object.metadata.annotations
+            default: {}
+        - name: oblikEnabled
+          variable:
+            jmesPath: request.object.metadata.annotations."oblik.socialgouv.io/enabled"
+            default: "true"
+      generate:
+        apiVersion: autoscaling.k8s.io/v1
+        kind: VerticalPodAutoscaler
+        name: "startup-vpa-{{`{{ (request.object.kind == 'Deployment' && 'deployment') || (request.object.kind == 'StatefulSet' && 'statefulset') || (request.object.kind == 'CronJob' && 'cronjob') }}`}}-{{`{{request.object.metadata.name}}`}}"
+        namespace: "{{`{{request.namespace}}`}}"
+        synchronize: true
+        data:
+          metadata:
+            annotations: '{{"{{ annotations }}"}}'
+            labels:
+              oblik.socialgouv.io/enabled: "{{`{{ oblikEnabled  }}`}}"
+          spec:
+            targetRef:
+              apiVersion: "{{`{{request.object.apiVersion}}`}}"
+              kind: "{{`{{request.object.kind}}`}}"
+              name: "{{`{{request.object.metadata.name}}`}}"
+            updatePolicy:
+              updateMode: "Off"
+        

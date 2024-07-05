@@ -1,0 +1,17 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  annotations:
+    cas.openebs.io/config: |
+      - name: NFSServerType
+        value: kernel
+      - name: BackendStorageClass
+        value: csi-cinder-high-speed
+      - name: FilePermissions
+        data:
+          mode: "0777"
+    openebs.io/cas-type: nfsrwx
+  name: openebs-nfs-hspeed
+provisioner: openebs.io/nfsrwx
+reclaimPolicy: Delete
+volumeBindingMode: Immediate

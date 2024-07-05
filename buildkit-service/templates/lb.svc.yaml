@@ -1,0 +1,34 @@
+{{ if .Values.lb.enabled -}}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: svc
+spec:
+  externalTrafficPolicy: Local
+  ports:
+  - name: tcp
+    port: 1234
+    targetPort: tcp
+  selector:
+    app.kubernetes.io/instance: buildkit-service
+    app.kubernetes.io/name: buildkit-service
+  type: LoadBalancer
+---
+{{- range $i := until (.Values.lb.serviceCount | int) }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: svc-{{ $i }}
+spec:
+  externalTrafficPolicy: Local
+  ports:
+  - name: tcp
+    port: 1234
+    targetPort: tcp
+  selector:
+    statefulset.kubernetes.io/pod-name: buildkit-service-{{ $i }}
+  type: LoadBalancer
+---
+{{ end }}
+{{- end }}

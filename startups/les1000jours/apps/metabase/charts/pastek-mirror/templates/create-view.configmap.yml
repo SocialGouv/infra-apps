@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: create-view
+data:
+  view.sql: |
+    --- create view for remote data
+    DROP MATERIALIZED VIEW IF EXISTS pastek_1000jours;
+    CREATE MATERIALIZED VIEW pastek_1000jours AS
+    SELECT tickets.id, tickets.number, tickets.title,  tag_items.name as tag, tickets.last_contact_at, tickets.first_response_at, ticket_articles.from, ticket_articles.to, ticket_articles.subject, ticket_articles.body, ticket_articles.created_at, groups.name as group
+    FROM pastek_remote_schema.groups as groups, pastek_remote_schema.ticket_articles as ticket_articles, pastek_remote_schema.tickets as tickets
+    LEFT JOIN pastek_remote_schema.tags tags on tags.o_id=tickets.id  
+    LEFT JOIN pastek_remote_schema.tag_objects tag_objects on tag_objects.id=tags.tag_object_id 
+    LEFT JOIN pastek_remote_schema.tag_items tag_items on tag_items.id=tags.tag_item_id 
+    WHERE ticket_articles.ticket_id=tickets.id and tickets.group_id in (13,14,19,20) and tickets.group_id=groups.id;
+    GRANT SELECT ON pastek_1000jours to "app";
+    GRANT SELECT ON ALL TABLES IN SCHEMA pastek_remote_schema to "app";
+    ALTER MATERIALIZED VIEW pastek_1000jours OWNER to "app";

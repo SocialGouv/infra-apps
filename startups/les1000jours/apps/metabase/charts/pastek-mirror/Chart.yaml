@@ -1,0 +1,8 @@
+apiVersion: v2
+name: pastek-mirror
+version: 0.0.0
+dependencies:
+  - name: cnpg-cluster
+    version: 1.18.0
+    repository: https://socialgouv.github.io/helm-charts
+    condition: cnpg-cluster.enabled

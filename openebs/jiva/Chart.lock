@@ -1,0 +1,6 @@
+dependencies:
+- name: jiva
+  repository: https://openebs.github.io/jiva-operator
+  version: 3.6.0
+digest: sha256:5a90a46b9e81d97924473bfe24e14409a3e0565bd23e0a62fa6ad4aa6076c96d
+generated: "2024-01-31T14:43:01.172553634+01:00"

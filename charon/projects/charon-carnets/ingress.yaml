@@ -1,0 +1,25 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: nginx
+  labels:
+    app: charon
+  name: charon
+spec:
+  rules:
+    - host: charon-carnets.ovh.fabrique.social.gouv.fr
+      http:
+        paths:
+          - backend:
+              service:
+                name: charon
+                port:
+                  name: http
+            path: /
+            pathType: Prefix
+  tls:
+    - hosts:
+        - charon-carnets.ovh.fabrique.social.gouv.fr
+      secretName: wildcard-crt
+---

@@ -1,0 +1,21 @@
+cnpgClusters:
+  {}
+
+  # sample
+  # carnet
+  # - namespace: carnets
+  #   name: pg
+  #   memory: 768Mi
+
+  # # fce
+  # - namespace: fce
+  #   name: pg
+  #   memory: 8192Mi
+
+  # - namespace: fce
+  #   name: pg-n8n
+  #   memory: 8192Mi
+
+  # - namespace: fce
+  #   name: pg-strapi
+  #   memory: 8192Mi

@@ -1,0 +1,77 @@
+apiVersion: kyverno.io/v1
+kind: Policy
+metadata:
+  name: add-backup-sidecar-container
+  namespace: les1000jours
+spec:
+  rules:
+    - name: inject-sidecar-container
+      match:
+        resources:
+          kinds:
+            - Pod
+          selector:
+            matchLabels:
+              component: app-strapi
+      mutate:
+        patchStrategicMerge:
+          spec:
+            containers:
+              - name: backup-uploads
+                image: bitnami/rclone:1.65.2-debian-12-r7
+                command:
+                - "/bin/sh"
+                - "-c"
+                - |
+                  while true; do
+                    CURRENT_HOUR=$(date +'%H')
+                    CURRENT_MINUTE=$(date +'%M')
+                    if [ "$CURRENT_HOUR" -eq "$CRON_HOUR" ] && [ "$CURRENT_MINUTE" -eq "$CRON_MINUTE" ]; then
+                        rclone sync -v /mnt/storage backup:$BUCKET_NAME/backup/uploads
+                    fi
+                    sleep 60
+                  done
+                volumeMounts:
+                  - name: uploads
+                    mountPath: /mnt/storage
+                env:
+                  - name: CRON_HOUR
+                    value: "1"
+                  - name: CRON_MINUTE
+                    value: "0"
+                  - name: RCLONE_CONFIG_BACKUP_TYPE
+                    value: s3
+                  - name: RCLONE_CONFIG_BACKUP_PROVIDER
+                    value: Other
+                  - name: RCLONE_CONFIG_BACKUP_REGION
+                    valueFrom:
+                      secretKeyRef:
+                        name: les1000jours-prod-app-access-key 
+                        key: bucket_region
+                  - name: RCLONE_CONFIG_BACKUP_ENDPOINT
+                    valueFrom:
+                      secretKeyRef:
+                        name: les1000jours-prod-app-access-key 
+                        key: bucket_endpoint
+                  - name: RCLONE_CONFIG_BACKUP_ACCESS_KEY_ID
+                    valueFrom:
+                      secretKeyRef:
+                        name: les1000jours-prod-app-access-key 
+                        key: bucket_access_key
+                  - name: RCLONE_CONFIG_BACKUP_SECRET_ACCESS_KEY
+                    valueFrom:
+                      secretKeyRef:
+                        name: les1000jours-prod-app-access-key 
+                        key: bucket_secret_key
+                  - name: BUCKET_NAME
+                    valueFrom:
+                      secretKeyRef:
+                        name: les1000jours-prod-app-access-key 
+                        key: bucket_name
+                resources:
+                  requests:
+                    cpu: 100m
+                    memory: 175Mi
+                  limits:
+                    cpu: "500m"
+                    memory: 1Gi

@@ -1,0 +1,36 @@
+metabase:
+  enabled: true
+  fullnameOverride: metabase
+  cnpg-cluster:
+    backup:
+      enabled: true
+      barmanObjectStore:
+        destinationPath: s3://monsuivipsy-prod-backups/metabase-ovh
+        endpointURL: https://s3.gra.io.cloud.ovh.net
+        s3Credentials:
+          accessKeyId:
+            name: &s3secretName monsuivipsy-prod-backups-access-key
+          region:
+            name: *s3secretName
+          secretAccessKey:
+            name: *s3secretName
+
+metabase-matomo-sync:
+  enabled: true
+  matomoSiteId: 37
+  fullnameOverride: metabase-matomo-sync
+  cnpg-cluster:
+    persistence:
+      size: 30Gi
+    backup:
+      enabled: true
+      barmanObjectStore:
+        destinationPath: s3://monsuivipsy-prod-backups/metabase-matomo-sync-ovh
+        endpointURL: https://s3.gra.io.cloud.ovh.net
+        s3Credentials:
+          accessKeyId:
+            name: &s3secretName monsuivipsy-prod-backups-access-key
+          region:
+            name: *s3secretName
+          secretAccessKey:
+            name: *s3secretName

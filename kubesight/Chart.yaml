@@ -1,0 +1,11 @@
+apiVersion: v2
+name: kubesight-deploy
+version: 1.0.0
+dependencies:
+  - name: contrib-helpers
+    repository: file://./charts/contrib-helpers
+  - name: oauth2-proxy
+    condition: oauth2-proxy.enabled
+    repository: file://./charts/oauth2-proxy
+  - name: kubesight
+    repository: file://./charts/kubesight

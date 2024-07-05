@@ -1,0 +1,122 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: e2esdk-dev
+  namespace: e2esdk-dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: e2esdk-dev
+  template:
+    metadata:
+      labels:
+        app: e2esdk-dev
+    spec:
+      securityContext:
+        fsGroup: 1000
+        runAsGroup: 1000
+        runAsUser: 1000
+      initContainers:
+        - name: migrations
+          image: ghcr.io/socialgouv/e2esdk/server:1.0.0-beta.36
+          imagePullPolicy: Always
+          command:
+            - pnpm
+            - db
+            - migrations
+            - apply
+          env:
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: "password"
+                  name: "e2esdk-dev-cnpg2-app"
+            - name: POSTGRESQL_URL
+              value: "postgres://app:$(PGPASSWORD)@e2esdk-dev-cnpg2-rw/app"
+      containers:
+        - name: e2esdk-dev
+          image: ghcr.io/socialgouv/e2esdk/server:1.0.0-beta.36
+          imagePullPolicy: Always
+          securityContext:
+            allowPrivilegeEscalation: false
+          resources:
+            limits:
+              cpu: 500m
+              memory: 1Gi
+            requests:
+              cpu: 5m
+              memory: 256Mi
+          ports:
+            - containerPort: 3000
+              name: http
+          envFrom:
+            - secretRef:
+                name: e2esdk
+          env:
+            - name: NODE_ENV
+              value: "development"
+            - name: PORT
+              value: "3000"
+            - name: DEPLOYMENT_URL
+              value: "https://e2esdk.ovh.fabrique.social.gouv.fr"
+            - name: REDIS_URL
+              value: "redis://e2esdk-dev-redis-master:6379"
+            - name: DEBUG
+              value: "true"
+            - name: DISABLE_TLS
+              value: "true" # dev only
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: "password"
+                  name: "e2esdk-dev-cnpg2-app"
+            - name: POSTGRESQL_URL
+              value: "postgres://app:$(PGPASSWORD)@e2esdk-dev-cnpg2-rw/app"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    application: e2esdk
+  name: e2esdk-dev
+  namespace: e2esdk-dev
+spec:
+  ports:
+    - name: http
+      port: 80
+      targetPort: 3000
+  selector:
+    app: e2esdk-dev
+  type: ClusterIP
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: nginx
+  labels:
+    application: e2esdk-dev
+  name: e2esdk-dev
+  namespace: e2esdk-dev
+spec:
+  rules:
+    - host: e2esdk.ovh.fabrique.social.gouv.fr
+      http:
+        paths:
+          - backend:
+              service:
+                name: e2esdk-dev
+                port:
+                  name: http
+            path: /
+            pathType: Prefix
+  tls:
+    - hosts:
+        - e2esdk.ovh.fabrique.social.gouv.fr
+      secretName: wildcard-crt
+---
+

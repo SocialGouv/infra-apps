@@ -1,0 +1,32 @@
+actions-runner-controller:
+  image:
+    # Using latest because releases will be controlled from https://github.com/SocialGouv/actions-runner
+    actionsRunnerRepositoryAndTag: ghcr.io/socialgouv/actions-runner:latest
+    pullPolicy: Always
+
+  githubWebhookServer:
+    enabled: true
+    secret:
+      enabled: true
+    service:
+      type: ClusterIP
+      ports:
+        - port: 443
+          targetPort: http
+          protocol: TCP
+          name: http
+    ingress:
+      ingressClassName: "nginx"
+      enabled: true
+      annotations:
+        cert-manager.io/cluster-issuer: letsencrypt-prod
+        kubernetes.io/tls-acme: "true"
+      hosts:
+        - host: gha-runners.ovh.fabrique.social.gouv.fr
+          paths:
+            - pathType: Prefix
+              path: "/"
+      tls:
+        - secretName: gha-runners.ovh.fabrique.social.gouv.fr-tls
+          hosts:
+            - gha-runners.ovh.fabrique.social.gouv.fr

@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: config
+data:
+  GRAFANA_URL_LOGS_DEPLOYMENT: "https://grafana.fabrique.social.gouv.fr/explore?orgId=1&left=%7B%22datasource%22:%22pQ6DLUo7k%22,%22queries%22:%5B%7B%22refId%22:%22A%22,%22expr%22:%22%7Bcluster%3D%5C%22ovh-prod%5C%22,%20namespace%3D%5C%22{{namespace}}%5C%22,%20app%3D%5C%22{{app}}%5C%22%7D%22,%22queryType%22:%22range%22,%22datasource%22:%7B%22type%22:%22loki%22,%22uid%22:%22pQ6DLUo7k%22%7D,%22editorMode%22:%22builder%22%7D%5D,%22range%22:%7B%22from%22:%22now-24h%22,%22to%22:%22now%22%7D%7D"
+  CNPG_ENABLE_DUMPS: "true"

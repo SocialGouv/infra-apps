@@ -1,0 +1,7 @@
+apiVersion: scheduling.k8s.io/v1
+description: Used for CNPG deployments
+kind: PriorityClass
+metadata:
+  name: cnpg-high-priority-3
+preemptionPolicy: PreemptLowerPriority
+value: 900001000

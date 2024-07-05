@@ -1,0 +1,53 @@
+3s:
+  enabled: true
+
+buildkit-service:
+  storage:
+    # className: 
+    size: 100Gi
+    accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      cpu: "2"
+      memory: 8Gi
+    limits:
+      cpu: "4"
+      memory: 12Gi
+  tolerations:
+    - key: "pool"
+      operator: "Equal"
+      value: "ci"
+      effect: "NoSchedule"
+  affinity:
+    nodeAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        preference:
+          matchExpressions:
+          - key: nodepool
+            operator: In
+            values:
+            - prod-build
+
+  hpa:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: &maxReplicas 6
+    metrics:
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 180
+
+lb:
+  enabled: true
+  serviceCount: *maxReplicas

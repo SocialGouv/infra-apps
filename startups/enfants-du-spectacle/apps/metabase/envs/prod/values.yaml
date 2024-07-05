@@ -1,0 +1,17 @@
+metabase:
+  host: &metabaseHost metabase-enfants-du-spectacle.fabrique.social.gouv.fr
+  ingress:
+    enabled: false
+
+final-appset:
+  importSecretsFromStartup: true
+  importSreSecretsList:
+    - matomo-key
+
+oauth2-proxy:
+  host: *metabaseHost
+  ingress:
+    annotations:
+      cert-manager.io: cluster-issuer
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+      kubernetes.io/tls-acme: true

@@ -1,0 +1,17 @@
+global:
+  env: prod
+  isProd: true
+  ingress:
+    annotations:
+      "kubernetes.io/tls-acme": "true"
+      "cert-manager.io": cluster-issuer
+      "cert-manager.io/cluster-issuer": "letsencrypt-prod"
+
+oauth2-proxy:
+  enabled: true
+  certSecretName: oauth2-proxy-crt
+  envFrom:
+    - configMapRef:
+        name: oauth2-proxy-configmap
+    - secretRef:
+        name: oauth2-proxy-sealed-secret

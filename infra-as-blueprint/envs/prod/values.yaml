@@ -1,0 +1,59 @@
+config:
+  clusters:
+    aks-dev:
+      contextName: dev
+      environment: dev
+      isEnvironmentDefaultKubeconfigContext: true
+    aks-prod:
+      contextName: prod
+      environment: prod
+      isEnvironmentDefaultKubeconfigContext: true
+    ovh-dev:
+      contextName: ovh-dev
+      environment: dev
+      contextRename: ovh
+    ovh-prod:
+      contextName: ovh-prod
+      environment: prod
+      contextRename: ovh
+
+  environments:
+    dev:
+      githubName: ""
+    prod:
+      githubName: "production"
+
+  projects:
+    test:
+      ciNamespace: ci-fabrique
+    bpco-mieux: {}
+    archifiltre: {}
+    # fabrique: {}
+    # sre:
+    #   enabled: false
+    # archifiltre: {}
+    # carnet-de-bord: {}
+    # cdtn:
+    #   team: code-du-travail
+    # domifa: {}
+    # dora: {}
+    # egapro: {}
+    # emjpm: {}
+    # enfants-du-spectacle: {}
+    # fce: {}
+    # les1000jours:
+    #   team: nos1000jours
+    # mano: {}
+    # monsuivipsy:
+    #   team: jardinmental
+    #ozensemble:
+    #  team: oz-ensemble
+    # ressourcerie: {}
+    # reva: {}
+    # secretariat: {}
+    # transition-collective: {}
+    # tumeplay: {}
+    # mda:
+    #   team: maison-de-l-autisme
+    # recosante: {}
+    # bpco-mieux: {}

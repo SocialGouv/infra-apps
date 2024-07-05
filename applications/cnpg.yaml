@@ -1,0 +1,53 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: cnpg
+spec:
+  generators:
+    - list:
+        elements:
+          - name: cnpg-ovh-dev
+            cluster: ovh-dev
+            namespace: cnpg
+          - name: cnpg-ovh-prod
+            cluster: ovh-prod
+            namespace: cnpg
+  goTemplate: true
+  template:
+    metadata:
+      name: "{{ .name }}"
+      annotations:
+        argocd.argoproj.io/manifest-generate-paths: .
+    spec:
+      destination:
+        name: "{{ .cluster }}"
+        namespace: "{{ .namespace }}"
+      project: default
+      source:
+        repoURL: git@github.com/SocialGouv/manifests.git
+        targetRevision: master
+        path: "cnpg"
+        helm:
+          valueFiles:
+            - values.yaml
+            - "values.{{ .cluster }}.yaml"
+      # hack (see README in `cnpg` folder of this repo)
+      ignoreDifferences:
+        - group: admissionregistration.k8s.io
+          kind: MutatingWebhookConfiguration
+          jsonPointers:
+            - /webhooks
+        - group: apiextensions.k8s.io
+          kind: CustomResourceDefinition
+          jsonPointers:
+            - /spec/versions/0/schema/openAPIV3Schema/properties/spec/properties/selector
+            - /spec/versions/0/subresources/scale/labelSelectorPath
+      syncPolicy:
+        syncOptions:
+          - ServerSideApply=true
+        retry:
+          limit: 5
+          backoff:
+            duration: 5s
+            factor: 2
+            maxDuration: 3m

@@ -1,0 +1,70 @@
+# throttling: https://github.com/josegonzalez/python-github-backup/issues/76
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.24.0/_definitions.json#/definitions/io.k8s.api.batch.v1.CronJob
+
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  labels:
+    app: sre
+  name: github-backup
+  namespace: github-backup
+spec:
+  concurrencyPolicy: Forbid
+  schedule: "0 10 * * *"
+  suspend: false
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      template:
+        metadata:
+        spec:
+          volumes:
+            - name: github-backup
+              persistentVolumeClaim:
+                claimName: github-backup
+            - name: github-ssh
+              secret:
+                defaultMode: 0400
+                secretName: github-ssh
+          securityContext:
+            runAsNonRoot: false
+          containers:
+            - name: github-backup
+              # image: python:3.10.5-alpine3.16
+              image: harbor.fabrique.social.gouv.fr/hub/python:3.10.5-alpine3.16
+              imagePullPolicy: Always
+              securityContext:
+                runAsNonRoot: false
+              envFrom:
+                - secretRef:
+                    name: github-backup-cronjob
+              volumeMounts:
+                - mountPath: "/root/.ssh"
+                  name: github-ssh
+                  readOnly: true
+                - name: github-backup
+                  mountPath: "/data"
+                  
+              # see https://github.com/josegonzalez/python-github-backup
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  apk add --no-cache git openssh-client
+                  export GIT_SSH_COMMAND='ssh -i /root/.ssh/key  -o "StrictHostKeyChecking=no"'
+                  ssh git@github.com
+                  pip install github-backup
+                  github-backup "${GITHUB_ORG}" --token "${GITHUB_ACCESS_TOKEN}" \
+                    --prefer-ssh \
+                    --throttle-limit 2000 \
+                    --throttle-pause 2 \
+                    --incremental \
+                    --private \
+                    --fork  \
+                    --pulls  \
+                    --repositories \
+                    --issues \
+                    --milestones \
+                    --organization \
+                    --output-directory /data/
+          restartPolicy: Never

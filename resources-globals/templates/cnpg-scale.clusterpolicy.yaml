@@ -1,0 +1,27 @@
+# related to https://github.com/cloudnative-pg/cloudnative-pg/issues/2574
+# need to disable webhooks of cnpg
+{{ if .Values.cnpgVpa.enabled }}
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: cnpg-cluster-scale-selector
+spec:
+  background: true
+  generateExisting: true
+  mutateExistingOnPolicyUpdate: true
+  useServerSideApply: true
+  rules:
+    - name: add-spec-selector-to-clusters
+      match:
+        resources:
+          kinds:
+            - postgresql.cnpg.io/v1/Cluster
+      mutate:
+        targets:
+          - apiVersion: postgresql.cnpg.io/v1
+            kind: Cluster
+            name: "{{`{{ request.object.metadata.name }}`}}"
+        patchStrategicMerge:
+          spec:
+            selector: "cnpg.io/cluster={{`{{ request.object.metadata.name }}`}}"
+{{ end }}

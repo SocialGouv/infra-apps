@@ -1,0 +1,37 @@
+{{- define "contrib-helpers.probe" -}}
+{{ if .Values.probesPort }}
+tcpSocket:
+  port: {{ .Values.probesPort }}
+{{ else if .Values.probesPath }}
+httpGet:
+  path: {{ .Values.probesPath }}
+  port: http
+{{ end }}
+{{- end -}}
+
+{{- define "contrib-helpers.livenessProbe" -}}
+{{ $defaultLivenessProbe := dict "failureThreshold" 15 "initialDelaySeconds" 30 "periodSeconds" 5 "timeoutSeconds" 5 }}
+{{ if .Values.livenessProbe }}
+{{ mergeOverwrite dict $defaultLivenessProbe .Values.livenessProbe | toYaml }}
+{{ else }}
+{{- mergeOverwrite dict $defaultLivenessProbe ((include "contrib-helpers.probe" .) | fromYaml) | toYaml }}
+{{- end -}}
+{{- end -}}
+
+{{- define "contrib-helpers.readinessProbe" -}}
+{{ $defaultReadinessProbe := dict "failureThreshold" 15 "initialDelaySeconds" 1 "periodSeconds" 5 "timeoutSeconds" 1 "successThreshold" 1 }}
+{{ if .Values.readinessProbe }}
+{{ mergeOverwrite dict $defaultReadinessProbe .Values.readinessProbe | toYaml }}
+{{ else }}
+{{- mergeOverwrite dict $defaultReadinessProbe ((include "contrib-helpers.probe" .) | fromYaml) | toYaml }}
+{{- end -}}
+{{- end -}}
+
+{{- define "contrib-helpers.startupProbe" -}}
+{{ $defaultStartupProbe := dict "failureThreshold" 12 "periodSeconds" 5 }}
+{{ if .Values.startupProbe }}
+{{ mergeOverwrite dict $defaultStartupProbe ((include "contrib-helpers.probe" .) | fromYaml) .Values.startupProbe | toYaml }}
+{{ else }}
+{{- mergeOverwrite dict $defaultStartupProbe ((include "contrib-helpers.probe" .) | fromYaml) | toYaml }}
+{{- end -}}
+{{- end -}}

@@ -1,0 +1,69 @@
+# ---
+# apiVersion: v1
+# kind: Pod
+# metadata:
+#   namespace: github-backup
+#   name: filebrowser
+#   labels:
+#     app: filebrowser
+# spec:
+#   volumes:
+#     - name: backups
+#       persistentVolumeClaim:
+#         claimName: github-backup
+#     - name: filebrowser
+#       emptyDir: {}
+#   containers:
+#     - name: filebrowser
+#       image: filebrowser/filebrowser
+#       command:
+#         - /bin/sh
+#         - "-c"
+#         - |
+#           ./filebrowser config init
+#           ./filebrowser -c .filebrowser.json config init
+#           cat .filebrowser.json
+#           ./filebrowser -c .filebrowser.json config set --server.port=8080
+#           ./filebrowser -c .filebrowser.json config set --server.root=/srv
+#           ./filebrowser -c .filebrowser.json config set --auth.method=noauth
+#           ./filebrowser -c .filebrowser.json users add nouser nopass
+#           ./filebrowser -c .filebrowser.json config set --branding.name=SocialGouv
+#           ./filebrowser -c .filebrowser.json config set --locale=fr
+#           ./filebrowser -c .filebrowser.json config set --perm.admin=false
+#           ./filebrowser -c .filebrowser.json config set --perm.create=false
+#           ./filebrowser -c .filebrowser.json config set --perm.delete=false
+#           ./filebrowser -c .filebrowser.json config set --perm.download=true
+#           ./filebrowser -c .filebrowser.json config set --perm.execute=false
+#           ./filebrowser -c .filebrowser.json config set --perm.modify=false
+#           ./filebrowser -c .filebrowser.json config set --perm.rename=false
+#           ./filebrowser -c .filebrowser.json config set --perm.modify=false
+#           ./filebrowser -c .filebrowser.json config set --perm.share=false
+#           cat .filebrowser.json
+#           ./filebrowser -c .filebrowser.json --port 8080
+#       imagePullPolicy: Always
+#       securityContext:
+#         runAsNonRoot: false
+#       readinessProbe:
+#         tcpSocket:
+#           port: 8080
+#         initialDelaySeconds: 10
+#         periodSeconds: 20
+#       env:
+#         - name: TZ
+#           value: Europe/Paris
+#         - name: PUID
+#           value: "6518"
+#         - name: PGID
+#           value: "6518"
+#         - name: "branding.name"
+#           value: "IOIOOI"
+#       ports:
+#         - name: filebrowser
+#           containerPort: 8080
+#           protocol: TCP
+#       volumeMounts:
+#         - name: filebrowser
+#           mountPath: /database
+#         - name: backups
+#           mountPath: /srv
+#           readOnly: true

@@ -1,0 +1,15 @@
+cnpgVpa:
+  enabled: false
+  oblikEnabledDefault: false
+  annotations:
+    # memory rules
+    oblik.socialgouv.io/request-memory-apply-mode: "off" # postgres is not compatible with memory recommendations
+
+    # cpu rules
+    oblik.socialgouv.io/min-request-cpu: "100m"
+    oblik.socialgouv.io/limit-cpu-calculator-algo: "ratio"
+    oblik.socialgouv.io/limit-cpu-calculator-value: "3"
+
+cnpgDefaultResourcesClusterPolicy:
+  enabled: false
+  memoryRequest: 512Mi

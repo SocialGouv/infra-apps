@@ -1,0 +1,108 @@
+apiVersion: kyverno.io/v1
+kind: Policy
+metadata:
+  name: add-backup-sidecar-container
+  namespace: enfants-du-spectacle
+spec:
+  rules:
+    - name: inject-sidecar-container-docs
+      match:
+        resources:
+          kinds:
+            - Pod
+          selector:
+            matchLabels:
+              component: app
+      mutate:
+        patchStrategicMerge:
+          spec:
+            containers:
+              - name: backup-docs
+                image: bitnami/rclone:1.65.2-debian-12-r7
+                command:
+                  - "/bin/sh"
+                  - "-c"
+                  - |
+                    while true; do
+                      CURRENT_HOUR=$(date +'%H')
+                      CURRENT_MINUTE=$(date +'%M')
+                      if [ "$CURRENT_HOUR" -eq "$CRON_HOUR" ] && [ "$CURRENT_MINUTE" -eq "$CRON_MINUTE" ]; then
+                          rclone sync -v /mnt/docs backup:$BUCKET_NAME/backup/docs
+                      fi
+                      sleep 60
+                    done
+                volumeMounts:
+                  - name: docs
+                    mountPath: /mnt/docs
+                env: &ENV
+                  - name: CRON_HOUR
+                    value: "1"
+                  - name: CRON_MINUTE
+                    value: "0"
+                  - name: RCLONE_CONFIG_BACKUP_TYPE
+                    value: s3
+                  - name: RCLONE_CONFIG_BACKUP_PROVIDER
+                    value: Other
+                  - name: RCLONE_CONFIG_BACKUP_REGION
+                    valueFrom:
+                      secretKeyRef:
+                        name: &SECRETKEY enfants-du-spectacle-prod-app-access-key
+                        key: bucket_region
+                  - name: RCLONE_CONFIG_BACKUP_ENDPOINT
+                    valueFrom:
+                      secretKeyRef:
+                        name: *SECRETKEY
+                        key: bucket_endpoint
+                  - name: RCLONE_CONFIG_BACKUP_ACCESS_KEY_ID
+                    valueFrom:
+                      secretKeyRef:
+                        name: *SECRETKEY
+                        key: bucket_access_key
+                  - name: RCLONE_CONFIG_BACKUP_SECRET_ACCESS_KEY
+                    valueFrom:
+                      secretKeyRef:
+                        name: *SECRETKEY
+                        key: bucket_secret_key
+                  - name: BUCKET_NAME
+                    valueFrom:
+                      secretKeyRef:
+                        name: *SECRETKEY
+                        key: bucket_name
+                resources:
+                  requests:
+                    cpu: 100m
+                    memory: 200Mi
+                  limits:
+                    cpu: 100m
+                    memory: 200Mi
+
+    - name: inject-sidecar-container-docs-form
+      match:
+        resources:
+          kinds:
+            - Pod
+          selector:
+            matchLabels:
+              component: form
+      mutate:
+        patchStrategicMerge:
+          spec:
+            containers:
+              - name: backup-docs-form
+                image: bitnami/rclone:1.65.2-debian-12-r7
+                command:
+                  - "/bin/sh"
+                  - "-c"
+                  - |
+                    while true; do
+                      CURRENT_HOUR=$(date +'%H')
+                      CURRENT_MINUTE=$(date +'%M')
+                      if [ "$CURRENT_HOUR" -eq "$CRON_HOUR" ] && [ "$CURRENT_MINUTE" -eq "$CRON_MINUTE" ]; then
+                          rclone sync -v /mnt/docs-form backup:$BUCKET_NAME/backup/docs-form
+                      fi
+                      sleep 60
+                    done
+                volumeMounts:
+                  - name: docs-form
+                    mountPath: /mnt/docs-form
+                env: *ENV

@@ -1,0 +1,58 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: startups-raw
+spec:
+  generators:
+    - matrix:
+        generators:
+          - git:
+              pathParamPrefix: startup
+              repoURL: git@github.com/SocialGouv/manifests.git
+              revision: master
+              directories:
+                - path: "startups/*"
+          - git:
+              pathParamPrefix: cluster
+              repoURL: git@github.com/SocialGouv/manifests.git
+              revision: master
+              directories:
+                - path: "{{ startup.path }}/raw/clusters/*"
+  template:
+    metadata:
+      name: "startup-{{ startup.path.basename }}--raw-{{ cluster.path.basename }}"
+      annotations:
+        argocd.argoproj.io/manifest-generate-paths: .
+      # labels:
+    spec:
+      destination:
+        name: "{{ cluster.path.basename }}"
+      project: default
+      source:
+        repoURL: git@github.com/SocialGouv/manifests.git
+        targetRevision: master
+        path: "{{ cluster.path }}"
+        directory:
+          recurse: true
+      ignoreDifferences:
+        - group: kyverno.io
+          kind: ClusterPolicy
+          jqPathExpressions:
+            - .spec.rules[] | select(.name|test("autogen-."))
+        - group: ""
+          kind: PersistentVolumeClaim
+          jsonPointers:
+            - /metadata/finalizers
+      syncPolicy:
+        syncOptions:
+          - CreateNamespace=false
+          - Replace=false
+        automated:
+          selfHeal: false
+          # prune: true
+        retry:
+          limit: 5
+          backoff:
+            duration: 5s
+            factor: 2
+            maxDuration: 3m

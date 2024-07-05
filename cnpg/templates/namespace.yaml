@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Release.Namespace }}
+  labels:
+    network-policy/namespace: {{ .Release.Namespace }}
+    network-policy/source: monitoring

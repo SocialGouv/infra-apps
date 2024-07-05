@@ -1,0 +1,49 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: infra-as-blueprint
+spec:
+  generators:
+    - list:
+        elements:
+          - name: infra-as-blueprint
+            namespace: infra-as-blueprint
+            cluster: ovh-prod
+            env: prod
+            imageTag: v1
+  goTemplate: true
+  template:
+    metadata:
+      name: "{{ .name }}"
+      # labels:
+    spec:
+      destination:
+        name: "{{ .cluster }}"
+        namespace: "{{ .namespace }}"
+      project: default
+      source:
+        repoURL: git@github.com/SocialGouv/manifests.git
+        targetRevision: master
+        path: "infra-as-blueprint"
+        helm:
+          releaseName: infra-as-blueprint
+          valueFiles:
+            - "envs/{{ .env }}/values.yaml"
+          parameters:
+            - name: image.tag
+              value: "{{ .imageTag }}"
+            - name: global.appset.env
+              value: "{{ .env }}"
+      syncPolicy:
+        syncOptions:
+          - CreateNamespace=true
+          # - Replace=true
+        automated:
+          prune: false # Specifies if resources should be pruned during auto-syncing ( false by default ).
+          selfHeal: false # Specifies if partial app sync should be executed when resources are changed only in target Kubernetes cluster and no git change detected ( false by default ).
+        retry:
+          limit: 5
+          backoff:
+            duration: 5s
+            factor: 2
+            maxDuration: 3m

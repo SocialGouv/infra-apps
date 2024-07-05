@@ -1,0 +1,65 @@
+{{- range $index, $policy := .Values.cnpgClusters }}
+apiVersion: kyverno.io/v1
+{{ if $policy.namespace }}
+kind: Policy
+{{ else }}
+kind: ClusterPolicy
+{{ end }}
+metadata:
+  {{ $targetName := (or $policy.namespace ((print $policy.rancherProjectName "-" $policy.repositoryName) | lower)) }}
+  name: {{ print "resources-startups-cnpg-" $targetName "-" $index | trunc 63 | trimSuffix "-" }}
+  {{ if $policy.namespace }}
+  namespace: {{ $policy.namespace }}
+  {{ end }}
+spec:
+  background: true
+  validationFailureAction: Enforce
+  mutateExistingOnPolicyUpdate: true
+  rules:
+    - name: mutate-resources-cnpg
+      skipBackgroundRequests: true
+      match:
+        any:
+        - resources:
+            kinds:
+              - postgresql.cnpg.io/v1/Cluster
+            selector:
+              matchLabels:
+                app.kubernetes.io/name: {{ $policy.name }}
+      {{ if not $policy.namespace }}
+      context:
+        - name: namespaceAnnotations
+          apiCall:
+            urlPath: "/api/v1/namespaces/{{`{{request.namespace}}`}}"
+            jmesPath: "metadata.annotations"
+      preconditions:
+        all:
+          - key: "{{`{{`}} namespaceAnnotations.\"application\" || '' {{`}}`}}"
+            operator: Equals
+            value: {{ $policy.repositoryName | quote }}
+        {{- range $index, $project := $.Values.rancherProjects }}
+        {{ if eq $policy.rancherProjectName $project.projectName  }}
+          - key: "{{`{{`}} namespaceAnnotations.\"field.cattle.io/projectId\" || '' {{`}}`}}"
+            operator: Equals
+            value: {{ $project.projectId | quote }}
+        {{ end }}
+        {{ end }}
+      {{ end }}
+      mutate:
+        targets:
+          - kind: Cluster
+            apiVersion: postgresql.cnpg.io/v1
+            {{ if $policy.namespace }}
+            namespace: {{ $policy.namespace }}
+            {{ end }}
+            name: '{{"{{request.object.metadata.name}}"}}'
+        patchStrategicMerge:
+          metadata:
+            annotations:
+              ressource.socialgouv.io/enforced: "true"
+          spec:
+            resources:
+              requests:
+                memory: "{{ $policy.memory }}"
+---
+{{- end }}

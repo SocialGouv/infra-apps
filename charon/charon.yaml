@@ -1,0 +1,76 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: charon
+  labels:
+    app: charon
+  annotations:
+    oblik.socialgouv.io/enabled: "true"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: charon
+  template:
+    metadata:
+      name: charon
+      labels:
+        app: charon
+    spec:
+      containers:
+        - image: lsagetlethias/charon:latest
+          name: app
+          ports:
+            - containerPort: 3000
+              name: http
+          livenessProbe:
+            failureThreshold: 15
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 5
+            timeoutSeconds: 5
+          readinessProbe:
+            failureThreshold: 15
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 1
+            periodSeconds: 5
+            successThreshold: 1
+            timeoutSeconds: 1
+          startupProbe:
+            failureThreshold: 12
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 5
+          env:
+            - name: CHARON_PORT
+              value: "3000"
+            - name: DEBUG
+              value: charon:*
+          envFrom:
+            - secretRef:
+                name: charon
+            - configMapRef:
+                name: charon
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: charon
+  name: charon
+spec:
+  ports:
+    - name: http
+      port: 80
+      targetPort: 3000
+  selector:
+    app: charon
+  type: ClusterIP
+---
+

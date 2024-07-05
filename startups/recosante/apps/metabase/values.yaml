@@ -1,0 +1,66 @@
+metabase:
+  enabled: true
+  fullnameOverride: metabase
+  cnpg-cluster:
+    resources:
+      requests:
+        cpu: 200m
+        memory: 1Gi
+      limits:
+        cpu: 200m
+        memory: 1Gi
+    backup:
+      enabled: true
+      barmanObjectStore:
+        destinationPath: s3://recosante-prod-backups/metabase-prod
+        endpointURL: https://s3.gra.io.cloud.ovh.net
+        s3Credentials:
+          accessKeyId:
+            name: &s3secretName recosante-prod-backups-access-key
+          region:
+            name: *s3secretName
+          secretAccessKey:
+            name: *s3secretName
+
+metabase-matomo-sync:
+  enabled: true
+  fullnameOverride: metabase-matomo-sync
+  cnpg-cluster:
+    resources:
+      requests:
+        cpu: "1"
+        memory: 1Gi
+      limits:
+        cpu: "1"
+        memory: 1Gi
+
+metabase-matomo-sync-nodeapp:
+  enabled: true
+  fullnameOverride: metabase-matomo-sync-nodeapp
+  pgdatabase:
+    # base commune matomo-sync
+    secretName: metabase-matomo-sync-app
+  cnpg-cluster:
+    enabled: false
+
+metabase-matomo-sync-app:
+  enabled: true
+  fullnameOverride: metabase-matomo-sync-app
+  pgdatabase:
+    # base commune matomo-sync
+    secretName: metabase-matomo-sync-app
+  cnpg-cluster:
+    enabled: false
+
+oauth2-proxy:
+  fullnameOverride: oauth2-proxy
+  enabled: true
+  upstream: http://metabase
+  envFrom:
+    - configMapRef:
+        name: oauth2-proxy-configmap
+    - secretRef:
+        name: oauth2-proxy-sealed-secret
+  additionalArgs:
+    - --skip-auth-route
+    - ^/public/.*,^/app/dist/.*,^/api/public/.*,^/api/session/.*,^/app/assets/.*

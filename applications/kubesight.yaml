@@ -1,0 +1,73 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: kubesight
+spec:
+  generators:
+    - list:
+        elements:
+          []
+          # - projectName: azure-prod
+          #   cluster: prod
+          #   host: kubesight-azure.fabrique.social.gouv.fr
+          #   namespace: kubesight
+          # - projectName: ovh-prod
+          #   cluster: ovh-prod
+          #   host: kubesight-ovh.fabrique.social.gouv.fr
+          #   namespace: kubesight
+
+  template:
+    metadata:
+      name: "kubesight-{{projectName}}"
+      annotations:
+        argocd.argoproj.io/manifest-generate-paths: .
+        notifications.argoproj.io/subscribe.mattermost: moojipgstjgsixs6mgycxpe5ua
+    spec:
+      project: default
+      syncPolicy:
+        automated:
+          prune: true # Specifies if resources should be pruned during auto-syncing ( false by default ).
+          selfHeal: false # Specifies if partial app sync should be executed when resources are changed only in target Kubernetes cluster and no git change detected ( false by default ).
+          allowEmpty: false # Allows deleting all application resources during automatic syncing ( false by default ).
+        retry:
+          limit: 5
+          backoff:
+            duration: 5s
+            factor: 2
+            maxDuration: 3m
+        managedNamespaceMetadata:
+          labels:
+            application: sre
+        syncOptions:
+          - CreateNamespace=true
+
+      source:
+        path: kubesight
+        repoURL: git@github.com/SocialGouv/manifests.git
+        targetRevision: master
+        helm:
+          parameters:
+            - name: "global.dummy"
+              value: "1"
+            - name: "global.repositoryName"
+              value: "{{projectName}}"
+            - name: "global.namespace"
+              value: "{{namespace}}"
+            - name: "global.host"
+              value: "{{host}}"
+
+            - name: "oauth2-proxy.host"
+              value: "{{host}}"
+            - name: "oauth2-proxy.upstream"
+              value: "http://kubesight-{{projectName}}:3000"
+
+          # Use the contents of files as parameters (uses Helm's --set-file)
+          fileParameters:
+            - name: oauth2-proxy.inlineSealedSecret
+              path: "{{projectName}}/oauth2-proxy.sealed-secret.yaml"
+            - name: kubesight.inlineConfigmap
+              path: "{{projectName}}/kubesight.configmap.yaml"
+
+      destination:
+        name: "{{cluster}}"
+        namespace: "{{namespace}}"

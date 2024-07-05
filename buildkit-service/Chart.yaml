@@ -1,0 +1,11 @@
+apiVersion: v2
+name: buildkit-service
+version: 1.0.0
+dependencies:
+  - name: buildkit-service
+    repository: https://socialgouv.github.io/helm-charts
+    version: 1.29.1
+  - name: 3s
+    repository: file://./charts/3s
+    version: 0.1.0
+    condition: 3s.enabled

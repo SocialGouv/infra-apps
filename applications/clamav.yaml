@@ -1,0 +1,36 @@
+# apiVersion: argoproj.io/v1alpha1
+# kind: ApplicationSet
+# metadata:
+#   name: clamav
+# spec:
+#   generators:
+#     - list:
+#         elements:
+#           - name: clamav-ovh-dev
+#             namespace: clamav
+#             cluster: ovh-dev
+#           - name: clamav-dev
+#             namespace: clamav
+#             cluster: dev
+#   goTemplate: true
+#   template:
+#     metadata:
+#       name: "{{ .name }}"
+#     spec:
+#       destination:
+#         name: "{{ .cluster }}"
+#         namespace: "{{ .namespace }}"
+#       project: default
+#       source:
+#         repoURL: git@github.com/SocialGouv/manifests.git
+#         targetRevision: master
+#         path: clamav
+#       syncPolicy:
+#         syncOptions:
+#           - CreateNamespace=true
+#         retry:
+#           limit: 5
+#           backoff:
+#             duration: 5s
+#             factor: 2
+#             maxDuration: 3m

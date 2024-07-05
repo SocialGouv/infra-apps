@@ -1,0 +1,51 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  labels:
+    application: ozensemble
+  name: refresh-view
+  namespace: startup-ozensemble--metabase-prod
+spec:
+  schedule: 0 * * * *
+  successfulJobsHistoryLimit: 3
+  suspend: false
+  concurrencyPolicy: Forbid
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            application: ozensemble
+          name: ozensemble-cronjob-refresh-views
+        spec:
+          containers:
+          - command:
+            - psql
+            - -c
+            - |
+              REFRESH MATERIALIZED VIEW matomo_actives;
+              REFRESH MATERIALIZED VIEW matomo_engages;
+              REFRESH MATERIALIZED VIEW matomo_ouvertures;
+              REFRESH MATERIALIZED VIEW matomo_petit_engages;
+              REFRESH MATERIALIZED VIEW matomo_engages_par_action;
+              REFRESH MATERIALIZED VIEW matomo_petit_engages_par_action;
+              REFRESH MATERIALIZED VIEW matomo_engages_par_action_v2;
+              REFRESH MATERIALIZED VIEW matomo_engages_v2;
+            envFrom:
+            - secretRef:
+                name: managed-db-metabase
+            env:
+            image: ghcr.io/socialgouv/docker/psql
+            imagePullPolicy: IfNotPresent
+            name: cronjob
+            securityContext:
+              allowPrivilegeEscalation: false
+            resources:
+              requests:
+                cpu: 20m
+                memory: 32Mi
+              limits:
+                cpu: 20m
+                memory: 32Mi
+          restartPolicy: OnFailure

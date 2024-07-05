@@ -1,0 +1,17 @@
+apiVersion: bitnami.com/v1alpha1
+kind: SealedSecret
+metadata:
+  annotations:
+    sealedsecrets.bitnami.com/namespace-wide: "true"
+  name: smtp-creds
+  namespace: bitwarden
+spec:
+  encryptedData:
+    username: AgCfOKfKKGwoTOUSGV17ACkQKMsbj03LRiB1EILrHWHDmOjG4QGF7YgnekV/MqXOwYvX5YK0XIqr65dkAGsbKFWSE2fZLWafWg1jRQ7HUujK3GGvyq/aCPs2go2BcEUOx+H/MBcCPbyBZu/eHqCW7k98GDFn00vqkedB2oiZBP4H6fldb9xQwDN6jOUkY2fhQ6z5zlBKJeq9Y04l06lNGcZ7xOSNr7WLMRde/4rI+jCZvcWuoXB20UhduOoc/3hWTHKKl2Dxs0DQ9up/Kkht7yF+2LQtRnt4NaMjr8qUFK1u3n6Wq2bYfggAzpx6YYW3jSGFKqwVHoQNxopDUM25Al7yLqirRc31b39Bor8oI+J+LNgArseeSTpiJ0id+S50dpQh3zExoxZAMdyi1yvnoYARqjvN0pZHVvYhBiJecHHdmo9jzdT5SBkeJ3yadPjdTvt2npJnRzkl99n+j2s3bCfYptv56sEIdvwUe5l/1291V/LPaxOAa8kU/kdRu5Qg82FTSWgtp93e3LjOtGszrKQudawCNF9UybCOh4nu7/mdLlociHAQA1cWBu6D+JzWpx5L86ffF4sIGH/fbZ7ALrtjlTdyJ1QZ804Banm6BKFQoH2uc69AlGtxljrRCJXZXCF3mNVBfK4K1KVDfyq4Sz+g0zVROltRf5swH38rGpHtEkS7ij3J5jGfvXXlWtonCnfj97H+PMQIDiMCi3yE+6B28hIISmJWBulvIVzbf3SQ9w==
+    password: AgBLNA3xSPHj3ec4yj1s3q26TvmUxtE+5bmA9uGM97Ebodt+vHtFljjAjiEs3xjIiDOMi0H7mw1Y3A08rZqEMF0a9BRtuGlG1qFg3KRESkXZo5Znj9ur9heRycvfAQ2eEFt3iIHHfsZ2R3k59VoB5klxgFp0t4mJrz1XG1L1Y/iuY1oNpaOTog5f/NSfAdcXW6bIW7c0Hf+msRWdKF5gSrYjn6xya086uZncFns9hJIQL9uLjc6yNb7EKHJiP0rGYfc5DnS1IcNp6g6KJ+EuMhkuHvgyBCZy/3pp05VvocXdngp/+fOYN/eW7JFzG/3ZTbtrkf4py6WW7nkPrisQkNcpb7Ws3uT/FdeOcYmsoFDtXVazmbmJnt+nmo19TghsSvJcdyaUrGrQIFqHWMr04QWLm0JYlFICLWbvGjinMAj/PXXn0skwE8gQq+p0D+hmECjJWNXe2dG+KGBXtn7Dv8kTa0oZF0lwMEEeTS7C3U9M/w27Y6NPu5rMX9k+5rDVn/X5/8UWQLO7l5sGbkAUNH8F1bxhYIcPeYh7xDVaH8TU3ujo4kPbRiX3wT2VBYPlKvCEZYqJ3vvdwmRQP0WZ64r3D2HlDp4ev2aesC2dEoaofxv/MBK+Mwrv1Dr3SYbK5sFW1FUm9A5QE0JfI4U6GMxLtkwDNGFSWL01382HpkK2cf+stPGrpmOzwf8KRLvqm3jE6qEtsvo+NrFB+Q8KyQIwj3isUGQDoQef75dK/AzN5w==
+  template:
+    metadata:
+      annotations:
+        sealedsecrets.bitnami.com/namespace-wide: "true"
+      name: smtp-creds
+    type: Opaque

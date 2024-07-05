@@ -1,0 +1,50 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: oblik
+spec:
+  goTemplate: true
+  generators:
+    - git:
+        repoURL: git@github.com/SocialGouv/manifests.git
+        revision: master
+        files:
+          - path: "oblik/envs/*/config.yaml"
+        values:
+          env: "{{ index .path.segments 2 }}"
+  template:
+    metadata:
+      name: "oblik-{{ .values.env }}"
+      annotations:
+        argocd.argoproj.io/manifest-generate-paths: .
+    spec:
+      destination:
+        name: "{{ .cluster }}"
+        namespace: "oblik"
+      project: default
+      source:
+        repoURL: git@github.com/SocialGouv/manifests.git
+        targetRevision: master
+        path: "oblik"
+        helm:
+          valueFiles:
+            - "values.yaml"
+            - "envs/{{ .values.env }}/values.yaml"
+          values: |
+            global:
+              appset:
+                env: "{{ .values.env }}"
+                cluster: "{{ .cluster }}"
+      syncPolicy:
+        syncOptions:
+          - CreateNamespace=false
+          - Replace=true
+        automated:
+          selfHeal: false
+          prune: true
+        retry:
+          limit: 5
+          backoff:
+            duration: 5s
+            factor: 2
+            maxDuration: 3m

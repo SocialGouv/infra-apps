@@ -1,0 +1,6 @@
+cnpgVpa:
+  enabled: true
+  oblikEnabledDefault: true
+
+cnpgDefaultResourcesClusterPolicy:
+  enabled: true

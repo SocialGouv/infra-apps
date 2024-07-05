@@ -1,0 +1,28 @@
+metabase:
+  host: &metabaseHost metabase-recosante.fabrique.social.gouv.fr
+  ingress:
+    enabled: false
+
+final-appset:
+  importSecretsFromStartup: true
+  importSreSecretsList:
+    - matomo-key
+
+oauth2-proxy:
+  host: *metabaseHost
+  ingress:
+    annotations:
+      cert-manager.io: cluster-issuer
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+      kubernetes.io/tls-acme: true
+
+metabase-matomo-sync:
+  matomoSiteId: 100
+
+metabase-matomo-sync-nodeapp:
+  matomoSiteId: 108
+  destinationTable: matomo_app
+
+metabase-matomo-sync-app:
+  matomoSiteId: 107
+  destinationTable: matomo_nodeapp

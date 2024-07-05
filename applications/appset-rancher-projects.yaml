@@ -1,0 +1,36 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: appset-rancher-projects
+spec:
+  destination:
+    name: in-cluster
+    namespace: appset-rancher-projects-plugin
+  project: default
+  source:
+    repoURL: git@github.com/SocialGouv/manifests.git
+    targetRevision: master
+    path: appset-rancher-projects-plugin
+    helm:
+      parameters:
+        - name: rancherServer
+          value: https://rancher.fabrique.social.gouv.fr
+      values: |
+        enableClusterList:
+        - ovh-dev
+        - ovh-prod
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+      - Force=true
+      - Replace=true
+    # automated:
+    #   prune: true
+    #   selfHeal: true
+    #   allowEmpty: false
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m

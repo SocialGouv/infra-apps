@@ -1,0 +1,12 @@
+apiVersion: v2
+name: metabase
+version: 0.0.0
+dependencies:
+  - name: final-appset
+    repository: file://./charts/final-appset
+    version: 0.0.0
+  - name: sftp
+    repository: file://./charts/sftp
+    version: 0.0.0
+    condition: sftp.enabled
+  

@@ -1,0 +1,49 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  labels:
+    app: {{ include "infra-as-blueprint.name" . }}
+  name: {{ include "infra-as-blueprint.fullname" . }}
+spec:
+  concurrencyPolicy: Forbid
+  schedule: {{ .Values.schedule | quote }}
+  suspend: {{ .Values.suspend }}
+  jobTemplate:
+    spec:
+      backoffLimit: {{ .Values.backoffLimit }}
+      ttlSecondsAfterFinished: {{ .Values.ttlSecondsAfterFinished }}
+      template:
+        metadata:
+        spec:
+          volumes:
+            - name: volume-config
+              configMap:
+                name: {{ include "infra-as-blueprint.fullname" . }}
+            - name: keys
+              secret:
+                secretName: the-keys
+          containers:
+            - name: run-infra-as-blueprint
+              image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+              imagePullPolicy: Always
+              env:
+                - name: FORCE_COLOR
+                  value: "2"
+              volumeMounts:
+                - name: "volume-config"
+                  mountPath: "/workspace/config.yaml"
+                  subPath: "config.yaml"
+                - name: keys
+                  mountPath: /workspace/.kube/config
+                  subPath: "kubeconfig"
+                - name: keys
+                  mountPath: /workspace/.env
+                  subPath: "env"
+              resources:
+                limits:
+                  cpu: {{ .Values.resources.limits.cpu }}
+                  memory: {{ .Values.resources.limits.memory }}
+                requests:
+                  cpu: {{ .Values.resources.requests.cpu }}
+                  memory: {{ .Values.resources.requests.memory }}
+          restartPolicy: Never

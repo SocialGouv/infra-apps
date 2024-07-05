@@ -1,0 +1,7 @@
+apiVersion: v2
+name: clamav
+version: 0.1.0
+dependencies:
+  - name: clamav
+    repository: https://socialgouv.github.io/helm-charts
+    version: 1.18.2

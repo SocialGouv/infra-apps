@@ -1,0 +1,10 @@
+apiVersion: v2
+name: bitwarden
+version: 1.0.0
+dependencies:
+  - name: cnpg-cluster
+    version: 1.17.3
+    repository: https://socialgouv.github.io/helm-charts
+  - name: vaultwarden
+    version: 1.17.3
+    repository: https://socialgouv.github.io/helm-charts

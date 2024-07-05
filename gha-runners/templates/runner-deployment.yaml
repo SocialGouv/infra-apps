@@ -1,0 +1,32 @@
+apiVersion: actions.summerwind.dev/v1alpha1
+kind: RunnerDeployment
+metadata:
+  name: runners
+spec:
+  replicas: 3
+  template:
+    spec:
+      resources:
+        limits:
+          cpu: "2"
+          memory: 8Gi
+        requests:
+          cpu: "1"
+          memory: 2Gi
+      imagePullPolicy: Always
+      dockerdWithinRunnerContainer: true
+      organization: SocialGouv
+      containers:
+        - name: runner
+          securityContext:
+            allowPrivilegeEscalation: true
+{{/* --- */}}
+{{/* apiVersion: actions.summerwind.dev/v1alpha1 */}}
+{{/* kind: HorizontalRunnerAutoscaler */}}
+{{/* metadata: */}}
+{{/*   name: runners-autoscaler */}}
+{{/* spec: */}}
+{{/*   scaleTargetRef: */}}
+{{/*     name: runners */}}
+{{/*   minReplicas: 3 */}}
+{{/*   maxReplicas: 3 */}}

@@ -1,0 +1,103 @@
+replicas: 1
+
+dbhost:
+  secretName:
+  secretKey: host
+dbport:
+  secretName:
+  secretKey: port
+dbname:
+  secretName:
+  secretKey: dbname
+dbuser:
+  secretName:
+  secretKey: user
+dbpass:
+  secretName:
+  secretKey: password
+
+host:
+certSecretName:
+env: []
+envFrom: []
+secretName: metabase
+ingress:
+  enabled: true
+  annotations: {}
+annotations:
+  oblik.socialgouv.io/request-memory-apply-mode: "off" # because metabase is JVM and memory recommendation is incompatible with JVM
+  oblik.socialgouv.io/min-limit-cpu: "500m" # consumming is high at startup
+
+image:
+  name: metabase/metabase
+  # renovate: datasource=docker depName=metabase/metabase versioning=v0.47.7
+  tag: v0.47.7
+
+resources:
+  requests:
+    memory: 512Mi # keep only memory request not handled by VPA+Oblik
+
+cnpg-cluster:
+  enabled: true
+  labels:
+    application: cnpg-metabase
+  clusterExtraSpec:
+    enableSuperuserAccess: true
+  minSyncReplicas: 1
+  maxSyncReplicas: 1
+  fullnameOverride: metabase
+  # dbSecretName: "pg-metabase"
+  instances: 3
+  postgresqlParameters:
+    TimeZone: "Europe/Paris"
+    pg_stat_statements.max: "10000"
+    pg_stat_statements.track: all
+    max_standby_archive_delay: 1d
+    max_standby_streaming_delay: 1d
+  extensions:
+    - postgis
+    - postgis_topology
+    - fuzzystrmatch
+    - postgis_tiger_geocoder
+    - uuid-ossp
+    - citext
+    - pgcrypto
+    - hstore
+  monitoring:
+    enablePodMonitor: true
+  persistence:
+    size: 8Gi
+    # pvcTemplate:
+  image:
+    repository: "ghcr.io/cloudnative-pg/postgis"
+    tag: "14"
+
+  resources: {}
+
+  priorityClassName: cnpg-high-priority-3
+
+  backup:
+    enabled: false
+    schedule: "0 0 0 * * *" # daily
+    retentionPolicy: 60d
+    sqlDumpRetentionDays: "60"
+    barmanObjectStore: &barmanObjectStore
+      data:
+        compression: gzip
+      # destinationPath: s3://${startup}-prod-backups/${startup}
+      endpointURL: https://s3.gra.io.cloud.ovh.net
+      s3Credentials:
+        accessKeyId:
+          key: bucket_access_key
+          # name: ${startup}-prod-backups-access-key
+        region:
+          key: bucket_region
+          # name: ${startup}-prod-backups-access-key
+        secretAccessKey:
+          key: bucket_secret_key
+          # name: ${startup}-prod-backups-access-key
+      wal:
+        compression: gzip
+
+  recovery:
+    barmanObjectStore: *barmanObjectStore

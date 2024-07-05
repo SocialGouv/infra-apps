@@ -1,0 +1,96 @@
+envFrom: []
+command:
+  - sh
+  - "-c"
+  - npx @socialgouv/matomo-postgres
+
+matomoKey:
+  secretName: matomo-key
+  secretKey: MATOMO_KEY
+
+pgdatabase:
+  secretName:
+  secretKey: uri
+
+destinationTable: matomo
+matomoSiteId:
+matomoUrl: https://matomo.fabrique.social.gouv.fr
+startDate: "2019-01-01"
+debug: "*"
+
+cnpg-cluster:
+  enabled: true
+  fullnameOverride: metabase-matomo-sync
+  # dbSecretName: "pg-matomo-data"
+  instances: 1
+  minSyncReplicas: 0
+  maxSyncReplicas: 0
+  clusterExtraSpec:
+    enablePDB: false
+    enableSuperuserAccess: true
+  priorityClassName: cnpg-high-priority-3
+  resources:
+    requests:
+      memory: 1G
+      cpu: 100m
+    limits:
+      memory: 1G
+      cpu: "4"
+  # sharedPreloadLibraries:
+  #   - pg_partman_bgw
+  # postgresqlInitCommandsBeforeExtensions:
+  #   - CREATE SCHEMA partman;
+  # postgresqlInitCommands:
+  #   - GRANT ALL ON SCHEMA partman TO app;
+  #   - GRANT ALL ON ALL TABLES IN SCHEMA partman TO app;
+  #   - GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA partman TO app;
+  #   - GRANT EXECUTE ON ALL PROCEDURES IN SCHEMA partman TO app;
+  postgresqlParameters:
+    TimeZone: "Europe/Paris"
+    pg_stat_statements.max: "10000"
+    pg_stat_statements.track: all
+    max_standby_archive_delay: 1d
+    max_standby_streaming_delay: 1d
+  monitoring:
+    enablePodMonitor: true
+  extensions:
+    # - pg_partman
+    - postgis
+    - postgis_topology
+    - fuzzystrmatch
+    - postgis_tiger_geocoder
+    - pgcrypto
+    - citext
+    - hstore
+    - uuid-ossp
+  persistence:
+    size: 8Gi
+    # pvcTemplate:
+  image:
+    repository: "ghcr.io/cloudnative-pg/postgis"
+    tag: "14"
+    # repository: "ghcr.io/socialgouv/docker/cnpg-partman"
+  backup:
+    enabled: false
+    schedule: "0 0 0 * * *" # daily
+    retentionPolicy: 60d
+    sqlDumpRetentionDays: "60"
+    barmanObjectStore: &barmanObjectStore
+      data:
+        compression: gzip
+      # destinationPath: s3://${startup}-prod-backups/${startup}
+      endpointURL: https://s3.gra.io.cloud.ovh.net
+      s3Credentials:
+        accessKeyId:
+          key: bucket_access_key
+          # name: ${startup}-prod-backups-access-key
+        region:
+          key: bucket_region
+          # name: ${startup}-prod-backups-access-key
+        secretAccessKey:
+          key: bucket_secret_key
+          # name: ${startup}-prod-backups-access-key
+      wal:
+        compression: gzip
+  recovery:
+    barmanObjectStore: *barmanObjectStore

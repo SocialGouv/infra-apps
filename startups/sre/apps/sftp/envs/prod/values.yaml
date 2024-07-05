@@ -1,0 +1,64 @@
+sftp:
+
+  persistence:
+    storage:
+      size: 10Gi
+      className: openebs-nfs-hspeed
+  
+  config:
+    storage:
+      size: 5Gi
+      className: openebs-nfs-hspeed
+
+  sftpgo: # https://github.com/sagikazarmark/helm-charts/blob/master/charts/sftpgo/values.yaml
+    enabled: true
+    fullnameOverride: sftp
+
+    services:
+      sftp-public:
+        externalTrafficPolicy: Local
+        # annotations:
+        #   external-dns.alpha.kubernetes.io/hostname: sftpgo.fabrique.social.gouv.fr.
+        type: LoadBalancer
+        ports:
+          sftp:
+            port: 443
+    ui:
+      ingress:
+        enabled: true
+        annotations: &ingressAnnotations
+          kubernetes.io/ingress.class: nginx
+          kubernetes.io/tls-acme: "true"
+          cert-manager.io: cluster-issuer
+          cert-manager.io/cluster-issuer: letsencrypt-prod
+
+        hosts:
+          - host: &host sftpgo.fabrique.social.gouv.fr
+            paths:
+              - path: /
+                pathType: ImplementationSpecific
+        tls:
+          - hosts:
+            - *host
+            secretName: sftp-crt
+    api:
+      ingress:
+        enabled: true
+        annotations: *ingressAnnotations
+        hosts:
+          - host: *host
+            paths:
+              - path: /api/(.*)
+                pathType: ImplementationSpecific
+        tls:
+          - hosts:
+            - *host
+            secretName: sftp-crt
+    
+    resources:
+      limits:
+        cpu: 500m
+        memory: 256Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi

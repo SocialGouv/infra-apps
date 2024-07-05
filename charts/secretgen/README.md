@@ -1,0 +1,1 @@
+see https://github.com/carvel-dev/secretgen-controller/blob/develop/docs/install.md

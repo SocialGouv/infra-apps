@@ -1,0 +1,58 @@
+{{- range $index, $policy := .Values.policies }}
+{{ $apiVersion := (default "apps/v1" $policy.apiVersion) }}
+{{ $kind := (default "Deployment" $policy.kind) }}
+{{ $namespace := (or $policy.namespace $.Values.global.appset.startup) }}
+apiVersion: kyverno.io/v1
+kind: Policy
+metadata:
+  name: mutate-resources-{{ $namespace }}-{{ $kind | lower }}-{{ $index }}
+  namespace: {{ $namespace }}
+spec:
+  background: true
+  validationFailureAction: Enforce
+  mutateExistingOnPolicyUpdate: true
+  rules:
+    - name: mutate-resources-{{ $kind | lower }}
+      skipBackgroundRequests: true
+      match:
+        any:
+        - resources:
+            kinds:
+              - {{ $apiVersion }}/{{ $kind }}
+            selector:
+              matchLabels:
+                {{- range $key, $value := $policy.labels }}
+                {{ $key }}: {{ $value }}
+                {{- end }}
+      mutate:
+        targets:
+          - kind: {{ $kind }}
+            apiVersion: {{ $apiVersion }}
+            namespace: {{ $namespace }}
+        {{- if eq $kind "Cluster" }}
+        patchStrategicMerge:
+          spec:
+            resources:
+              requests:
+                memory: "{{ $policy.resources.requests.memory }}"
+                cpu: "{{ $policy.resources.requests.cpu }}"
+              limits:
+                memory: "{{ $policy.resources.limits.memory }}"
+                cpu: "{{ $policy.resources.limits.cpu }}"
+        {{- else }}
+        patchStrategicMerge:
+          spec:
+            template:
+              spec:
+                containers:
+                  - (name): "*"
+                    resources:
+                      requests:
+                        memory: "{{ $policy.resources.requests.memory }}"
+                        cpu: "{{ $policy.resources.requests.cpu }}"
+                      limits:
+                        memory: "{{ $policy.resources.limits.memory }}"
+                        cpu: "{{ $policy.resources.limits.cpu }}"
+        {{- end }}
+---
+{{- end }}

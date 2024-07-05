@@ -1,0 +1,7 @@
+apiVersion: v2
+name: nfs-provisioner
+version: 1.0.0
+dependencies:
+- name: nfs-provisioner
+  repository: https://openebs.github.io/dynamic-nfs-provisioner
+  version: 0.11.0

@@ -1,0 +1,46 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  annotations:
+  labels:
+    application: pastek-mirror
+    component: pastek-mirror
+  name: pastek-mirror-cronjob
+spec:
+  concurrencyPolicy: Forbid
+  schedule: 0 * * * * # hourly
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            application: pastek-mirror
+            component: pastek-mirror
+          name: pastek-mirror-cronjob
+        spec:
+          containers:
+            - securityContext:
+                allowPrivilegeEscalation: false
+                runAsUser: 1000
+                runAsGroup: 1000
+              command:
+                - "psql"
+                - "-c"
+                - |
+                  REFRESH MATERIALIZED VIEW pastek_1000jours;
+              env:
+                - name: PGHOST
+                  value: $(host)
+                - name: PGUSER
+                  value: "$(username)"
+                - name: PGPASSWORD
+                  value: "$(password)"
+                - name: PGDATABASE
+                  value: app
+              envFrom:
+                - secretRef:
+                    name: pastek-mirror-app
+              image: postgres:15
+              imagePullPolicy: IfNotPresent
+              name: cronjob
+          restartPolicy: OnFailure

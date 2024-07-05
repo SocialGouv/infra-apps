@@ -1,0 +1,14 @@
+#!/bin/bash
+
+trigger_kyverno_for_all_ns () {
+  echo "Adding annotation 'kyverno.socialgouv.github.io/trigger-manual' to all namespaces..."
+  kubectl get namespaces --no-headers -o custom-columns=":metadata.name" | while read namespace; do
+    echo "Adding annotation to '${namespace}'"
+    kubectl annotate namespace "${namespace}" kyverno.socialgouv.github.io/trigger-manual=$(date '+%Y-%m-%d-%H-%M-%S') --overwrite
+  done
+}
+echo "1st pass"
+trigger_kyverno_for_all_ns
+echo "2nd pass"
+trigger_kyverno_for_all_ns
+echo "Operation completed."

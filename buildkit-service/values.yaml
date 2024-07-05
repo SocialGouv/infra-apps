@@ -1,0 +1,17 @@
+buildkit-service:
+  image:
+    tag: "v0.13.2-rootless"
+  resources:
+    requests:
+      cpu: "6"
+      memory: 12Gi
+    limits:
+      cpu: "6"
+      memory: 12Gi
+  init:
+    fixSysctl:
+      enabled: true
+      mode: initContainer
+
+lb:
+  enabled: false

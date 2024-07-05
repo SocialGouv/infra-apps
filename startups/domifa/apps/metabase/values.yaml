@@ -1,0 +1,22 @@
+metabase:
+  enabled: true
+  resources:
+    requests:
+      memory: 2Gi
+
+  fullnameOverride: metabase
+  image:
+    tag: v0.49.6
+  cnpg-cluster:
+    backup:
+      enabled: true
+      barmanObjectStore:
+        destinationPath: s3://domifa-dev-backups/metabase-dev
+        endpointURL: https://s3.gra.io.cloud.ovh.net
+        s3Credentials:
+          accessKeyId:
+            name: &s3secretName domifa-dev-backups-access-key
+          region:
+            name: *s3secretName
+          secretAccessKey:
+            name: *s3secretName

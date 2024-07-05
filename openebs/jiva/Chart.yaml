@@ -1,0 +1,7 @@
+apiVersion: v2
+name: openebs-jiva
+version: 1.0.0
+dependencies:
+- name: jiva
+  repository: https://openebs.github.io/jiva-operator
+  version: 3.6.0

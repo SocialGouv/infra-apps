@@ -1,0 +1,88 @@
+metabase:
+  enabled: true
+  fullnameOverride: metabase
+  ingress:
+    annotations:
+      nginx.ingress.kubernetes.io/proxy-read-timeout: "1800"
+  # resources:
+  #   limits:
+  #     cpu: 2000m
+  #     memory: 4096Mi
+  #   requests:
+  #     cpu: 1000m
+  #     memory: 1024Mi
+  cnpg-cluster:
+    backup:
+      enabled: true
+      barmanObjectStore:
+        destinationPath: s3://les1000jours-prod-backups/metabase-ovh
+        endpointURL: https://s3.gra.io.cloud.ovh.net
+        s3Credentials:
+          accessKeyId:
+            name: &s3secretName les1000jours-prod-backups-access-key
+          region:
+            name: *s3secretName
+          secretAccessKey:
+            name: *s3secretName
+
+metabase-matomo-sync:
+  enabled: true
+  matomoSiteId: 43
+  fullnameOverride: metabase-matomo-sync
+  cnpg-cluster:
+    persistence:
+      size: 20Gi
+    backup:
+      enabled: true
+      barmanObjectStore:
+        destinationPath: s3://les1000jours-prod-backups/metabase-matomo-sync-ovh
+        endpointURL: https://s3.gra.io.cloud.ovh.net
+        s3Credentials:
+          accessKeyId:
+            name: &s3secretName les1000jours-prod-backups-access-key
+          region:
+            name: *s3secretName
+          secretAccessKey:
+            name: *s3secretName
+
+metabase-matomo-sync-preprod:
+  enabled: true
+  matomoSiteId: 46
+  fullnameOverride: metabase-matomo-sync-preprod
+  pgdatabase:
+    secretName: metabase-matomo-sync-app
+  destinationTable: matomo_preprod
+  cnpg-cluster:
+    enabled: false
+
+metabase-matomo-sync-widget:
+  enabled: true
+  matomoSiteId: 60
+  fullnameOverride: metabase-matomo-sync-widget
+  pgdatabase:
+    secretName: metabase-matomo-sync-app
+  destinationTable: matomo_widget
+  cnpg-cluster:
+    enabled: false
+
+metabase-matomo-sync-landing:
+  enabled: true
+  matomoSiteId: 38
+  fullnameOverride: metabase-matomo-sync-landing
+  pgdatabase:
+    secretName: metabase-matomo-sync-app
+  destinationTable: matomo_landing
+  cnpg-cluster:
+    enabled: false
+
+pastek-mirror:
+  enabled: true
+  cnpg-cluster:
+    fullnameOverride: pastek-mirror
+    resources:
+      requests:
+        cpu: 200m
+        memory: 1Gi
+      limits:
+        cpu: 200m
+        memory: 1Gi

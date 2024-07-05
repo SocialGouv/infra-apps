@@ -1,0 +1,40 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: resources-startups
+spec:
+  generators:
+    - plugin:
+        configMapRef:
+          name: appset-rancher-projects-plugin
+  goTemplate: true
+  template:
+    metadata:
+      name: "resources-startups-{{ .cluster }}"
+    spec:
+      destination:
+        name: "{{ .cluster }}"
+      project: default
+      source:
+        repoURL: git@github.com/SocialGouv/manifests.git
+        targetRevision: master
+        path: "resources-startups"
+        helm:
+          values: |
+            rancherProjects: {{ toJson .projects }}
+          valueFiles:
+            - "values.yaml"
+            - "values.{{ .cluster }}.yaml"
+      syncPolicy:
+        syncOptions:
+          - Force=true
+          - Replace=true
+        automated:
+          prune: true
+          selfHeal: false
+        retry:
+          limit: 5
+          backoff:
+            duration: 5s
+            factor: 2
+            maxDuration: 3m

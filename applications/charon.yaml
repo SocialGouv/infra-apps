@@ -1,0 +1,56 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: charon
+spec:
+  generators:
+    - list:
+        elements:
+          - name: charon-secretariat
+            cluster: ovh-dev
+            namespace: charon-secretariat
+          - name: charon-carnets
+            cluster: ovh-dev
+            namespace: charon-carnets
+          - name: charon-egapro
+            cluster: ovh-dev
+            namespace: charon-egapro
+          - name: charon-pgadmin
+            cluster: ovh-dev
+            namespace: charon-pgadmin
+
+  goTemplate: true
+  template:
+    metadata:
+      name: "{{ .name }}"
+      annotations:
+        argocd.argoproj.io/manifest-generate-paths: .
+        notifications.argoproj.io/subscribe.mattermost: moojipgstjgsixs6mgycxpe5ua
+      labels:
+    spec:
+      destination:
+        name: "{{ .cluster }}"
+        namespace: "{{ .namespace }}"
+      project: default
+      source:
+        repoURL: git@github.com/SocialGouv/manifests.git
+        targetRevision: master
+        path: "charon"
+        directory:
+          recurse: true
+          include: "{charon.yaml,projects/{{ .name }}/*}"
+      syncPolicy:
+        managedNamespaceMetadata:
+          labels:
+            cert: wildcard
+        syncOptions:
+          - CreateNamespace=true
+        automated:
+          prune: false
+          selfHeal: false
+        retry:
+          limit: 5
+          backoff:
+            duration: 5s
+            factor: 2
+            maxDuration: 3m

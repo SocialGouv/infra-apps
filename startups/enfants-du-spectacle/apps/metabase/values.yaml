@@ -1,0 +1,34 @@
+metabase:
+  enabled: true
+  fullnameOverride: metabase
+  cnpg-cluster:
+    backup:
+      enabled: true
+      barmanObjectStore: &barmanObjectStore
+        destinationPath: s3://enfants-du-spectacle-prod-backups/enfants-du-spectacle-202403041739
+        s3Credentials:
+          accessKeyId:
+            name: &s3secretName enfants-du-spectacle-prod-backups-access-key
+          region:
+            name: *s3secretName
+          secretAccessKey:
+            name: *s3secretName
+    recovery:
+      enabled: true
+      barmanObjectStore:
+        <<: *barmanObjectStore
+        serverName: pg-metabase
+        destinationPath: s3://enfants-du-spectacle-prod-backups/enfants-du-spectacle
+
+oauth2-proxy:
+  fullnameOverride: oauth2-proxy
+  enabled: true
+  upstream: http://metabase
+  envFrom:
+    - configMapRef:
+        name: oauth2-proxy-configmap
+    - secretRef:
+        name: oauth2-proxy-sealed-secret
+  additionalArgs:
+    - --skip-auth-route
+    - ^/public/.*,^/app/dist/.*,^/api/public/.*,^/api/session/.*,^/app/assets/.*

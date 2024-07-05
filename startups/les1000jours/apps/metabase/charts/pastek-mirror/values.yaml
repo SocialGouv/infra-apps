@@ -1,0 +1,72 @@
+cnpg-cluster:
+  enabled: true
+  instances: 3
+  name: pastek-mirror
+  labels:
+    application: pastek-mirror
+  postgresqlParameters:
+    TimeZone: "Europe/Paris"
+    work_mem: 16MB
+  extensions:
+    - postgis
+    - postgis_topology
+    - fuzzystrmatch
+    - postgis_tiger_geocoder
+    - uuid-ossp
+    - citext
+    - pgcrypto
+    - hstore
+  monitoring:
+    enablePodMonitor: true
+  persistence:
+    size: 20Gi
+  resources:
+    requests:
+      cpu: "1"
+      memory: 2Gi
+    limits:
+      cpu: "1"
+      memory: 2Gi
+  image:
+    repository: "ghcr.io/cloudnative-pg/postgis"
+    tag: "14"
+  backup:
+    enabled: true
+    schedule: "0 0 0 * * *" # daily
+    retentionPolicy: 30d
+    barmanObjectStore:
+      endpointURL: https://s3.gra.io.cloud.ovh.net
+      destinationPath: s3://argocd-sre-cnpg-clusters/backups
+      s3Credentials:
+        accessKeyId:
+          name: pastek-mirror-cnpg-s3-creds
+          key: bucket_access_key
+        secretAccessKey:
+          name: pastek-mirror-cnpg-s3-creds
+          key: bucket_secret_key
+        region:
+          name: pastek-mirror-cnpg-s3-creds
+          key: bucket_region
+      wal:
+        compression: gzip
+      data:
+        compression: gzip
+
+  recovery:
+    enabled: false
+    barmanObjectStore:
+      destinationPath: s3://argocd-sre-cnpg-clusters/backups
+      endpointURL: https://s3.gra.io.cloud.ovh.net
+      s3Credentials:
+        accessKeyId:
+          name: s3-creds
+          key: bucket_access_key
+        secretAccessKey:
+          name: s3-creds
+          key: bucket_secret_key
+        region:
+          name: s3-creds
+          key: bucket_region
+      data:
+        compression: gzip
+

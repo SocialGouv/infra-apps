@@ -1,0 +1,16 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: arc-runners
+spec:
+  project: default
+  destination:
+    name: ovh-dev
+    namespace: arc-runners
+  source:
+    path: arc-runners
+    repoURL: "git@github.com:SocialGouv/manifests.git"
+    targetRevision: master
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true

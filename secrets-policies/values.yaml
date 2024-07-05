@@ -1,0 +1,11 @@
+projects: {}
+
+sreSecretsList:
+  - matomo-key
+
+commonSecretsListToCI:
+  - namespace: buildkit-service
+    name: buildkit-client-certs
+
+sreShareableSecretList:
+  - pgadmin-oauth2-proxy

@@ -1,0 +1,21 @@
+image:
+  repository: ghcr.io/socialgouv/infra-as-blueprint
+  tag: latest
+
+config: {}
+
+resources:
+  limits:
+    cpu: "2"
+    memory: 2Gi
+  requests:
+    cpu: 200m
+    memory: 256Mi
+
+backoffLimit: 0
+
+suspend: true
+
+schedule: "0 0 * * *" # every day at 00:00
+# ttlSecondsAfterFinished: 86400 # daily
+ttlSecondsAfterFinished: 1800

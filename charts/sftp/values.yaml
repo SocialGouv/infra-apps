@@ -1,0 +1,77 @@
+persistence:
+  storage:
+    size: 10Gi
+    className:
+
+config:
+  storage:
+    size: 5Gi
+    className:
+
+sftpgo: # https://github.com/sagikazarmark/helm-charts/blob/master/charts/sftpgo/values.yaml
+  enabled: true
+  volumes:
+    - name: data
+      persistentVolumeClaim:
+        claimName: sftp-data
+  volumeMounts:
+    - name: data
+      mountPath: /data
+  envVars:
+    - name: SFTPGO_DATA_PROVIDER__DRIVER
+      value: postgresql
+    - name: SFTPGO_DATA_PROVIDER__NAME
+      valueFrom:
+        secretKeyRef:
+          name: pg-sftp-app
+          key: dbname
+    - name: SFTPGO_DATA_PROVIDER__HOST
+      valueFrom:
+        secretKeyRef:
+          name: pg-sftp-app
+          key: host
+    - name: SFTPGO_DATA_PROVIDER__PORT
+      valueFrom:
+        secretKeyRef:
+          name: pg-sftp-app
+          key: port
+    - name: SFTPGO_DATA_PROVIDER__USERNAME
+      valueFrom:
+        secretKeyRef:
+          name: pg-sftp-app
+          key: user
+    - name: SFTPGO_DATA_PROVIDER__PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: pg-sftp-app
+          key: password
+
+cnpg-cluster:
+  enabled: true
+  fullnameOverride: pg-sftp
+  instances: 1
+  minSyncReplicas: 0
+  maxSyncReplicas: 0
+  clusterExtraSpec:
+    enablePDB: false
+  priorityClassName: cnpg-high-priority-3
+  resources:
+    requests:
+      memory: 1G
+      cpu: 256m
+    limits:
+      memory: 1G
+      cpu: 512m
+  postgresqlParameters:
+    TimeZone: "Europe/Paris"
+    pg_stat_statements.max: "10000"
+    pg_stat_statements.track: all
+    max_standby_archive_delay: 1d
+    max_standby_streaming_delay: 1d
+  monitoring:
+    enablePodMonitor: true
+  persistence:
+    size: 8Gi
+  image:
+    repository: "ghcr.io/cloudnative-pg/postgis"
+    tag: "14"

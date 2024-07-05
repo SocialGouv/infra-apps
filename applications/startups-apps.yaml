@@ -1,0 +1,60 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: startups-apps
+spec:
+  goTemplate: true
+  generators:
+    - git:
+        # https://argo-cd.readthedocs.io/en/stable/operator-manual/applicationset/GoTemplate/#git-generators
+        # pathParamPrefix: env
+        repoURL: git@github.com/SocialGouv/manifests.git
+        revision: master
+        files:
+          - path: "startups/*/apps/*/envs/*/config.yaml"
+        values:
+          startup: "{{ index .path.segments 1 }}"
+          app: "{{ index .path.segments 3 }}"
+          env: "{{ index .path.segments 5 }}"
+  template:
+    metadata:
+      name: "startup-{{ .values.startup }}--{{ .values.app }}-{{ .values.env }}"
+      annotations:
+        argocd.argoproj.io/manifest-generate-paths: .
+      # labels:
+    spec:
+      destination:
+        name: "{{ .cluster }}"
+        namespace: "startup-{{ .values.startup }}--{{ .values.app }}-{{ .values.env }}"
+      project: default
+      source:
+        repoURL: git@github.com/SocialGouv/manifests.git
+        targetRevision: master
+        path: "startups/{{ .values.startup }}/apps/{{ .values.app }}"
+        helm:
+          valueFiles:
+            - "envs/{{ .values.env }}/values.yaml"
+          values: |
+            global:
+              appset:
+                env: "{{ .values.env }}"
+                cluster: "{{ .cluster }}"
+                startup: "{{ .values.startup }}"
+      ignoreDifferences:
+        - group: kyverno.io
+          kind: ClusterPolicy
+          jqPathExpressions:
+            - .spec.rules[] | select(.name|test("autogen-."))
+      syncPolicy:
+        syncOptions:
+          - CreateNamespace=false
+          - Replace=false
+        # automated:
+        #   selfHeal: false
+        #   # prune: true
+        retry:
+          limit: 5
+          backoff:
+            duration: 5s
+            factor: 2
+            maxDuration: 3m

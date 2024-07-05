@@ -1,0 +1,6 @@
+jiva:
+  defaultPolicy:
+    # replicaSC: csi-cinder-high-speed
+    # # defaults:
+    # replicaSC: openebs-hostpath
+    # replicas: 3
