@@ -145,9 +145,11 @@ subjects:
   - kind: ServiceAccount
     name: vpa-recommender
     namespace: kube-system
+  {{ if .Values.updateEnabled }}
   - kind: ServiceAccount
     name: vpa-updater
     namespace: kube-system
+  {{ end }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -228,13 +230,16 @@ subjects:
   - kind: ServiceAccount
     name: vpa-recommender
     namespace: kube-system
+  {{ if .Values.updateEnabled }}
   - kind: ServiceAccount
     name: vpa-admission-controller
     namespace: kube-system
   - kind: ServiceAccount
     name: vpa-updater
     namespace: kube-system
+  {{ end }}
 ---
+{{ if .Values.updateEnabled }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
@@ -253,6 +258,7 @@ kind: ServiceAccount
 metadata:
   name: vpa-admission-controller
   namespace: kube-system
+{{ end }}
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -260,6 +266,7 @@ metadata:
   name: vpa-recommender
   namespace: kube-system
 ---
+{{ if .Values.updateEnabled }}
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -357,3 +364,4 @@ subjects:
   - kind: ServiceAccount
     name: vpa-updater
     namespace: kube-system
+{{ end }}

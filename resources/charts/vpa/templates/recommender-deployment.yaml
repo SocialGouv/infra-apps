@@ -20,15 +20,10 @@ spec:
         runAsUser: 65534 # nobody
       containers:
         - name: recommender
-          image: registry.k8s.io/autoscaling/vpa-recommender:1.1.2
-          imagePullPolicy: Always
+          image: {{ .Values.recommender.image.repository }}:{{ .Values.recommender.image.tag }}
+          imagePullPolicy: {{ .Values.updater.image.pullPolicy }}
           resources:
-            limits:
-              cpu: 200m
-              memory: 1000Mi
-            requests:
-              cpu: 50m
-              memory: 500Mi
+            {{- toYaml .Values.recommender.resources | nindent 12 }}
           ports:
             - name: prometheus
               containerPort: 8942

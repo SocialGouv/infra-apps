@@ -1,16 +1,19 @@
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
 metadata:
-  name: resources-startups
+  name: resources
 spec:
   generators:
-    - plugin:
-        configMapRef:
-          name: appset-rancher-projects-plugin
+    - list:
+        elements:
+          - name: resources-dev
+            cluster: ovh-dev
+          - name: resources-prod
+            cluster: ovh-prod
   goTemplate: true
   template:
     metadata:
-      name: "resources-startups-{{ .cluster }}"
+      name: "{{ .name }}"
     spec:
       destination:
         name: "{{ .cluster }}"
@@ -18,10 +21,8 @@ spec:
       source:
         repoURL: https://github.com/SocialGouv/infra-apps.git
         targetRevision: master
-        path: "resources-startups"
+        path: "resources"
         helm:
-          values: |
-            rancherProjects: {{ toJson .projects }}
           valueFiles:
             - "values.yaml"
             - "values.{{ .cluster }}.yaml"

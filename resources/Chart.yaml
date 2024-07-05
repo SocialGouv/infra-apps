@@ -1,0 +1,9 @@
+apiVersion: v2
+name: resources
+version: 0.1.0
+description: A Helm chart for resources
+dependencies:
+  - name: vpa
+    version: 0.0.0
+    repository: file://./charts/vpa
+    condition: vpa.enabled
