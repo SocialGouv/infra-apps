@@ -1,0 +1,12 @@
+metabase:
+  annotations:
+    oblik.socialgouv.io/enabled: "true"
+  host: metabase-prod-domifa.ovh.fabrique.social.gouv.fr
+  ingress:
+    annotations:
+      cert-manager.io: cluster-issuer
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+      kubernetes.io/tls-acme: true
+
+final-appset:
+  importSecretsFromStartup: true
