@@ -23,7 +23,11 @@ envFrom: []
 secretName: metabase
 ingress:
   enabled: true
-  annotations: {}
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "30"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "1800"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "1800"
+    nginx.ingress.kubernetes.io/proxy-body-size: 8m
 annotations:
   oblik.socialgouv.io/request-memory-apply-mode: "off" # because metabase is JVM and memory recommendation is incompatible with JVM
   oblik.socialgouv.io/min-limit-cpu: "500m" # consumming is high at startup
