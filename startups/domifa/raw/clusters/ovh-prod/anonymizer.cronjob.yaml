@@ -37,27 +37,27 @@ spec:
                   valueFrom:
                     secretKeyRef:
                       key: bucket_access_key
-                      name: domifa-dev-backups-access-key
+                      name: domifa-prod-backups-access-key
                 - name: AWS_SECRET_ACCESS_KEY
                   valueFrom:
                     secretKeyRef:
                       key: bucket_secret_key
-                      name: domifa-dev-backups-access-key
+                      name: domifa-prod-backups-access-key
                 - name: AWS_BUCKET_NAME
                   valueFrom:
                     secretKeyRef:
                       key: bucket_name
-                      name: domifa-dev-backups-access-key
+                      name: domifa-prod-backups-access-key
                 - name: AWS_DEFAULT_REGION
                   valueFrom:
                     secretKeyRef:
                       key: bucket_region
-                      name: domifa-dev-backups-access-key
+                      name: domifa-prod-backups-access-key
                 - name: AWS_ENDPOINT_URL
                   valueFrom:
                     secretKeyRef:
                       key: bucket_endpoint
-                      name: domifa-dev-backups-access-key
+                      name: domifa-prod-backups-access-key
               volumeMounts:
                 - name: workspace
                   mountPath: /workspace
@@ -67,7 +67,7 @@ spec:
                 - |
                   cd /workspace/.anonymizer
                   ./anonymize-prod.sh
-                  aws s3 cp --recursive /tmp/pg_dump/ s3://domifa-dev-backups/anonymizer/pg_dumps/
+                  aws s3 cp --recursive /tmp/pg_dump/ s3://domifa-prod-backups/anonymizer/pg_dumps/
           initContainers:
             - name: degit-repository
               image: ghcr.io/socialgouv/kontinuous/degit:v1.169.11
@@ -76,7 +76,7 @@ spec:
                 - sh
                 - -c
                 - |
-                  degit --disable-cache --verbose --mode=git https://github.com/SocialGouv/domifa.git#chore/anonymisation-pipeline /workspace
+                  degit --disable-cache --verbose --mode=git https://github.com/SocialGouv/domifa.git /workspace
               securityContext:
                 runAsUser: 1000
                 runAsGroup: 1000
