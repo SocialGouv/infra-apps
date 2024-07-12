@@ -11,8 +11,6 @@ metabase:
     recovery:
       enabled: true
       barmanObjectStore:
-        data:
-          compression: gzip
         destinationPath: s3://domifa-dev-backups/metabase-dev
         endpointURL: https://s3.gra.io.cloud.ovh.net
         s3Credentials:
@@ -25,8 +23,6 @@ metabase:
           secretAccessKey:
             key: bucket_secret_key
             name: domifa-dev-backups-access-key
-        wal:
-          compression: gzip
     backup:
       enabled: false
       barmanObjectStore:
