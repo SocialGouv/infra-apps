@@ -4,11 +4,11 @@ metadata:
   namespace: domifa
   name: cron-anonymizer
 spec:
-  suspend: true
+  suspend: false
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 3
   failedJobsHistoryLimit: 3
-  schedule: 0 * * * *
+  schedule: 0 0 * * *
   jobTemplate:
     spec:
       backoffLimit: 0
