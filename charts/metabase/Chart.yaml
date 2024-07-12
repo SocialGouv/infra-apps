@@ -6,6 +6,6 @@ dependencies:
     version: 0.0.0
     repository: file://./charts/common
   - name: cnpg-cluster
-    version: 1.23.0
+    version: 1.29.3
     repository: https://socialgouv.github.io/helm-charts
     condition: cnpg-cluster.enabled
