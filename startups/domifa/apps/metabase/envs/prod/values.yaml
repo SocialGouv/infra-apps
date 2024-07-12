@@ -27,18 +27,18 @@ metabase:
             name: domifa-dev-backups-access-key
         wal:
           compression: gzip
-    # backup:
-    #   enabled: true
-    #   barmanObjectStore:
-    #     destinationPath: s3://domifa-prod-backups/metabase-prod
-    #     endpointURL: https://s3.gra.io.cloud.ovh.net
-    #     s3Credentials:
-    #       accessKeyId:
-    #         name: &s3secretName domifa-prod-backups-access-key
-    #       region:
-    #         name: *s3secretName
-    #       secretAccessKey:
-    #         name: *s3secretName
+    backup:
+      enabled: false
+      barmanObjectStore:
+        destinationPath: s3://domifa-prod-backups/metabase-prod
+        endpointURL: https://s3.gra.io.cloud.ovh.net
+        s3Credentials:
+          accessKeyId:
+            name: &s3secretName domifa-prod-backups-access-key
+          region:
+            name: *s3secretName
+          secretAccessKey:
+            name: *s3secretName
 
 final-appset:
   importSecretsFromStartup: true
