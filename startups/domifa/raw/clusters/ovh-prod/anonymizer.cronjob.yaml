@@ -58,6 +58,31 @@ spec:
                     secretKeyRef:
                       key: bucket_endpoint
                       name: domifa-prod-backups-access-key
+                - name: AWS_ACCESS_KEY_ID_DEV
+                  valueFrom:
+                    secretKeyRef:
+                      key: bucket_access_key
+                      name: domifa-dev-backups-access-key
+                - name: AWS_SECRET_ACCESS_KEY_DEV
+                  valueFrom:
+                    secretKeyRef:
+                      key: bucket_secret_key
+                      name: domifa-dev-backups-access-key
+                - name: AWS_BUCKET_NAME_DEV
+                  valueFrom:
+                    secretKeyRef:
+                      key: bucket_name
+                      name: domifa-dev-backups-access-key
+                - name: AWS_DEFAULT_REGION_DEV
+                  valueFrom:
+                    secretKeyRef:
+                      key: bucket_region
+                      name: domifa-dev-backups-access-key
+                - name: AWS_ENDPOINT_URL_DEV
+                  valueFrom:
+                    secretKeyRef:
+                      key: bucket_endpoint
+                      name: domifa-dev-backups-access-key
               volumeMounts:
                 - name: workspace
                   mountPath: /workspace
@@ -68,6 +93,12 @@ spec:
                   cd /workspace/.anonymizer
                   ./anonymize-prod.sh
                   aws s3 cp --recursive /tmp/pg_dump/ s3://domifa-prod-backups/anonymizer/pg_dumps/
+                  AWS_ENDPOINT_URL=$AWS_ENDPOINT_URL_DEV \
+                    AWS_DEFAULT_REGION=$AWS_DEFAULT_REGION_DEV \
+                    AWS_BUCKET_NAME=$AWS_BUCKET_NAME_DEV \
+                    AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY_DEV \
+                    AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID_DEV \
+                    aws s3 cp --recursive /tmp/pg_dump/ s3://domifa-dev-backups/anonymizer/pg_dumps/
           initContainers:
             - name: degit-repository
               image: ghcr.io/socialgouv/kontinuous/degit:v1.169.11
