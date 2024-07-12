@@ -8,18 +8,37 @@ metabase:
       cert-manager.io/cluster-issuer: letsencrypt-prod
       kubernetes.io/tls-acme: true
   cnpg-cluster:
-    backup:
+    recovery:
       enabled: true
       barmanObjectStore:
-        destinationPath: s3://domifa-prod-backups/metabase-prod
+        data:
+          compression: gzip
+        destinationPath: s3://domifa-dev-backups/metabase-dev
         endpointURL: https://s3.gra.io.cloud.ovh.net
         s3Credentials:
           accessKeyId:
-            name: &s3secretName domifa-prod-backups-access-key
+            key: bucket_access_key
+            name: domifa-dev-backups-access-key
           region:
-            name: *s3secretName
+            key: bucket_region
+            name: domifa-dev-backups-access-key
           secretAccessKey:
-            name: *s3secretName
+            key: bucket_secret_key
+            name: domifa-dev-backups-access-key
+        wal:
+          compression: gzip
+    # backup:
+    #   enabled: true
+    #   barmanObjectStore:
+    #     destinationPath: s3://domifa-prod-backups/metabase-prod
+    #     endpointURL: https://s3.gra.io.cloud.ovh.net
+    #     s3Credentials:
+    #       accessKeyId:
+    #         name: &s3secretName domifa-prod-backups-access-key
+    #       region:
+    #         name: *s3secretName
+    #       secretAccessKey:
+    #         name: *s3secretName
 
 final-appset:
   importSecretsFromStartup: true
