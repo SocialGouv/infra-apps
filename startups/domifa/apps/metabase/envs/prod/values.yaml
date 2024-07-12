@@ -10,6 +10,7 @@ metabase:
   cnpg-cluster:
     recovery:
       enabled: true
+      externalClusterName: metabase
       barmanObjectStore:
         destinationPath: s3://domifa-dev-backups/metabase-dev
         endpointURL: https://s3.gra.io.cloud.ovh.net
