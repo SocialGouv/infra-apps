@@ -9,7 +9,7 @@ metabase:
       kubernetes.io/tls-acme: true
   cnpg-cluster:
     backup:
-      enabled: false
+      enabled: true
       barmanObjectStore:
         destinationPath: s3://domifa-prod-backups/metabase-20240712
         endpointURL: https://s3.gra.io.cloud.ovh.net
