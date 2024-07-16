@@ -19,7 +19,7 @@ spec:
         app: charon
     spec:
       containers:
-        - image: lsagetlethias/charon:latest
+        - image: lsagetlethias/charon:main
           name: app
           ports:
             - containerPort: 3000
