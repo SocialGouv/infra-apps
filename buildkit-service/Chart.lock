@@ -1,9 +1,9 @@
 dependencies:
 - name: buildkit-service
   repository: https://socialgouv.github.io/helm-charts
-  version: 1.29.1
+  version: 1.30.0
 - name: 3s
   repository: file://./charts/3s
   version: 0.1.0
-digest: sha256:06f724ba055c98954471925231485697249b61846160fa4c368088191c58388d
-generated: "2024-05-14T11:59:41.084223269+02:00"
+digest: sha256:fd9cdf537ae3018cc7d1215a25cee757389be26fe891ad6e049b2721632f6d59
+generated: "2024-09-17T19:26:29.265026592+02:00"

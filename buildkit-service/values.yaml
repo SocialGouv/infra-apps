@@ -12,6 +12,9 @@ buildkit-service:
     fixSysctl:
       enabled: true
       mode: initContainer
+  dns:
+    enabled: true
+    nameservers: ["1.1.1.1","8.8.8.8"]
 
 lb:
   enabled: false
