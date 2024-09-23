@@ -61,6 +61,8 @@ graph LR
 
 ### secrets from ci namespace to startup's namespaces
 
+#### deprecated and replaced back by kontinuous for performance reasons
+
 
 policy: **sync-secrets-from-ci-ns**
 
