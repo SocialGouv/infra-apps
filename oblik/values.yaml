@@ -1,7 +1,16 @@
+replicas: 3
+
 image:
   repository: ghcr.io/socialgouv/oblik
-  tag:
-  pullPolicy:
+  tag: 
+  pullPolicy: 
+
+webhook:
+  enabled: true
+  failurePolicy: Fail # Fail or Ignore
+
+existingSecret: 
+
 resources:
   requests:
     cpu: 80m
@@ -9,7 +18,9 @@ resources:
   limits:
     cpu: 80m
     memory: 262144k
-existingSecret:
+
+annotations: {}
+
 env:
   OBLIK_DEFAULT_CRON: "0 0,2,4 * * *" # UTC
   OBLIK_DEFAULT_CRON_ADD_RANDOM_MAX: 60m
