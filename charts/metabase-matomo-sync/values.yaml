@@ -73,8 +73,8 @@ cnpg-cluster:
   backup:
     enabled: false
     schedule: "0 0 0 * * *" # daily
-    retentionPolicy: 7d
-    sqlDumpRetentionDays: "7"
+    retentionPolicy: 60d
+    sqlDumpRetentionDays: "60"
     barmanObjectStore: &barmanObjectStore
       data:
         compression: gzip
