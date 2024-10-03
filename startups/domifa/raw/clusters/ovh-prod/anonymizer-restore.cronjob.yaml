@@ -11,101 +11,104 @@ spec:
   schedule: 0 3 * * *
   jobTemplate:
     spec:
-      containers:
-        - command:
-            - /bin/bash
-            - -c
-            - |
-              set -e
-              set -e
-              root_path=domifa-prod-backups/anonymizer/pg_dumps
-              last_dir=$(aws s3 ls s3://$root_path --recursive | awk '{print $4}' | cut -d "/" -f3 | tail -n 1)
-              echo "Restoring $last_dir"
-              aws s3 cp --recursive s3://$root_path/$last_dir /tmp/dump/$last_dir
-              export PGSSLMODE=require
-              pg_restore -h postgresql-77eca822-od41f3361.database.cloud.ovh.net -p 20184 --clean --if-exists --no-owner --role=$PGUSERAPP --no-acl --verbose /tmp/dump/$last_dir --dbname defaultdb
-          env:
-            - name: AWS_ACCESS_KEY_ID
-              valueFrom:
-                secretKeyRef:
-                  key: bucket_access_key
-                  name: domifa-prod-backups-access-key
-            - name: AWS_SECRET_ACCESS_KEY
-              valueFrom:
-                secretKeyRef:
-                  key: bucket_secret_key
-                  name: domifa-prod-backups-access-key
-            - name: AWS_DEFAULT_REGION
-              valueFrom:
-                secretKeyRef:
-                  key: bucket_region
-                  name: domifa-prod-backups-access-key
-            - name: AWS_ENDPOINT_URL
-              valueFrom:
-                secretKeyRef:
-                  key: bucket_endpoint
-                  name: domifa-prod-backups-access-key
-            - name: PGUSER
-              valueFrom:
-                secretKeyRef:
-                  key: ADMIN_PG_USER
-                  name: managed-db-admin-anonymous
-            - name: PGPASSWORD
-              valueFrom:
-                secretKeyRef:
-                  key: ADMIN_PG_PASSWORD
-                  name: managed-db-admin-anonymous
-            - name: PGUSERAPP
-              valueFrom:
-                secretKeyRef:
-                  key: PGUSER
-                  name: managed-db-admin-anonymous
-          envFrom:
-            - secretRef:
-                name: domifa-prod-backups-access-key
-            - secretRef:
-                name: managed-db-admin-anonymous
-          image: ghcr.io/socialgouv/docker/s3-client:sha-d43374e
-          imagePullPolicy: Always
-          name: anonymizer-restore
-          resources:
-            limits:
-              cpu: "1"
-              memory: 4Gi
-            requests:
-              cpu: "1"
-              memory: 4Gi
+      backoffLimit: 0
+      template:
+        spec:
+          containers:
+            - command:
+                - /bin/bash
+                - -c
+                - |
+                  set -e
+                  set -e
+                  root_path=domifa-prod-backups/anonymizer/pg_dumps
+                  last_dir=$(aws s3 ls s3://$root_path --recursive | awk '{print $4}' | cut -d "/" -f3 | tail -n 1)
+                  echo "Restoring $last_dir"
+                  aws s3 cp --recursive s3://$root_path/$last_dir /tmp/dump/$last_dir
+                  export PGSSLMODE=require
+                  pg_restore -h postgresql-77eca822-od41f3361.database.cloud.ovh.net -p 20184 --clean --if-exists --no-owner --role=$PGUSERAPP --no-acl --verbose /tmp/dump/$last_dir --dbname defaultdb
+              env:
+                - name: AWS_ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef:
+                      key: bucket_access_key
+                      name: domifa-prod-backups-access-key
+                - name: AWS_SECRET_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      key: bucket_secret_key
+                      name: domifa-prod-backups-access-key
+                - name: AWS_DEFAULT_REGION
+                  valueFrom:
+                    secretKeyRef:
+                      key: bucket_region
+                      name: domifa-prod-backups-access-key
+                - name: AWS_ENDPOINT_URL
+                  valueFrom:
+                    secretKeyRef:
+                      key: bucket_endpoint
+                      name: domifa-prod-backups-access-key
+                - name: PGUSER
+                  valueFrom:
+                    secretKeyRef:
+                      key: ADMIN_PG_USER
+                      name: managed-db-admin-anonymous
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      key: ADMIN_PG_PASSWORD
+                      name: managed-db-admin-anonymous
+                - name: PGUSERAPP
+                  valueFrom:
+                    secretKeyRef:
+                      key: PGUSER
+                      name: managed-db-admin-anonymous
+              envFrom:
+                - secretRef:
+                    name: domifa-prod-backups-access-key
+                - secretRef:
+                    name: managed-db-admin-anonymous
+              image: ghcr.io/socialgouv/docker/s3-client:sha-d43374e
+              imagePullPolicy: Always
+              name: anonymizer-restore
+              resources:
+                limits:
+                  cpu: "1"
+                  memory: 4Gi
+                requests:
+                  cpu: "1"
+                  memory: 4Gi
+              securityContext:
+                runAsGroup: 1001
+                runAsUser: 1001
+              volumeMounts:
+                - mountPath: /workspace
+                  name: workspace
+          initContainers:
+            - command:
+                - sh
+                - -c
+                - |2
+                  degit --disable-cache SocialGouv/domifa#master \
+                    /workspace
+              image: ghcr.io/socialgouv/kontinuous/degit:v1
+              imagePullPolicy: Always
+              name: degit-repository
+              resources:
+                limits:
+                  cpu: 500m
+                  memory: 1Gi
+                requests:
+                  cpu: 500m
+                  memory: 1Gi
+              securityContext:
+                runAsGroup: 1000
+                runAsUser: 1000
+              volumeMounts:
+                - mountPath: /workspace
+                  name: workspace
           securityContext:
-            runAsGroup: 1001
-            runAsUser: 1001
-          volumeMounts:
-            - mountPath: /workspace
+            fsGroup: 1001
+          volumes:
+            - emptyDir: {}
               name: workspace
-      initContainers:
-        - command:
-            - sh
-            - -c
-            - |2
-              degit --disable-cache SocialGouv/domifa#master \
-                /workspace
-          image: ghcr.io/socialgouv/kontinuous/degit:v1
-          imagePullPolicy: Always
-          name: degit-repository
-          resources:
-            limits:
-              cpu: 500m
-              memory: 1Gi
-            requests:
-              cpu: 500m
-              memory: 1Gi
-          securityContext:
-            runAsGroup: 1000
-            runAsUser: 1000
-          volumeMounts:
-            - mountPath: /workspace
-              name: workspace
-      securityContext:
-        fsGroup: 1001
-      volumes:
-        - emptyDir: {}
-          name: workspace
