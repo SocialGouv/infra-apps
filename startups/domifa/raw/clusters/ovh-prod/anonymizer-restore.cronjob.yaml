@@ -14,6 +14,7 @@ spec:
       backoffLimit: 0
       template:
         spec:
+          restartPolicy: Never
           containers:
             - command:
                 - /bin/bash
