@@ -2,7 +2,7 @@ apiVersion: batch/v1
 kind: CronJob
 metadata:
   namespace: domifa
-  name: cron-anonymizer
+  name: anonymizer-dump
 spec:
   suspend: false
   concurrencyPolicy: Forbid
@@ -20,7 +20,7 @@ spec:
             runAsUser: 1000
             runAsGroup: 1000
           containers:
-            - name: anonymizer
+            - name: anonymizer-dump
               image: ghcr.io/socialgouv/docker/greenmask:1.1.4
               resources:
                 requests:
