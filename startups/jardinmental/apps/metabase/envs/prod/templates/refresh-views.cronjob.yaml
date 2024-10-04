@@ -1,0 +1,75 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  labels:
+    application: jardinmental
+  name: refresh-views
+  namespace: startup-jardinmental--metabase-prod
+spec:
+  schedule: 0 * * * *
+  successfulJobsHistoryLimit: 3
+  suspend: false
+  concurrencyPolicy: Forbid
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            application: jardinmental
+          name: jardinmental-cronjob-refresh-views
+        spec:
+          containers:
+          - command:
+            - psql
+            - -c
+            - |
+              REFRESH MATERIALIZED VIEW dau_wau_mau;
+              REFRESH MATERIALIZED VIEW engages;
+              REFRESH MATERIALIZED VIEW ouverts;
+              REFRESH MATERIALIZED VIEW ouvertures;
+              REFRESH MATERIALIZED VIEW petits_engages;
+            env:
+            - name: PGDATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: metabase-matomo-sync-app
+                  key: dbname
+            - name: PGHOST
+              valueFrom:
+                secretKeyRef:
+                  name: metabase-matomo-sync-app
+                  key: host
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: metabase-matomo-sync-app
+                  key: password
+            - name: PGPORT
+              valueFrom:
+                secretKeyRef:
+                  name: metabase-matomo-sync-app
+                  key: port
+            - name: PGURL
+              valueFrom:
+                secretKeyRef:
+                  name: metabase-matomo-sync-app
+                  key: jdbc-uri
+            - name: PGUSER
+              valueFrom:
+                secretKeyRef:
+                  name: metabase-matomo-sync-app
+                  key: username
+            image: ghcr.io/socialgouv/docker/psql
+            imagePullPolicy: IfNotPresent
+            name: cronjob
+            securityContext:
+              allowPrivilegeEscalation: false
+            resources:
+              requests:
+                cpu: 20m
+                memory: 32Mi
+              limits:
+                cpu: 20m
+                memory: 32Mi
+          restartPolicy: OnFailure
