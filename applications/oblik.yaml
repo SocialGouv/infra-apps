@@ -48,3 +48,12 @@ spec:
             duration: 5s
             factor: 2
             maxDuration: 3m
+      ignoreDifferences:
+        - group: admissionregistration.k8s.io
+          kind: MutatingWebhookConfiguration
+          name: oblik
+          jsonPointers:
+            - /webhooks/0/clientConfig/caBundle
+        - group: ""
+          kind: Secret
+          name: webhook-certs
