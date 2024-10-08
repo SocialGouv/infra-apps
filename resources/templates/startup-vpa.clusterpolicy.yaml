@@ -40,7 +40,7 @@ spec:
         - name: oblikEnabled
           variable:
             jmesPath: request.object.metadata.annotations."oblik.socialgouv.io/enabled"
-            default: "true"
+            default: "{{ .Values.startupVpa.oblikEnabledDefault }}"
       generate:
         apiVersion: autoscaling.k8s.io/v1
         kind: VerticalPodAutoscaler

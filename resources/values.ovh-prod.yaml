@@ -1,4 +1,6 @@
+startupVpa:
+  oblikEnabledDefault: false
+
 cnpgVpa:
   enabled: false
   oblikEnabledDefault: false
-
