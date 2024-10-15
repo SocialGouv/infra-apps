@@ -39,9 +39,9 @@ spec:
         syncOptions:
           - CreateNamespace=false
           - ApplyOutOfSyncOnly=true
-        automated:
-          selfHeal: false
-          prune: true
+        # automated:
+        #   selfHeal: false
+        #   prune: true
         retry:
           limit: 5
           backoff:
