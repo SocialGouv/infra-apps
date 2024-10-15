@@ -1,17 +1,23 @@
-startupVpa:
-  oblikEnabledDefault: true
+kinds:
+  Deployment:
+    enabled: true
+    annotations: {}
+  StatefulSet:
+    enabled: true
+    annotations: {}
+  CronJob:
+    enabled: true
+    annotations: {}
+  Cluster:
+    apiVersion: postgresql.cnpg.io/v1
+    enabled: true
+    annotations:
+      # memory rules
+      oblik.socialgouv.io/request-memory-apply-mode: "off" # postgres is not compatible with memory recommendations
 
-vpa:
-  enabled: true
+      # cpu rules
+      oblik.socialgouv.io/min-request-cpu: "100m"
+      oblik.socialgouv.io/limit-cpu-calculator-algo: "ratio"
+      oblik.socialgouv.io/limit-cpu-calculator-value: "3"
 
-cnpgVpa:
-  enabled: false
-  oblikEnabledDefault: false
-  annotations:
-    # memory rules
-    oblik.socialgouv.io/request-memory-apply-mode: "off" # postgres is not compatible with memory recommendations
-
-    # cpu rules
-    oblik.socialgouv.io/min-request-cpu: "100m"
-    oblik.socialgouv.io/limit-cpu-calculator-algo: "ratio"
-    oblik.socialgouv.io/limit-cpu-calculator-value: "3"
+patchCnpgEnabled: true

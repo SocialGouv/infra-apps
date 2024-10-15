@@ -1,6 +1,11 @@
-startupVpa:
-  oblikEnabledDefault: false
+kinds:
+  Deployment:
+    enabled: false
+  StatefulSet:
+    enabled: false
+  CronJob:
+    enabled: false
+  Cluster:
+    enabled: false
 
-cnpgVpa:
-  enabled: false
-  oblikEnabledDefault: false
+patchCnpgEnabled: false
