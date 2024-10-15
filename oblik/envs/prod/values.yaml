@@ -14,3 +14,6 @@ env:
   OBLIK_DEFAULT_UNPROVIDED_APPLY_DEFAULT_REQUEST_MEMORY: 250Mi
 
   OBLIK_DEFAULT_WEBHOOK_ENABLED: "false" # temp
+
+annotations:
+  reloader.stakater.com/auto: "true"
