@@ -39,6 +39,7 @@ spec:
         syncOptions:
           - CreateNamespace=false
           - ApplyOutOfSyncOnly=true
+          - RespectIgnoreDifferences=true
         # automated:
         #   selfHeal: false
         #   prune: true
