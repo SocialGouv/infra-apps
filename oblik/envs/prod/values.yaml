@@ -17,3 +17,6 @@ env:
 
 annotations:
   reloader.stakater.com/auto: "true"
+
+image:
+  tag: v0.1.5
