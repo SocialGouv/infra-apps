@@ -16,7 +16,7 @@ env:
   OBLIK_DEFAULT_WEBHOOK_ENABLED: "false" # temp
 
 annotations:
-  reloader.stakater.com/auto: "true"
+  reloader.stakater.com/auto: "true" # should not be necessary if argo app configured properly but extra security
 
 image:
   tag: v0.1.7
