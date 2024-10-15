@@ -4,6 +4,11 @@ metadata:
   labels:
     component: {{ include "common.names.fullname" . }}
     application: {{ include "common.names.fullname" . }}
+    {{ if .Values.labels }}
+    {{ range $key, $val := .Values.labels }}
+    "{{ $key }}": {{ $val | quote }}
+    {{ end }}
+    {{ end }}
   name: {{ include "common.names.fullname" . }}
   annotations:
     {{ if .Values.annotations }}

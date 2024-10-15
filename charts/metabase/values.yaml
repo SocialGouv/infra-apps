@@ -31,7 +31,8 @@ ingress:
 annotations:
   oblik.socialgouv.io/request-memory-apply-mode: "off" # because metabase is JVM and memory recommendation is incompatible with JVM
   oblik.socialgouv.io/min-limit-cpu: "500m" # consumming is high at startup
-
+labels:
+  
 image:
   name: metabase/metabase
   # renovate: datasource=docker depName=metabase/metabase versioning=v0.47.7

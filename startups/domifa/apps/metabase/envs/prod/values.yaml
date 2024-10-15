@@ -1,6 +1,4 @@
 metabase:
-  annotations:
-    oblik.socialgouv.io/enabled: "false"
   host: metabase-prod-domifa.ovh.fabrique.social.gouv.fr
   ingress:
     annotations:

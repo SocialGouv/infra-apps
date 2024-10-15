@@ -5,7 +5,6 @@ metadata:
   name: charon
   labels:
     app: charon
-  annotations:
     oblik.socialgouv.io/enabled: "true"
 spec:
   replicas: 1
