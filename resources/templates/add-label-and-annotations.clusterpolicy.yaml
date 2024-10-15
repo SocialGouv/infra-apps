@@ -16,6 +16,7 @@ kind: ClusterPolicy
 metadata:
   name: add-label-and-annotations
 spec:
+  background: true
   rules:
 {{- range $kindName, $kindConfig := .Values.kinds }}
   {{- if $kindConfig.enabled }}
