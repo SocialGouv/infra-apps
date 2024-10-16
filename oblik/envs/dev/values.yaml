@@ -21,4 +21,4 @@ annotations:
   reloader.stakater.com/auto: "true" # should not be necessary if argo app configured properly but extra security
 
 image:
-  tag: v0.1.10
+  tag: v0.1.11
