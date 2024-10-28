@@ -5,6 +5,13 @@ metabase:
       cert-manager.io: cluster-issuer
       cert-manager.io/cluster-issuer: letsencrypt-prod
       kubernetes.io/tls-acme: true
+  resources: # temporary, keep as actually deployed, remove after enable oblik
+    limits:
+      cpu: '1'
+      memory: 2Gi
+    requests:
+      cpu: 500m
+      memory: 512Mi
 
 pastek-mirror:
   cnpg-cluster:
