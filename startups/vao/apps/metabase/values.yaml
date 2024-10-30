@@ -17,7 +17,7 @@ metabase:
 
 metabase-matomo-sync:
   enabled: true
-  matomoSiteId: 103
+  matomoSiteId: 104
   fullnameOverride: metabase-matomo-sync
   cnpg-cluster:
     persistence:
