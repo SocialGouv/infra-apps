@@ -13,3 +13,8 @@ dependencies:
     repository: file://./charts/metabase-matomo-sync
     version: 0.0.0
     condition: metabase-matomo-sync.enabled
+  - name: metabase-matomo-sync
+    alias: metabase-matomo-sync-back
+    repository: file://./charts/metabase-matomo-sync
+    version: 0.0.0
+    condition: metabase-matomo-sync.enabled

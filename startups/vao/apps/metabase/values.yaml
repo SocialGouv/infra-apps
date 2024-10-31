@@ -17,7 +17,6 @@ metabase:
 
 metabase-matomo-sync:
   enabled: true
-  matomoSiteId: 104
   fullnameOverride: metabase-matomo-sync
   cnpg-cluster:
     persistence:
@@ -34,3 +33,12 @@ metabase-matomo-sync:
             name: *s3secretName
           secretAccessKey:
             name: *s3secretName
+
+metabase-matomo-sync-back:
+  enabled: true
+  fullnameOverride: metabase-matomo-sync-back
+  pgdatabase:
+    # base commune matomo-sync
+    secretName: metabase-matomo-sync-app
+  cnpg-cluster:
+    enabled: false

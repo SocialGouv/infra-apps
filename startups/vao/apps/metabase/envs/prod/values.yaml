@@ -10,3 +10,10 @@ final-appset:
   importSecretsFromStartup: true
   importSreSecretsList:
     - matomo-key
+
+metabase-matomo-sync:
+  matomoSiteId: 104
+
+metabase-matomo-sync-back:
+  matomoSiteId: 106
+  destinationTable: matomo_back
