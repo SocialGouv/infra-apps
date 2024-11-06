@@ -15,9 +15,6 @@ spec:
           - name: charon-egapro
             cluster: ovh-dev
             namespace: charon-egapro
-          - name: charon-pgadmin
-            cluster: ovh-dev
-            namespace: charon-pgadmin
 
   goTemplate: true
   template:
