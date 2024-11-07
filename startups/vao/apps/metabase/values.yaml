@@ -18,6 +18,8 @@ metabase:
 metabase-matomo-sync:
   enabled: true
   fullnameOverride: metabase-matomo-sync
+  backup:
+    name: 2024-11-07
   cnpg-cluster:
     persistence:
       size: 20Gi
