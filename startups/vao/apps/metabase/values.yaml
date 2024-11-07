@@ -18,15 +18,13 @@ metabase:
 metabase-matomo-sync:
   enabled: true
   fullnameOverride: metabase-matomo-sync
-  backup:
-    name: 2024-11-07
   cnpg-cluster:
     persistence:
       size: 20Gi
     backup:
       enabled: true
       barmanObjectStore:
-        destinationPath: s3://vao-prod-backups/metabase-matomo-sync
+        destinationPath: s3://vao-prod-backups/metabase-matomo-sync-20241107
         endpointURL: https://s3.gra.io.cloud.ovh.net
         s3Credentials:
           accessKeyId:
