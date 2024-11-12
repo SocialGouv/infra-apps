@@ -1,6 +1,6 @@
 buildkit-service:
   image:
-    tag: "v0.13.2-rootless"
+    tag: "v0.17.1-rootless"
   resources:
     requests:
       cpu: "6"
