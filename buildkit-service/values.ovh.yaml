@@ -4,7 +4,7 @@
 buildkit-service:
   storage:
     # className: 
-    size: 150Gi
+    size: 200Gi
     accessModes:
     - ReadWriteOnce
   resources:
