@@ -31,9 +31,9 @@ spec:
     - name: {{ $ruleName }}
       preconditions:
         all:
-        - key: "{{ `{{metadata.labels.oblik\.socialgouv\.io/enabled}}` }}"
-          operator: NotEquals
-          value: "false"
+          - key: "{{`{{`}} request.object.metadata.labels.\"oblik.socialgouv.io/enabled\" || '' {{`}}`}}"
+            operator: NotEquals
+            value: "false"
       match:
         resources:
           kinds:
