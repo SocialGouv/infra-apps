@@ -29,6 +29,11 @@ spec:
       {{- $ruleName = printf "add-label-and-annotations-to-%s" (lower $kindName) }}
     {{- end }}
     - name: {{ $ruleName }}
+      preconditions:
+        all:
+        - key: "{{ `{{metadata.labels.oblik\.socialgouv\.io/enabled}}` }}"
+          operator: NotEquals
+          value: "false"
       match:
         resources:
           kinds:
