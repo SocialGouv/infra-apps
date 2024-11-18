@@ -20,6 +20,7 @@ spec:
                 - Namespace
               operations:
                 - CREATE
+                - UPDATE
               selector:
                 matchLabels:
                   cert: wildcard
