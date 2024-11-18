@@ -23,12 +23,22 @@ spec:
               selector:
                 matchLabels:
                   cert: wildcard
+      context:
+        - name: tlscrt
+          apiCall:
+            urlPath: "/api/v1/namespaces/cert-manager/secrets/wildcard-crt"
+            jmesPath: 'data."tls.crt"'
+        - name: tlskey
+          apiCall:
+            urlPath: "/api/v1/namespaces/cert-manager/secrets/wildcard-crt"
+            jmesPath: 'data."tls.key"'
       generate:
         apiVersion: v1
         kind: Secret
         name: wildcard-crt
         namespace: "{{`{{`}}request.object.metadata.name{{`}}`}}"
-        clone:
-          namespace: cert-manager
-          name: wildcard-crt
-        synchronize: true  
+        synchronize: true
+        data:
+          data:
+            "tls.crt": "{{`{{`}}tlscrt{{`}}`}}"
+            "tls.key": "{{`{{`}}tlskey{{`}}`}}"
