@@ -6,6 +6,3 @@ sreSecretsList:
 commonSecretsListToCI:
   - namespace: buildkit-service
     name: buildkit-client-certs
-
-sreShareableSecretList:
-  - pgadmin-oauth2-proxy
