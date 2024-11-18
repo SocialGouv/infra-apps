@@ -39,6 +39,8 @@ spec:
         namespace: "{{`{{`}}request.object.metadata.name{{`}}`}}"
         synchronize: true
         data:
+          metadata:
+            type: kubernetes.io/tls
           data:
             "tls.crt": "{{`{{`}}tlscrt{{`}}`}}"
             "tls.key": "{{`{{`}}tlskey{{`}}`}}"
