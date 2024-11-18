@@ -18,6 +18,8 @@ spec:
           - resources:
               kinds:
                 - Namespace
+              operations:
+                - CREATE
               selector:
                 matchLabels:
                   cert: wildcard
