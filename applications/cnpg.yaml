@@ -32,16 +32,16 @@ spec:
             - values.yaml
             - "values.{{ .cluster }}.yaml"
       # hack (see README in `cnpg` folder of this repo)
-      ignoreDifferences:
-        - group: admissionregistration.k8s.io
-          kind: MutatingWebhookConfiguration
-          jsonPointers:
-            - /webhooks
-        - group: apiextensions.k8s.io
-          kind: CustomResourceDefinition
-          jsonPointers:
-            - /spec/versions/0/schema/openAPIV3Schema/properties/spec/properties/selector
-            - /spec/versions/0/subresources/scale/labelSelectorPath
+      # ignoreDifferences:
+      #   - group: admissionregistration.k8s.io
+      #     kind: MutatingWebhookConfiguration
+      #     jsonPointers:
+      #       - /webhooks
+      #   - group: apiextensions.k8s.io
+      #     kind: CustomResourceDefinition
+      #     jsonPointers:
+      #       - /spec/versions/0/schema/openAPIV3Schema/properties/spec/properties/selector
+      #       - /spec/versions/0/subresources/scale/labelSelectorPath
       syncPolicy:
         syncOptions:
           - ServerSideApply=true
