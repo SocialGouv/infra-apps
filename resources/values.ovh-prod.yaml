@@ -1,11 +1,1 @@
-kinds:
-  Deployment:
-    enabled: false
-  StatefulSet:
-    enabled: false
-  CronJob:
-    enabled: false
-  Cluster:
-    enabled: false
-
 patchCnpgEnabled: false
