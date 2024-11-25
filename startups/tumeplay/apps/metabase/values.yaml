@@ -28,11 +28,11 @@ metabase-matomo-sync:
   cnpg-cluster:
     resources:
       requests:
-        cpu: 100m
-        memory: 512Mi
+        cpu: 500m
+        memory: 2Gi
       limits:
-        cpu: 100m
-        memory: 512Mi
+        cpu: 500m
+        memory: 2Gi
 
 metabase-matomo-sync-vitrine:
   enabled: true
@@ -43,4 +43,3 @@ metabase-matomo-sync-vitrine:
     secretName: metabase-matomo-sync-app
   cnpg-cluster:
     enabled: false
-

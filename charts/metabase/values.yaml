@@ -29,18 +29,17 @@ ingress:
     nginx.ingress.kubernetes.io/proxy-send-timeout: "1800"
     nginx.ingress.kubernetes.io/proxy-body-size: 8m
 annotations:
-  oblik.socialgouv.io/request-memory-apply-mode: "off" # because metabase is JVM and memory recommendation is incompatible with JVM
-  oblik.socialgouv.io/min-limit-cpu: "500m" # consumming is high at startup
-labels:
-  
+  {}
+  # oblik.socialgouv.io/request-memory-apply-mode: "off" # because metabase is JVM and memory recommendation is incompatible with JVM
+  # oblik.socialgouv.io/min-limit-cpu: "500m" # consumming is high at startup
+labels: {}
+
 image:
   name: metabase/metabase
   # renovate: datasource=docker depName=metabase/metabase versioning=v0.47.7
   tag: v0.47.7
 
-resources:
-  requests:
-    memory: 512Mi # keep only memory request not handled by VPA+Oblik
+resources: {}
 
 cnpg-cluster:
   enabled: true
