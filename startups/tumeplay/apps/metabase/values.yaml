@@ -1,6 +1,13 @@
 metabase:
   enabled: true
   fullnameOverride: metabase
+  ressources:
+    requests:
+      cpu: 500m
+      memory: 2Gi
+    limits:
+      cpu: 500m
+      memory: 2Gi
   cnpg-cluster:
     resources:
       requests:

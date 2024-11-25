@@ -29,13 +29,7 @@ cnpg-cluster:
     enablePDB: false
     enableSuperuserAccess: true
   priorityClassName: cnpg-high-priority-3
-  resources:
-    requests:
-      memory: 1G
-      cpu: 100m
-    limits:
-      memory: 1G
-      cpu: "4"
+  resources: {}
   # sharedPreloadLibraries:
   #   - pg_partman_bgw
   # postgresqlInitCommandsBeforeExtensions:
