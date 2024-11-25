@@ -1,7 +1,7 @@
 metabase:
   enabled: true
   fullnameOverride: metabase
-  ressources:
+  resources:
     requests:
       cpu: 500m
       memory: 2Gi
