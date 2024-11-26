@@ -16,7 +16,7 @@ spec:
     spec:
       backoffLimit: 0
       template:
-        metadata:
+        metadata: {}
         spec:
           volumes:
             - name: github-backup
@@ -44,7 +44,7 @@ spec:
                   readOnly: true
                 - name: github-backup
                   mountPath: "/data"
-                  
+
               # see https://github.com/josegonzalez/python-github-backup
               command:
                 - /bin/sh
