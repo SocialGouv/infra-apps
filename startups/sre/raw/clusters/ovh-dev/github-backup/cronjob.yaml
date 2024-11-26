@@ -26,20 +26,15 @@ spec:
               secret:
                 defaultMode: 0400
                 secretName: github-ssh
-          securityContext:
-            runAsNonRoot: false
           containers:
             - name: github-backup
-              # image: python:3.10.5-alpine3.16
-              image: harbor.fabrique.social.gouv.fr/hub/python:3.10.5-alpine3.16
+              image: ghcr.io/socialgouv/docker/github-backup:latest
               imagePullPolicy: Always
-              securityContext:
-                runAsNonRoot: false
               envFrom:
                 - secretRef:
                     name: github-backup-cronjob
               volumeMounts:
-                - mountPath: "/root/.ssh"
+                - mountPath: "/home/user/.ssh"
                   name: github-ssh
                   readOnly: true
                 - name: github-backup
@@ -50,10 +45,8 @@ spec:
                 - /bin/sh
                 - -c
                 - |
-                  apk add --no-cache git openssh-client
-                  export GIT_SSH_COMMAND='ssh -i /root/.ssh/key  -o "StrictHostKeyChecking=no"'
+                  export GIT_SSH_COMMAND='ssh -i /home/user/.ssh/key  -o "StrictHostKeyChecking=no"'
                   ssh git@github.com
-                  pip install github-backup
                   github-backup "${GITHUB_ORG}" --token "${GITHUB_ACCESS_TOKEN}" \
                     --prefer-ssh \
                     --throttle-limit 2000 \
