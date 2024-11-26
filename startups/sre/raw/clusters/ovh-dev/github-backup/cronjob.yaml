@@ -18,6 +18,8 @@ spec:
       template:
         metadata: {}
         spec:
+          securityContext:
+            fsGroup: 1000
           volumes:
             - name: github-backup
               persistentVolumeClaim:
