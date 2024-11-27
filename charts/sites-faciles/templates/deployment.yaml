@@ -39,6 +39,8 @@ spec:
                 secretKeyRef:
                   name: pg-app
                   key: uri
+            - name: ALLOWED_HOSTS
+              value: "{{ .Values.ingress.host }}"
             {{- if gt (len .Values.env) 0 }}
             {{- tpl (.Values.env | toYaml) . | nindent 12 }}
             {{- end }}

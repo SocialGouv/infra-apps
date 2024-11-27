@@ -3,8 +3,12 @@ replicas: 1
 annotations: {}
 labels: {}
 image: ghcr.io/socialgouv/sites-faciles:latest
-env: []
-envFrom: []
+env:
+  - name: HOST_PORT
+    value: "8080"
+envFrom:
+  - secretRef:
+      name: secret-key
 resources: {}
 
 ingress:
