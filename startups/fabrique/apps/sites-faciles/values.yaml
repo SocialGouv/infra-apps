@@ -3,4 +3,4 @@ sites-faciles:
   fullnameOverride: app
   image: ghcr.io/socialgouv/sites-faciles:chore-cd
   ingress:
-    host: sites-faciles.ovh.fabrique.social.gouv.fr
+    host: sites-faciles.fabrique.ovh.fabrique.social.gouv.fr
