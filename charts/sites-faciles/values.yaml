@@ -18,6 +18,7 @@ ingress:
 
 cnpg-cluster:
   enabled: true
+  fullnameOverride: pg
   minSyncReplicas: 1
   maxSyncReplicas: 1
   # dbSecretName: "pg-metabase"
