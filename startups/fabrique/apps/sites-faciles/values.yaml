@@ -1,5 +1,6 @@
 sites-faciles:
   enabled: true
+  fullnameOverride: app
   image: ghcr.io/socialgouv/sites-faciles:chore-cd
   ingress:
     host: sites-faciles.ovh.fabrique.social.gouv.fr
