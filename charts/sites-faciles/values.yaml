@@ -1,0 +1,76 @@
+replicas: 1
+
+annotations: {}
+labels: {}
+image: ghcr.io/socialgouv/sites-faciles:latest
+env: []
+envFrom: []
+resources: {}
+
+ingress:
+  enabled: true
+  host:
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "30"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "1800"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "1800"
+    nginx.ingress.kubernetes.io/proxy-body-size: 8m
+
+cnpg-cluster:
+  enabled: true
+  minSyncReplicas: 1
+  maxSyncReplicas: 1
+  # dbSecretName: "pg-metabase"
+  instances: 3
+  postgresqlParameters:
+    TimeZone: "Europe/Paris"
+    pg_stat_statements.max: "10000"
+    pg_stat_statements.track: all
+    max_standby_archive_delay: 1d
+    max_standby_streaming_delay: 1d
+  extensions:
+    - postgis
+    - postgis_topology
+    - fuzzystrmatch
+    - postgis_tiger_geocoder
+    - uuid-ossp
+    - citext
+    - pgcrypto
+    - hstore
+  monitoring:
+    enablePodMonitor: true
+  persistence:
+    size: 8Gi
+  image:
+    repository: "ghcr.io/cloudnative-pg/postgis"
+    tag: "14"
+
+  resources: {}
+
+  priorityClassName: cnpg-high-priority-3
+
+  backup:
+    enabled: false
+    schedule: "0 0 0 * * *" # daily
+    retentionPolicy: 7d
+    sqlDumpRetentionDays: "7"
+    barmanObjectStore: &barmanObjectStore
+      data:
+        compression: gzip
+      # destinationPath: s3://${startup}-prod-backups/${startup}
+      endpointURL: https://s3.gra.io.cloud.ovh.net
+      s3Credentials:
+        accessKeyId:
+          key: bucket_access_key
+          # name: ${startup}-prod-backups-access-key
+        region:
+          key: bucket_region
+          # name: ${startup}-prod-backups-access-key
+        secretAccessKey:
+          key: bucket_secret_key
+          # name: ${startup}-prod-backups-access-key
+      wal:
+        compression: gzip
+
+  recovery:
+    barmanObjectStore: *barmanObjectStore
