@@ -1,2 +1,4 @@
 sites-faciles:
   enabled: true
+  ingress:
+    host: sites-faciles.ovh.fabrique.social.gouv.fr

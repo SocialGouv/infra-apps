@@ -45,8 +45,6 @@ spec:
           envFrom:
             - configMapRef:
                 name: {{ include "common.names.fullname" . }}
-            - secretRef:
-                name: {{ .Values.secretName }}
             {{- if gt (len .Values.envFrom) 0 }}
             {{- tpl (.Values.envFrom | toYaml) . | nindent 12 }}
             {{- end }}
