@@ -4,3 +4,7 @@ sites-faciles:
   image: ghcr.io/socialgouv/sites-faciles:chore-cd
   ingress:
     host: sites-faciles.fabrique.ovh.fabrique.social.gouv.fr
+    annotations:
+      cert-manager.io: cluster-issuer
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+      kubernetes.io/tls-acme: true
