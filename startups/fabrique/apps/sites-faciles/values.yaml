@@ -1,9 +1,9 @@
 sites-faciles:
   enabled: true
   fullnameOverride: app
-  image: ghcr.io/socialgouv/sites-faciles:chore-cd
+  image: ghcr.io/socialgouv/sites-faciles:latest
   ingress:
-    host: sites-faciles.fabrique.ovh.fabrique.social.gouv.fr
+    host: sites-faciles-demo.fabrique.social.gouv.fr
     annotations:
       cert-manager.io: cluster-issuer
       cert-manager.io/cluster-issuer: letsencrypt-prod
