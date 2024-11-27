@@ -29,6 +29,6 @@ spec:
   tls:
     - hosts:
         - >-
-          {{- tpl (or .Values.host (print .Chart.Name "-" (or .Values.global.host ""))) . | nindent 12 }}
+          {{- tpl (or .Values.ingress.host (print .Chart.Name "-" (or .Values.global.host ""))) . | nindent 12 }}
       secretName: {{ print .Chart.Name "-crt" }}
 {{- end }}
