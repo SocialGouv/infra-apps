@@ -8,6 +8,8 @@ env: []
 envFrom:
   - secretRef:
       name: secret-key
+  - secretRef:
+      name: tipimail
 resources: {}
 
 ingress:
