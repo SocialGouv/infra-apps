@@ -1,7 +1,7 @@
 sites-faciles:
   enabled: true
   fullnameOverride: app
-  image: ghcr.io/socialgouv/sites-faciles:latest
+  image: ghcr.io/socialgouv/sites-faciles:fix-logging
   bucketSecretName: fabrique-prod-app-access-key
   env:
     - name: S3_LOCATION
