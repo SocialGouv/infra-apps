@@ -1,0 +1,39 @@
+sites-faciles:
+  enabled: true
+  fullnameOverride: app
+  image: ghcr.io/socialgouv/sites-faciles:latest
+  env:
+    - name: S3_BUCKET_NAME
+      valueFrom:
+        secretKeyRef:
+          name: fabrique-prod-app-access-key
+          key: bucket_name
+    - name: S3_BUCKET_REGION
+      valueFrom:
+        secretKeyRef:
+          name: fabrique-prod-app-access-key
+          key: bucket_region
+    - name: S3_KEY_ID
+      valueFrom:
+        secretKeyRef:
+          name: fabrique-prod-app-access-key
+          key: bucket_access_key
+    - name: S3_KEY_SECRET
+      valueFrom:
+        secretKeyRef:
+          name: fabrique-prod-app-access-key
+          key: bucket_secret_key
+    - name: S3_LOCATION
+      value: test-dir
+    - name: S3_HOST
+      value: s3.gra.io.cloud.ovh.net
+
+  ingress:
+    host: sites-faciles-demo.fabrique.social.gouv.fr
+    annotations:
+      cert-manager.io: cluster-issuer
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+      kubernetes.io/tls-acme: true
+
+final-appset:
+  importSecretsFromStartup: true
