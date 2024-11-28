@@ -36,6 +36,8 @@ spec:
           env:
             - name: ALLOWED_HOSTS
               value: "{{ .Values.ingress.host }},127.0.0.1,localhost,*"
+            - name: HOST_URL
+              value: "{{ .Values.ingress.host }}"
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:
