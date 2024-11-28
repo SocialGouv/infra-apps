@@ -3,6 +3,7 @@ replicas: 1
 annotations: {}
 labels: {}
 image: ghcr.io/socialgouv/sites-faciles:latest
+bucketSecretName:
 env: []
 envFrom:
   - secretRef:

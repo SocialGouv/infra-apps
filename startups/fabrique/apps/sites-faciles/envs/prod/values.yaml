@@ -2,27 +2,8 @@ sites-faciles:
   enabled: true
   fullnameOverride: app
   image: ghcr.io/socialgouv/sites-faciles:latest
+  bucketSecretName: fabrique-prod-app-access-key
   env:
-    - name: S3_BUCKET_NAME
-      valueFrom:
-        secretKeyRef:
-          name: fabrique-prod-app-access-key
-          key: bucket_name
-    - name: S3_BUCKET_REGION
-      valueFrom:
-        secretKeyRef:
-          name: fabrique-prod-app-access-key
-          key: bucket_region
-    - name: S3_KEY_ID
-      valueFrom:
-        secretKeyRef:
-          name: fabrique-prod-app-access-key
-          key: bucket_access_key
-    - name: S3_KEY_SECRET
-      valueFrom:
-        secretKeyRef:
-          name: fabrique-prod-app-access-key
-          key: bucket_secret_key
     - name: S3_LOCATION
       value: test-dir
     - name: S3_HOST

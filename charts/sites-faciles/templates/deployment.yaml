@@ -43,6 +43,26 @@ spec:
                   key: uri
             - name: HOST_PORT
               value: "8080"
+            - name: S3_BUCKET_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: "{{ .Values.bucketSecretName }}"
+                  key: bucket_name
+            - name: S3_BUCKET_REGION
+              valueFrom:
+                secretKeyRef:
+                  name: "{{ .Values.bucketSecretName }}"
+                  key: bucket_region
+            - name: S3_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: "{{ .Values.bucketSecretName }}"
+                  key: bucket_access_key
+            - name: S3_KEY_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: "{{ .Values.bucketSecretName }}"
+                  key: bucket_secret_key
             {{- if gt (len .Values.env) 0 }}
             {{- tpl (.Values.env | toYaml) . | nindent 12 }}
             {{- end }}
