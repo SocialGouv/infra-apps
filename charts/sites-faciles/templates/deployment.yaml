@@ -71,8 +71,18 @@ spec:
             {{- tpl (.Values.envFrom | toYaml) . | nindent 12 }}
           {{- end }}
           ports:
-            - containerPort: 3000
+            - containerPort: 8080
               name: http
+          readinessProbe:
+            failureThreshold: 15
+            httpGet:
+              path: /
+              port: http
+              scheme: HTTP
+            initialDelaySeconds: 10
+            periodSeconds: 1
+            successThreshold: 1
+            timeoutSeconds: 5
           {{- with .Values.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
