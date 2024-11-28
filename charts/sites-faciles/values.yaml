@@ -3,14 +3,7 @@ replicas: 1
 annotations: {}
 labels: {}
 image: ghcr.io/socialgouv/sites-faciles:latest
-env:
-  - name: DATABASE_URL
-    valueFrom:
-      secretKeyRef:
-        name: pg-app
-        key: uri
-  - name: HOST_PORT
-    value: "8080"
+env: []
 envFrom:
   - secretRef:
       name: secret-key
