@@ -43,7 +43,7 @@ spec:
                 secretKeyRef:
                   name: pg-app
                   key: uri
-            - name: HOST_PORT
+            - name: CONTAINER_PORT
               value: "8080"
             - name: S3_BUCKET_NAME
               valueFrom:
