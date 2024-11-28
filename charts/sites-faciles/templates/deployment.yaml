@@ -80,7 +80,7 @@ spec:
               port: http
               scheme: HTTP
             initialDelaySeconds: 10
-            periodSeconds: 1
+            periodSeconds: 5
             successThreshold: 1
             timeoutSeconds: 5
           {{- with .Values.resources }}
