@@ -37,10 +37,37 @@ spec:
         apiVersion: v1
         kind: Secret
         name: wildcard-crt
-        namespace: "{{`{{`}}request.object.metadata.name{{`}}`}}"
+        namespace: "{{ `{{request.object.metadata.name}}` }}"
         synchronize: true
         data:
           type: kubernetes.io/tls
           data:
-            "tls.crt": "{{`{{`}}tlscrt{{`}}`}}"
-            "tls.key": "{{`{{`}}tlskey{{`}}`}}"
+            "tls.crt": "{{ `{{tlscrt}}` }}"
+            "tls.key": "{{ `{{tlskey}}` }}"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: copy-wildcard-secret
+rules:
+- apiGroups:
+  - ''
+  resources:
+  - secrets
+  verbs:
+  - create
+  - update
+  - delete
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: copy-wildcard-secret
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: copy-wildcard-secret
+subjects:
+- kind: ServiceAccount
+  name: kyverno-background-controller
+  namespace: kyverno
