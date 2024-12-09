@@ -1,4 +1,4 @@
-versionTag: &versionTag 1.2.0
+versionTag: &versionTag 1.2.1
 updateEnabled: false
 
 recommender:
