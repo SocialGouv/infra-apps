@@ -22,9 +22,9 @@ spec:
         - name: recommender
           image: {{ .Values.recommender.image.repository }}:{{ .Values.recommender.image.tag }}
           imagePullPolicy: {{ .Values.updater.image.pullPolicy }}
-          args:
-            - --target-cpu-percentile=0.9 # default 0.9
-            - --recommendation-upper-bound-cpu-percentile=0.95 # default 0.95
+          # args:
+          #   - --target-cpu-percentile=0.95 # default 0.9
+          #   - --recommendation-upper-bound-cpu-percentile=1.0 # default 0.95
           resources:
             {{- toYaml .Values.recommender.resources | nindent 12 }}
           ports:
