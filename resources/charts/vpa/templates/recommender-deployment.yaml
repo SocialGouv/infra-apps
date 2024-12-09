@@ -25,7 +25,7 @@ spec:
           args:
             - --target-cpu-percentile=0.95 # default 0.9
             - --recommendation-upper-bound-cpu-percentile=1.0 # default 0.95
-            - --humanize-memory
+            # - --humanize-memory # will be available in future releases of vpa
           resources:
             {{- toYaml .Values.recommender.resources | nindent 12 }}
           ports:
