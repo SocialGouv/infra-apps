@@ -25,6 +25,7 @@ spec:
           args:
             - --target-cpu-percentile=0.95 # default 0.9
             - --recommendation-upper-bound-cpu-percentile=1.0 # default 0.95
+            - --humanize-memory=true
           resources:
             {{- toYaml .Values.recommender.resources | nindent 12 }}
           ports:
