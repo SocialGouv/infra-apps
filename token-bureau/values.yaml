@@ -1,0 +1,16 @@
+token-bureau:
+  image:
+    tag: latest
+    pullPolicy: Always
+  existingSecret: token-bureau
+  ingress:
+    enabled: true
+    hosts:
+      - host: token-bureau.fabrique.social.gouv.fr
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+    tls: 
+      - hosts:
+          - token-bureau.fabrique.social.gouv.fr
+        secretName: token-bureau-tls
