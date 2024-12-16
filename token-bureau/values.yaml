@@ -2,6 +2,7 @@ token-bureau:
   image:
     tag: latest
     pullPolicy: Always
+  replicaCount: 2
   existingSecret: token-bureau
   ingress:
     enabled: true
