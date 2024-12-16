@@ -6,6 +6,10 @@ token-bureau:
   existingSecret: token-bureau
   ingress:
     enabled: true
+    annotations:
+      cert-manager.io: cluster-issuer
+      cert-manager.io/cluster-issuer: clusterIssuer
+      kubernetes.io/tls-acme": "true"
     hosts:
       - host: token-bureau.fabrique.social.gouv.fr
         paths:
