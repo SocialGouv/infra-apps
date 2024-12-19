@@ -1,0 +1,44 @@
+metabase:
+  enabled: true
+  fullnameOverride: metabase
+  cnpg-cluster:
+    backup:
+      enabled: true
+      barmanObjectStore:
+        destinationPath: s3://1j1s-prod-backups/metabase
+        endpointURL: https://s3.gra.io.cloud.ovh.net
+        s3Credentials:
+          accessKeyId:
+            name: &s3secretName 1j1s-prod-backups-access-key
+          region:
+            name: *s3secretName
+          secretAccessKey:
+            name: *s3secretName
+
+metabase-matomo-sync:
+  enabled: true
+  fullnameOverride: metabase-matomo-sync
+  cnpg-cluster:
+    persistence:
+      size: 20Gi
+    backup:
+      enabled: true
+      barmanObjectStore:
+        destinationPath: s3://1j1s-prod-backups/metabase-matomo-sync-20241107
+        endpointURL: https://s3.gra.io.cloud.ovh.net
+        s3Credentials:
+          accessKeyId:
+            name: &s3secretName 1j1s-prod-backups-access-key
+          region:
+            name: *s3secretName
+          secretAccessKey:
+            name: *s3secretName
+
+metabase-matomo-sync-back:
+  enabled: true
+  fullnameOverride: metabase-matomo-sync-back
+  pgdatabase:
+    # base commune matomo-sync
+    secretName: metabase-matomo-sync-app
+  cnpg-cluster:
+    enabled: false
