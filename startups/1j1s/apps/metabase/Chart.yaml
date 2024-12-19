@@ -1,0 +1,15 @@
+apiVersion: v2
+name: metabase
+version: 0.0.0
+dependencies:
+  - name: final-appset
+    repository: file://./charts/final-appset
+    version: 0.0.0
+  - name: metabase
+    repository: file://./charts/metabase
+    version: 0.0.0
+    condition: metabase.enabled
+  - name: metabase-matomo-sync
+    repository: file://./charts/metabase-matomo-sync
+    version: 0.0.0
+    condition: metabase-matomo-sync.enabled
