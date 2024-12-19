@@ -24,7 +24,7 @@ metabase-matomo-sync:
     backup:
       enabled: true
       barmanObjectStore:
-        destinationPath: s3://1j1s-prod-backups/metabase-matomo-sync-20241107
+        destinationPath: s3://1j1s-prod-backups/metabase-matomo-sync-20241219
         endpointURL: https://s3.gra.io.cloud.ovh.net
         s3Credentials:
           accessKeyId:
