@@ -8,6 +8,9 @@ token-bureau:
   labels:
     oblik.socialgouv.io/enabled: "true"
 
+  deploymentAnnotations:
+    oblik.socialgouv.io/webhook-enabled: "true"
+
   podAnnotations: {}
 
   autoscaling:
@@ -33,10 +36,10 @@ token-bureau:
           - token-bureau.fabrique.social.gouv.fr
         secretName: token-bureau-tls
 
-  resources:
-    limits:
-      cpu: 300m
-      memory: 128Mi
-    requests:
-      cpu: 200m
-      memory: 128Mi
+  # resources:
+  #   limits:
+  #     cpu: 300m
+  #     memory: 128Mi
+  #   requests:
+  #     cpu: 200m
+  #     memory: 128Mi
