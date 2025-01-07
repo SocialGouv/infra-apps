@@ -11,6 +11,15 @@ webhook:
 
 existingSecret: 
 
+
+# Additional arguments to pass to the operator
+args: []
+# Example:
+# args:
+#   - "-v=2"  # Enable debug logging
+#   - "-v=3"  # Enable verbose debug logging
+
+
 resources:
   requests:
     cpu: 80m
