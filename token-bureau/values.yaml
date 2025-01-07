@@ -4,6 +4,19 @@ token-bureau:
     pullPolicy: Always
   replicaCount: 2
   existingSecret: token-bureau
+
+  labels:
+    oblik.socialgouv.io/enabled: "true"
+
+  podAnnotations: {}
+
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
+
   ingress:
     enabled: true
     annotations:
