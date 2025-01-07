@@ -19,3 +19,11 @@ token-bureau:
       - hosts:
           - token-bureau.fabrique.social.gouv.fr
         secretName: token-bureau-tls
+
+  resources:
+    limits:
+      cpu: 300m
+      memory: 128Mi
+    requests:
+      cpu: 200m
+      memory: 128Mi
