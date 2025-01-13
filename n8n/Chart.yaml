@@ -1,0 +1,11 @@
+apiVersion: v2
+name: n8n
+version: 0.0.0
+dependencies:
+  - name: n8n
+    repository: "oci://8gears.container-registry.com/library"
+    version: 0.25.2
+  - name: cnpg-cluster
+    version: 1.30.2
+    repository: https://socialgouv.github.io/helm-charts
+    condition: cnpg-cluster.enabled

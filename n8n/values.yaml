@@ -1,0 +1,30 @@
+cnpg-cluster:
+  enabled: true
+  instances: 1
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "250m"
+    limits:
+      memory: "1Gi"
+      cpu: "500m"
+  persistence:
+    size: 1Gi
+
+n8n:
+  config:
+    database:
+      type: postgresdb
+      postgresdb:
+        host: n8n-cnpg-cluster-rw
+        database: app
+        user: app
+        schema: public
+    executions:
+      pruneData: "true"
+      pruneDataMaxAge: 1440 # in hours (2 months)
+
+  extraEnvSecrets:
+    DB_POSTGRESDB_PASSWORD:
+      name: n8n-cnpg-cluster-app
+      key: password
