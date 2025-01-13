@@ -24,7 +24,7 @@ n8n:
     database:
       type: postgresdb
       postgresdb:
-        host: n8n-cnpg-cluster-rw
+        host: pg-n8n-rw
         database: app
         user: app
         schema: public
@@ -34,5 +34,5 @@ n8n:
 
   extraEnvSecrets:
     DB_POSTGRESDB_PASSWORD:
-      name: n8n-cnpg-cluster-app
+      name: pg-n8n-app
       key: password
