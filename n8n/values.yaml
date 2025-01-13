@@ -39,6 +39,9 @@ n8n:
     N8N_ENCRYPTION_KEY:
       name: n8n-encryption-key
       key: encryption-key
+    QUEUE_BULL_REDIS_PASSWORD:
+      name: n8n-redis
+      key: redis-password
   
   persistence:
     enabled: false
