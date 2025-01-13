@@ -44,7 +44,7 @@ n8n:
       key: redis-password
   
   persistence:
-    enabled: false
+    enabled: true
     type: dynamic
     storageClass: "openebs-nfs-hspeed"
     accessModes:
