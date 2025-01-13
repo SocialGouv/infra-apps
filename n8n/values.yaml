@@ -43,11 +43,11 @@ n8n:
       cert-manager.io/cluster-issuer: letsencrypt-prod
       cert-manager.io: cluster-issuer
       kubernetes.io/tls-acme: "true"
+    className: nginx
     hosts:
       - host: n8n.fabrique.social.gouv.fr
-        paths:
-          - path: /
-            pathType: Prefix
+        paths: 
+          - "/"
     tls:
       - secretName: n8n-cert
         hosts:
