@@ -1,5 +1,7 @@
 cnpg-cluster:
   enabled: true
+  labels:
+    application: n8n
   fullnameOverride: pg-n8n
   minSyncReplicas: 1
   maxSyncReplicas: 1
