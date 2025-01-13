@@ -1,15 +1,21 @@
 cnpg-cluster:
   enabled: true
-  instances: 1
+  fullnameOverride: pg-n8n
+  minSyncReplicas: 1
+  maxSyncReplicas: 1
+  instances: 3
+  priorityClassName: cnpg-high-priority-3
   resources:
     requests:
-      memory: "512Mi"
-      cpu: "250m"
+      memory: 2G
+      cpu: 512m
     limits:
-      memory: "1Gi"
-      cpu: "500m"
+      memory: 2G
+      cpu: 1024m
+  monitoring:
+    enablePodMonitor: true
   persistence:
-    size: 1Gi
+    size: 8Gi
 
 n8n:
   config:
