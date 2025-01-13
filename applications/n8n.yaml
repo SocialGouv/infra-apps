@@ -28,6 +28,9 @@ spec:
           valueFiles:
             - "values.yaml"
       syncPolicy:
+        managedNamespaceMetadata:
+          labels:
+            application: n8n
         syncOptions:
           - CreateNamespace=true
           #- Replace=true
