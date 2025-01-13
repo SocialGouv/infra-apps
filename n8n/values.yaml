@@ -36,3 +36,19 @@ n8n:
     DB_POSTGRESDB_PASSWORD:
       name: pg-n8n-app
       key: password
+
+  ingress:
+    enabled: true
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+      cert-manager.io: cluster-issuer
+      kubernetes.io/tls-acme: "true"
+    hosts:
+      - host: n8n.fabrique.social.gouv.fr
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: n8n-cert
+        hosts:
+          - n8n.fabrique.social.gouv.fr
