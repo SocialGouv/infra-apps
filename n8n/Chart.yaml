@@ -6,6 +6,6 @@ dependencies:
     repository: "oci://8gears.container-registry.com/library"
     version: 0.25.2
   - name: cnpg-cluster
-    version: 1.30.2
+    version: 1.30.3
     repository: https://socialgouv.github.io/helm-charts
     condition: cnpg-cluster.enabled
