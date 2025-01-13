@@ -20,6 +20,9 @@ cnpg-cluster:
     size: 8Gi
 
 n8n:
+  image:
+    tag: "1.74.1"
+
   config:
     database:
       type: postgresdb
