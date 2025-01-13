@@ -72,7 +72,15 @@ n8n:
     enabled: true
     minReplicas: 2
     maxReplicas: 10
-
+  workerAutoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+  webhookAutoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+  
   scaling:
     enabled: true
     worker:

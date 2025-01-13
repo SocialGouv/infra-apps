@@ -3,8 +3,14 @@ name: n8n
 version: 0.0.0
 dependencies:
   - name: n8n
-    repository: "oci://8gears.container-registry.com/library"
+  #   repository: "oci://8gears.container-registry.com/library"
+  #   version: 0.25.2
+  # when this will be merged: https://github.com/8gears/n8n-helm-chart/pull/112
+  # we can return to official helm-chart
+  # until use this with merged PR 112 from 0.25.2
+    repository: file://./charts/n8n
     version: 0.25.2
+
   - name: cnpg-cluster
     version: 1.30.3
     repository: https://socialgouv.github.io/helm-charts

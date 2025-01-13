@@ -1,9 +1,9 @@
 dependencies:
 - name: n8n
-  repository: oci://8gears.container-registry.com/library
+  repository: file://./charts/n8n
   version: 0.25.2
 - name: cnpg-cluster
   repository: https://socialgouv.github.io/helm-charts
   version: 1.30.3
-digest: sha256:58b6743395f0fc7b73bc684ba660fc8e788ceb8c16ba47172ba9e3258890d489
-generated: "2025-01-13T12:09:44.860837629+01:00"
+digest: sha256:13347309971f698c4833623b3a72ff62fb9124e2edf5e77f9b57f80570c0d68f
+generated: "2025-01-13T13:17:52.862666687+01:00"
