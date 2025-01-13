@@ -52,3 +52,21 @@ n8n:
       - secretName: n8n-cert
         hosts:
           - n8n.fabrique.social.gouv.fr
+  
+  # scale
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+
+  scaling:
+    enabled: true
+    worker:
+      count: 2
+      concurrency: 2
+    webhook:
+      enabled: true
+      count: 2
+  
+  redis:
+    enabled: true
