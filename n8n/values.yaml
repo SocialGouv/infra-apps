@@ -71,6 +71,10 @@ n8n:
           - n8n.fabrique.social.gouv.fr
   
   # scale
+  deploymentStrategy:
+    type: RollingUpdate
+    maxSurge: "50%"
+    maxUnavailable: "50%"
   autoscaling:
     enabled: true
     minReplicas: 2
