@@ -1,0 +1,20 @@
+sites-faciles:
+  enabled: true
+  fullnameOverride: app
+  image: ghcr.io/socialgouv/sites-faciles:latest
+  bucketSecretName: archifiltre-prod-site-access-key
+  env:
+    - name: S3_LOCATION
+      value: sites-faciles
+    - name: S3_HOST
+      value: s3.gra.io.cloud.ovh.net
+
+  ingress:
+    host: sites-faciles-archifiltre.fabrique.social.gouv.fr
+    annotations:
+      cert-manager.io: cluster-issuer
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+      kubernetes.io/tls-acme: true
+
+final-appset:
+  importSecretsFromStartup: true

@@ -1,0 +1,11 @@
+apiVersion: v2
+name: sites-faciles
+version: 0.0.0
+dependencies:
+  - name: final-appset
+    repository: file://./charts/final-appset
+    version: 0.0.0
+  - name: sites-faciles
+    repository: file://./charts/sites-faciles
+    version: 0.0.0
+    condition: sites-faciles.enabled
