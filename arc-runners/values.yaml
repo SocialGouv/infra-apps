@@ -11,6 +11,7 @@ gha-runner-scale-set:
       initContainers:
         - name: init-dind-externals
           image: ghcr.io/socialgouv/actions-runner:latest
+          imagePullPolicy: Always
           command:
             [
               "cp",
@@ -29,6 +30,7 @@ gha-runner-scale-set:
       containers:
         - name: runner
           image: ghcr.io/socialgouv/actions-runner:latest
+          imagePullPolicy: Always
           command: ["/home/runner/run.sh"]
           resources:
             requests:
