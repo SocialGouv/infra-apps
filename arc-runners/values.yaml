@@ -1,6 +1,9 @@
 gha-runner-scale-set:
   githubConfigUrl: "https://github.com/SocialGouv"
   githubConfigSecret: github-token
+  
+  minRunners: 1
+  maxRunners: 10
 
   controllerServiceAccount:
     namespace: arc-systems
