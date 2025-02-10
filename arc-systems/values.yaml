@@ -1,4 +1,6 @@
 gha-runner-scale-set-controller:
+  crds:
+    install: true
   resources:
     limits:
       cpu: 100m
