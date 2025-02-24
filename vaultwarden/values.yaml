@@ -94,7 +94,7 @@ cnpg-cluster:
     retentionPolicy: 30d
     barmanObjectStore:
       endpointURL: https://s3.gra.io.cloud.ovh.net
-      destinationPath: s3://argocd-sre-cnpg-clusters/backups/vaultwarden-ovh
+      destinationPath: s3://argocd-sre-cnpg-clusters/backups/vaultwarden-2025-02-24-11-51
       s3Credentials:
         accessKeyId:
           name: s3-creds
@@ -113,8 +113,7 @@ cnpg-cluster:
     enabled: true
     barmanObjectStore:
       endpointURL: https://s3.gra.io.cloud.ovh.net
-      destinationPath: s3://argocd-sre-cnpg-clusters/backups
-      serverName: bitwarden
+      destinationPath: s3://argocd-sre-cnpg-clusters/backups/bitwarden-ovh
       s3Credentials:
         accessKeyId:
           name: s3-creds
@@ -127,6 +126,7 @@ cnpg-cluster:
           key: bucket_region
       wal:
         compression: gzip
+        maxParallel: 8
       data:
         compression: gzip
   resources:
