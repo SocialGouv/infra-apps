@@ -1,14 +1,27 @@
 vaultwarden:
+  podSecurityContext:
+    fsGroup: 1000
+
   securityContext:
     allowPrivilegeEscalation: false
     privileged: false
     readOnlyRootFilesystem: true
     runAsNonRoot: true
-    runAsGroup: 1001
-    runAsUser: 1001
+    runAsGroup: 1000
+    runAsUser: 1000
     capabilities:
       drop:
         - ALL
+
+  # initContainers:
+  #   - name: init-chmod
+  #     image: busybox
+  #     command: ["sh", "-c", "chown -R 1000:1000 /data"]
+  #     volumeMounts:
+  #       - name: vaultwarden-data
+  #         mountPath: /data
+  #     securityContext:
+  #       runAsUser: 0
 
   signupsAllowed: false
   database:
