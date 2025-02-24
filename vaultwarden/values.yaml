@@ -17,9 +17,21 @@ vaultwarden:
     existingSecretKey: "uri"
   invitationsAllowed: true
   invitationOrgName: "Fabrique des ministères sociaux"
-  data:
-    name: "vaultwarden-data"
-    size: "10Gi"
+  storage:
+    data:
+      name: "vaultwarden-data"
+      size: "10Gi"
+      accessMode: "ReadWriteOnce"
+      path: "/data"
+      keepPvc: true
+    attachments:
+      # By default, attachments will be stored in the data volume
+      # If you need separate volume for attachments, uncomment and adjust these settings
+      # name: "vaultwarden-attachments"
+      # size: "20Gi"
+      # accessMode: "ReadWriteOnce"
+      # path: "/data/attachments"
+      # keepPvc: true
   adminToken:
     existingSecret: "admin-creds"
     existingSecretKey: "token"
