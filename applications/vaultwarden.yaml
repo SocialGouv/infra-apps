@@ -1,0 +1,29 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: vaultwarden
+spec:
+  destination:
+    name: ovh-prod
+    namespace: vaultwarden
+  project: default
+  source:
+    repoURL: https://github.com/SocialGouv/infra-apps.git
+    targetRevision: master
+    path: vaultwarden
+  syncPolicy:
+    managedNamespaceMetadata:
+      labels:
+        application: sre
+    syncOptions:
+      - CreateNamespace=true
+    # automated:
+    #   prune: true # Specifies if resources should be pruned during auto-syncing ( false by default ).
+    #   selfHeal: false # Specifies if partial app sync should be executed when resources are changed only in target Kubernetes cluster and no git change detected ( false by default ).
+    #   allowEmpty: false # Allows deleting all application resources during automatic syncing ( false by default ).
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
