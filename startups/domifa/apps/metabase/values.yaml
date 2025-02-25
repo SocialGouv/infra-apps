@@ -1,8 +1,5 @@
 metabase:
   enabled: true
-  resources:
-    requests:
-      memory: 2Gi
 
   fullnameOverride: metabase
   image:
