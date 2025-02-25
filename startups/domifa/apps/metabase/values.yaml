@@ -2,8 +2,6 @@ metabase:
   enabled: true
 
   fullnameOverride: metabase
-  image:
-    tag: v0.49.6
   cnpg-cluster:
     backup:
       enabled: true
