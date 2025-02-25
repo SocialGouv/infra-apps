@@ -30,7 +30,7 @@ ingress:
     nginx.ingress.kubernetes.io/proxy-body-size: 8m
 annotations:
   
-  oblik.socialgouv.io/request-memory-apply-mode: "off" # because metabase is JVM and memory recommendation is incompatible with JVM
+  # because metabase is JVM and memory recommendation is incompatible with JVM
   oblik.socialgouv.io/memory-request-from-cpu-enabled: "true"
   
   oblik.socialgouv.io/min-request-cpu: "500m"
