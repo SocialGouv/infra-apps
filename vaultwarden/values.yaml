@@ -88,6 +88,8 @@ cnpg-cluster:
   image:
     repository: "ghcr.io/cloudnative-pg/postgresql"
     tag: "15.3"
+  clusterExtraSpec:
+    enableSuperuserAccess: true
   backup:
     enabled: true
     schedule: "0 0 0 * * *" # daily
