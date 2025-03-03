@@ -15,4 +15,8 @@ data:
     http://localhost:3000,
     https://egapro-*.ovh.fabrique.social.gouv.fr
   CHARON_CLIENT_2_PROVIDER: moncomptepro
+  CHARON_CLIENT_3_WILDCARDS: |
+    http://localhost:3000,
+    https://egapro-*.ovh.fabrique.social.gouv.fr
+  CHARON_CLIENT_3_PROVIDER: fabriqueKeycloak
   CHARON_PUBLIC_HOST: https://egapro-charon.ovh.fabrique.social.gouv.fr
