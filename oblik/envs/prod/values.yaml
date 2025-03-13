@@ -18,4 +18,4 @@ oblik:
     reloader.stakater.com/auto: "true" # should not be necessary if argo app configured properly but extra security
 
   image:
-    tag: v0.2.6
+    tag: v0.3.0
