@@ -1,41 +1,43 @@
-replicas: 3
+oblik:
 
-image:
-  repository: ghcr.io/socialgouv/oblik
-  tag: 
-  pullPolicy: 
+  replicas: 3
 
-webhook:
-  enabled: true
-  failurePolicy: Fail # Fail or Ignore
+  image:
+    repository: ghcr.io/socialgouv/oblik
+    tag: 
+    pullPolicy: 
 
-existingSecret: 
+  webhook:
+    enabled: true
+    failurePolicy: Fail # Fail or Ignore
 
-
-# Additional arguments to pass to the operator
-args: []
-# Example:
-# args:
-#   - "-v=2"  # Enable debug logging
-#   - "-v=3"  # Enable verbose debug logging
+  existingSecret: 
 
 
-resources:
-  requests:
-    cpu: 80m
-    memory: 262144k
-  limits:
-    cpu: 80m
-    memory: 262144k
+  # Additional arguments to pass to the operator
+  args: []
+  # Example:
+  # args:
+  #   - "-v=2"  # Enable debug logging
+  #   - "-v=3"  # Enable verbose debug logging
 
-annotations: {}
 
-env:
-  OBLIK_DEFAULT_CRON: "0 0,2,4 * * *" # UTC
-  OBLIK_DEFAULT_CRON_ADD_RANDOM_MAX: 60m
-  OBLIK_DEFAULT_LIMIT_CPU_CALCULATOR_VALUE: "1.5"
-  OBLIK_DEFAULT_LIMIT_MEMORY_CALCULATOR_VALUE: "1"
-  OBLIK_DEFAULT_MIN_REQUEST_CPU: 100m
-  OBLIK_DEFAULT_MIN_REQUEST_MEMORY: 262144k
-  OBLIK_DEFAULT_MAX_REQUEST_CPU: "8"
-  OBLIK_DEFAULT_MAX_REQUEST_MEMORY: 20Gi
+  resources:
+    requests:
+      cpu: 80m
+      memory: 262144k
+    limits:
+      cpu: 80m
+      memory: 262144k
+
+  annotations: {}
+
+  env:
+    OBLIK_DEFAULT_CRON: "0 0,2,4 * * *" # UTC
+    OBLIK_DEFAULT_CRON_ADD_RANDOM_MAX: 60m
+    OBLIK_DEFAULT_LIMIT_CPU_CALCULATOR_VALUE: "1.5"
+    OBLIK_DEFAULT_LIMIT_MEMORY_CALCULATOR_VALUE: "1"
+    OBLIK_DEFAULT_MIN_REQUEST_CPU: 100m
+    OBLIK_DEFAULT_MIN_REQUEST_MEMORY: 262144k
+    OBLIK_DEFAULT_MAX_REQUEST_CPU: "8"
+    OBLIK_DEFAULT_MAX_REQUEST_MEMORY: 20Gi

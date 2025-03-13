@@ -3,6 +3,9 @@ name: oblik
 version: 0.1.0
 description: A Helm chart for Oblik
 dependencies:
+  - name: oblik
+    repository: oci://ghcr.io/socialgouv/helm
+    version: 0.1.0
   - name: final-appset
     repository: file://./charts/final-appset
     version: 0.0.0
