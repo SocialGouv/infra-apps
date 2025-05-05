@@ -1,0 +1,9 @@
+dependencies:
+- name: oblik
+  repository: oci://ghcr.io/socialgouv/helm
+  version: 0.1.0
+- name: final-appset
+  repository: file://./charts/final-appset
+  version: 0.0.0
+digest: sha256:8029d16a94a3db942be62c708a3889bb42aac51dedd6bafd8677f7802baac6dd
+generated: "2025-05-05T16:28:16.115949322+02:00"
