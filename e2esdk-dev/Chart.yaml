@@ -10,4 +10,4 @@ dependencies:
     version: 17.9.3
   - name: pgweb
     repository: https://charts.ectobit.com
-    version: 0.1.7
+    version: 0.1.9
