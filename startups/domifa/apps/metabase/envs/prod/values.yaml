@@ -1,5 +1,7 @@
 metabase:
   host: metabase-prod-domifa.ovh.fabrique.social.gouv.fr
+  annotations:
+    oblik.socialgouv.io/min-request-cpu: "1"
   ingress:
     annotations:
       cert-manager.io: cluster-issuer
