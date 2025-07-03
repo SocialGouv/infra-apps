@@ -17,15 +17,20 @@ spec:
       - ServerSideApply=true
       - RespectIgnoreDifferences=true
   ignoreDifferences:
-  - group: actions.github.com
-    kind: AutoscalingListener
-    jsonPointers:
-      - /
-  - group: rbac.authorization.k8s.io
-    kind: Role
-    jsonPointers:
-      - /
-  - group: rbac.authorization.k8s.io
-    kind: RoleBinding
-    jsonPointers:
-      - /
+    - group: actions.github.com
+      kind: "*"
+      jsonPointers:
+        - /
+    - group: rbac.authorization.k8s.io
+      kind: Role
+      jsonPointers:
+        - /
+    - group: rbac.authorization.k8s.io
+      kind: RoleBinding
+      jsonPointers:
+        - /
+    - group: ""
+      kind: ServiceAccount
+      name: arc-runners-gha-rs-no-permission
+      jsonPointers:
+        - /
