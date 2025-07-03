@@ -13,3 +13,8 @@ final-appset:
   namespace:
     labels:
       sre.socialgouv.github.io/startup: cdtn
+
+metabase-matomo-sync:
+  cnpg-cluster:
+    annotations:
+      oblik.socialgouv.io/min-request-cpu: "1"
