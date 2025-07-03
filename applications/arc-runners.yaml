@@ -16,17 +16,11 @@ spec:
       - CreateNamespace=true
       - ServerSideApply=true
       - RespectIgnoreDifferences=true
-  ignoreDifferences:
-  # - group: actions.github.com
-  #   kind: AutoscalingListener
-  #   jqPathExpressions:
-  #     - '.' # Ignore the entire AutoscalingListener resource completely
+  ignoreDifferences: # https://github.com/orgs/community/discussions/126862
+  - group: actions.github.com
+    kind: AutoscalingListener
   - group: rbac.authorization.k8s.io
     kind: Role
-    jqPathExpressions:
-      - 'select(.metadata.labels["actions.github.com/scale-set-name"] == "arc-runners")'
   - group: rbac.authorization.k8s.io
     kind: RoleBinding
-    jqPathExpressions:
-      - 'select(.metadata.labels["actions.github.com/scale-set-name"] == "arc-runners")'
 
