@@ -15,9 +15,3 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
-  ignoreDifferences:
-    - group: actions.github.com
-      kind: AutoscalingListener
-      namespace: arc-systems
-      jsonPointers:
-        - /
