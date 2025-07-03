@@ -16,21 +16,6 @@ spec:
       - CreateNamespace=true
       - ServerSideApply=true
       - RespectIgnoreDifferences=true
-  ignoreDifferences:
-    - group: actions.github.com
-      kind: "*"
-      jsonPointers:
-        - /
-    - group: rbac.authorization.k8s.io
-      kind: Role
-      jsonPointers:
-        - /
-    - group: rbac.authorization.k8s.io
-      kind: RoleBinding
-      jsonPointers:
-        - /
-    - group: ""
-      kind: ServiceAccount
-      name: arc-runners-gha-rs-no-permission
-      jsonPointers:
-        - /
+  # https://github.com/orgs/community/discussions/126862
+  # was unable to make ignoreDifferences work
+  
