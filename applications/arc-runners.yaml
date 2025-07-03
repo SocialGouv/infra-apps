@@ -17,24 +17,22 @@ spec:
       - ServerSideApply=true
       - RespectIgnoreDifferences=true
   ignoreDifferences:
-    # Ignore AutoscalingListener resources (controller-managed)
-    - group: actions.github.com
-      kind: AutoscalingListener
-    # Ignore ServiceAccounts with cleanup-protection finalizer
-    - group: ""
-      kind: ServiceAccount
-      name: arc-runners-gha-rs-no-permission
-    # Ignore dynamically created Roles
-    - group: rbac.authorization.k8s.io
-      kind: Role
-      name: arc-runners-754b578d-listener
-    - group: rbac.authorization.k8s.io
-      kind: Role
-      name: arc-runners-gha-rs-manager
-    # Ignore dynamically created RoleBindings
-    - group: rbac.authorization.k8s.io
-      kind: RoleBinding
-      name: arc-runners-754b578d-listener
-    - group: rbac.authorization.k8s.io
-      kind: RoleBinding
-      name: arc-runners-gha-rs-manager
+  - group: actions.github.com
+    kind: AutoscalingListener
+    jqPathExpressions:
+      - '.'
+  - group: ""
+    kind: ServiceAccount
+    name: arc-runners-gha-rs-no-permission
+    jqPathExpressions:
+      - '.'
+  - group: rbac.authorization.k8s.io
+    kind: Role
+    jqPathExpressions:
+      - '.metadata.name | test("arc-runners-.*-listener")'
+      - '.metadata.name == "arc-runners-gha-rs-manager"'
+  - group: rbac.authorization.k8s.io
+    kind: RoleBinding
+    jqPathExpressions:
+      - '.metadata.name | test("arc-runners-.*-listener")'
+      - '.metadata.name == "arc-runners-gha-rs-manager"'
