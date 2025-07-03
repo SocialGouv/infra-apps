@@ -16,27 +16,41 @@ spec:
       - CreateNamespace=true
       - ServerSideApply=true
       - RespectIgnoreDifferences=true
-  resourceExclusions:
-    - apiGroups:
-        - actions.github.com
-      kinds:
-        - AutoscalingListener
-      clusters:
-        - "*"
-    - apiGroups:
-        - ""
-      kinds:
-        - ServiceAccount
-      clusters:
-        - "*"
-      # Only exclude ServiceAccounts with specific patterns
-      nameRegex: ".*-gha-rs-no-permission$"
-    - apiGroups:
-        - rbac.authorization.k8s.io
-      kinds:
-        - Role
-        - RoleBinding
-      clusters:
-        - "*"
-      # Only exclude RBAC resources created by the listener
-      nameRegex: ".*-listener$"
+  # Ignore resources created and managed by the ARC operator
+  ignoreDifferences:
+    # Ignore AutoscalingListener resources (managed by operator)
+    - group: actions.github.com
+      kind: AutoscalingListener
+      jsonPointers:
+        - /metadata/finalizers
+        - /metadata/deletionTimestamp
+        - /metadata/deletionGracePeriodSeconds
+        - /metadata/resourceVersion
+        - /metadata/generation
+        - /spec
+        - /status
+    # Ignore ServiceAccount resources with cleanup finalizers
+    - group: ""
+      kind: ServiceAccount
+      name: arc-runners-gha-rs-no-permission
+      jsonPointers:
+        - /metadata/finalizers
+        - /metadata/deletionTimestamp
+        - /metadata/deletionGracePeriodSeconds
+        - /metadata/resourceVersion
+    # Ignore RBAC resources created by the operator
+    - group: rbac.authorization.k8s.io
+      kind: Role
+      nameRegex: "arc-runners-.*-listener"
+      jsonPointers:
+        - /metadata/labels
+        - /metadata/resourceVersion
+        - /rules
+    - group: rbac.authorization.k8s.io
+      kind: RoleBinding
+      nameRegex: "arc-runners-.*-listener"
+      jsonPointers:
+        - /metadata/labels
+        - /metadata/resourceVersion
+        - /subjects
+        - /roleRef
