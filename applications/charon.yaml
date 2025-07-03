@@ -23,7 +23,7 @@ spec:
       annotations:
         argocd.argoproj.io/manifest-generate-paths: .
         notifications.argoproj.io/subscribe.mattermost: moojipgstjgsixs6mgycxpe5ua
-      labels:
+      labels: {}
     spec:
       destination:
         name: "{{ .cluster }}"
