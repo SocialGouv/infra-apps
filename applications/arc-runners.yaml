@@ -16,11 +16,27 @@ spec:
       - CreateNamespace=true
       - ServerSideApply=true
       - RespectIgnoreDifferences=true
-  ignoreDifferences: # https://github.com/orgs/community/discussions/126862
-  - group: actions.github.com
-    kind: AutoscalingListener
-  - group: rbac.authorization.k8s.io
-    kind: Role
-  - group: rbac.authorization.k8s.io
-    kind: RoleBinding
-
+  resourceExclusions:
+    - apiGroups:
+        - actions.github.com
+      kinds:
+        - AutoscalingListener
+      clusters:
+        - "*"
+    - apiGroups:
+        - ""
+      kinds:
+        - ServiceAccount
+      clusters:
+        - "*"
+      # Only exclude ServiceAccounts with specific patterns
+      nameRegex: ".*-gha-rs-no-permission$"
+    - apiGroups:
+        - rbac.authorization.k8s.io
+      kinds:
+        - Role
+        - RoleBinding
+      clusters:
+        - "*"
+      # Only exclude RBAC resources created by the listener
+      nameRegex: ".*-listener$"
