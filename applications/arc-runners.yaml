@@ -17,10 +17,10 @@ spec:
       - ServerSideApply=true
       - RespectIgnoreDifferences=true
   ignoreDifferences:
-  - group: actions.github.com
-    kind: AutoscalingListener
-    jqPathExpressions:
-      - '.' # Ignore the entire AutoscalingListener resource completely
+  # - group: actions.github.com
+  #   kind: AutoscalingListener
+  #   jqPathExpressions:
+  #     - '.' # Ignore the entire AutoscalingListener resource completely
   - group: rbac.authorization.k8s.io
     kind: Role
     jqPathExpressions:
