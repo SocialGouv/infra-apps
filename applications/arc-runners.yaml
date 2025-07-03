@@ -20,19 +20,13 @@ spec:
   - group: actions.github.com
     kind: AutoscalingListener
     jqPathExpressions:
-      - '.'
-  - group: ""
-    kind: ServiceAccount
-    name: arc-runners-gha-rs-no-permission
-    jqPathExpressions:
-      - '.'
+      - '.' # Ignore the entire AutoscalingListener resource completely
   - group: rbac.authorization.k8s.io
     kind: Role
     jqPathExpressions:
-      - '.metadata.name | test("arc-runners-.*-listener")'
-      - '.metadata.name == "arc-runners-gha-rs-manager"'
+      - 'select(.metadata.labels["actions.github.com/scale-set-name"] == "arc-runners")'
   - group: rbac.authorization.k8s.io
     kind: RoleBinding
     jqPathExpressions:
-      - '.metadata.name | test("arc-runners-.*-listener")'
-      - '.metadata.name == "arc-runners-gha-rs-manager"'
+      - 'select(.metadata.labels["actions.github.com/scale-set-name"] == "arc-runners")'
+
