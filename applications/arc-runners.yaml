@@ -15,3 +15,37 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
+  ignoreDifferences:
+    # Ignore AutoscalingListener resources (controller-managed)
+    - group: actions.github.com
+      kind: AutoscalingListener
+      jsonPointers:
+        - /
+    # Ignore ServiceAccounts with cleanup-protection finalizer
+    - group: ""
+      kind: ServiceAccount
+      name: arc-runners-gha-rs-no-permission
+      jsonPointers:
+        - /
+    # Ignore dynamically created Roles
+    - group: rbac.authorization.k8s.io
+      kind: Role
+      name: arc-runners-754b578d-listener
+      jsonPointers:
+        - /
+    - group: rbac.authorization.k8s.io
+      kind: Role
+      name: arc-runners-gha-rs-manager
+      jsonPointers:
+        - /
+    # Ignore dynamically created RoleBindings
+    - group: rbac.authorization.k8s.io
+      kind: RoleBinding
+      name: arc-runners-754b578d-listener
+      jsonPointers:
+        - /
+    - group: rbac.authorization.k8s.io
+      kind: RoleBinding
+      name: arc-runners-gha-rs-manager
+      jsonPointers:
+        - /
