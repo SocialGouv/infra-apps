@@ -18,7 +18,7 @@ metabase:
 metabase-matomo-sync:
   enabled: true
   matomoSiteId: 4
-  startDate: "2025-01-01"
+  startDate: "2025-04-01"
   fullnameOverride: metabase-matomo-sync
   cnpg-cluster:
     persistence:
