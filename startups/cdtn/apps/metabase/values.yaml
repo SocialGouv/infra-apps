@@ -22,7 +22,13 @@ metabase-matomo-sync:
   fullnameOverride: metabase-matomo-sync
   cnpg-cluster:
     persistence:
-      size: 30Gi
+      size: 60Gi
+    clusterExtraSpec:
+      postgresql:
+        parameters:
+          wal_level: minimal
+          archive_mode: off
+          max_wal_senders: "0"
     backup:
       enabled: true
       barmanObjectStore:
