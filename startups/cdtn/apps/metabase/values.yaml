@@ -29,15 +29,15 @@ metabase-matomo-sync:
           wal_level: minimal
           archive_mode: "off"
           max_wal_senders: "0"
-    backup:
-      enabled: true
-      barmanObjectStore:
-        destinationPath: s3://cdtn-prod-backups/metabase-matomo-sync-ovh
-        endpointURL: https://s3.gra.io.cloud.ovh.net
-        s3Credentials:
-          accessKeyId:
-            name: &s3secretName cdtn-prod-backups-access-key
-          region:
-            name: *s3secretName
-          secretAccessKey:
-            name: *s3secretName
+    # backup:
+    #   enabled: true
+    #   barmanObjectStore:
+    #     destinationPath: s3://cdtn-prod-backups/metabase-matomo-sync-ovh
+    #     endpointURL: https://s3.gra.io.cloud.ovh.net
+    #     s3Credentials:
+    #       accessKeyId:
+    #         name: &s3secretName cdtn-prod-backups-access-key
+    #       region:
+    #         name: *s3secretName
+    #       secretAccessKey:
+    #         name: *s3secretName
