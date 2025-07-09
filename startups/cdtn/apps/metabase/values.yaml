@@ -27,7 +27,7 @@ metabase-matomo-sync:
       postgresql:
         parameters:
           wal_level: minimal
-          archive_mode: off
+          archive_mode: "off"
           max_wal_senders: "0"
     backup:
       enabled: true
