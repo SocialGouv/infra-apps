@@ -21,13 +21,15 @@ metabase-matomo-sync:
   startDate: "2025-04-01"
   fullnameOverride: metabase-matomo-sync
   cnpg-cluster:
+    annotations:
+      cnpg.io/skipWalArchiving: "enabled"
     persistence:
       size: 60Gi
     clusterExtraSpec:
       postgresql:
         parameters:
           wal_level: minimal
-          archive_mode: "off"
+          # archive_mode: "off"
           max_wal_senders: "0"
     # backup:
     #   enabled: true
