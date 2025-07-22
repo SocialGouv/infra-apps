@@ -6,11 +6,6 @@ metabase:
       cert-manager.io/cluster-issuer: letsencrypt-prod
       kubernetes.io/tls-acme: true
 
-metabase-matomo-sync:
-  cnpg-cluster:
-    persistence:
-      size: 120Gi
-
 final-appset:
   importSecretsFromStartup: false
   importSreSecretsList:
@@ -23,3 +18,5 @@ metabase-matomo-sync:
   cnpg-cluster:
     annotations:
       oblik.socialgouv.io/min-request-cpu: "1"
+    persistence:
+      size: 120Gi
