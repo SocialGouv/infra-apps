@@ -1,14 +1,14 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: arc-system
+  name: arc-systems
 spec:
   project: default
   destination:
     name: ovh-dev
-    namespace: arc-system
+    namespace: arc-systems
   source:
-    path: arc-system
+    path: arc-systems
     repoURL: https://github.com/SocialGouv/infra-apps.git
     targetRevision: master
   syncPolicy:

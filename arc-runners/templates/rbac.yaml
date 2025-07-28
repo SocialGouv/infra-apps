@@ -27,7 +27,7 @@ metadata:
 subjects:
   - kind: ServiceAccount
     name: arc-gha-rs-controller
-    namespace: arc-system
+    namespace: arc-systems
 roleRef:
   kind: Role
   name: gha-runner-controller
