@@ -1,0 +1,21 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: arc-system
+spec:
+  project: default
+  destination:
+    name: ovh-dev
+    namespace: arc-system
+  source:
+    path: arc-system
+    repoURL: https://github.com/SocialGouv/infra-apps.git
+    targetRevision: master
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+      - RespectIgnoreDifferences=true
+  # https://github.com/orgs/community/discussions/126862
+  # was unable to make ignoreDifferences work
+  

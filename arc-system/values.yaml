@@ -1,0 +1,16 @@
+gha-runner-scale-set-controller:
+  serviceAccount:
+    create: true
+    name: arc-systems-gha-rs-controller
+  
+  flags:
+    watchSingleNamespace: arc-runners
+
+  resources:
+    limits:
+      cpu: 100m
+      memory: 128Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+  

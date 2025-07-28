@@ -1,7 +1,7 @@
 apiVersion: v2
-name: arc-runners
+name: arc-system
 version: 0.0.0
 dependencies:
-  - name: gha-runner-scale-set
+  - name: gha-runner-scale-set-controller
     repository: "oci://ghcr.io/actions/actions-runner-controller-charts"
     version: 0.11.0
