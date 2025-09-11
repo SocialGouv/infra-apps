@@ -18,6 +18,7 @@ metabase:
 metabase-matomo-sync:
   enabled: true
   matomoSiteId: 4
+  startDate: "2025-04-01"
   destinationTable: "matomo_partitioned"
   fullnameOverride: metabase-matomo-sync
   cnpg-cluster:
