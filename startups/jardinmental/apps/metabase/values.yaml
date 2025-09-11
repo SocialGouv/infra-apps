@@ -19,6 +19,7 @@ metabase-matomo-sync:
   enabled: true
   matomoSiteId: 37
   fullnameOverride: metabase-matomo-sync
+  destinationTable: "matomo_partitioned"
   cnpg-cluster:
     persistence:
       size: 30Gi
