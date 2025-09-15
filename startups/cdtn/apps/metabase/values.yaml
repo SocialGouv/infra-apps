@@ -20,6 +20,9 @@ metabase-matomo-sync:
   matomoSiteId: 4
   startDate: "2025-04-01"
   destinationTable: "matomo_partitioned"
+  pgdatabase:
+    secretName: ovh-database
+    secretKey: uri
   fullnameOverride: metabase-matomo-sync
   cnpg-cluster:
     annotations:
