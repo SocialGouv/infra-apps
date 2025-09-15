@@ -1,0 +1,12 @@
+apiVersion: v2
+name: superset
+version: 0.0.0
+dependencies:
+  - name: final-appset
+    repository: file://./charts/final-appset
+    version: 0.0.0
+  - name: superset
+    repository: http://apache.github.io/superset/
+    version: 0.15.0
+    condition: superset.enabled
+

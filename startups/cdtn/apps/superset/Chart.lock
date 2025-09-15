@@ -1,0 +1,9 @@
+dependencies:
+- name: final-appset
+  repository: file://./charts/final-appset
+  version: 0.0.0
+- name: superset
+  repository: http://apache.github.io/superset/
+  version: 0.15.0
+digest: sha256:778a32ebf10bf8ee6244fa39ed28519215d9d3a5d827701f2f35cc6696787c80
+generated: "2025-09-15T15:31:46.905816001+02:00"

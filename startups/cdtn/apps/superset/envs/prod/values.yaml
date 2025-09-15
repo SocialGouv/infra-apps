@@ -1,0 +1,32 @@
+superset:
+  hosts:
+    - superset-cdtn.fabrique.social.gouv.fr
+  tls:
+    - secretName: superset-cdtn-tls
+      hosts:
+        - superset-cdtn.fabrique.social.gouv.fr
+
+  ingress:
+    annotations:
+      cert-manager.io: cluster-issuer
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+      kubernetes.io/tls-acme: true
+      
+  postgresql:
+    enabled: true
+    auth:
+      existingSecret: superset-postgresql
+  redis:
+    enabled: true
+    auth:
+      enabled: true
+      existingSecret: superset-redis
+      existingSecretKey: redis-password
+
+final-appset:
+  # importSecretsFromStartup: false
+  # importSreSecretsList:
+  #  - matomo-key
+  namespace:
+    labels:
+      sre.socialgouv.github.io/startup: cdtn

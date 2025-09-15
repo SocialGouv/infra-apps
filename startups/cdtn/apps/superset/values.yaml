@@ -1,0 +1,19 @@
+superset:
+  enabled: true
+  fullnameOverride: superset
+
+  # Do not let the subchart create its own env secret; we will provide one via SealedSecret
+  secretEnv:
+    create: false
+
+  # All pods load environment from this Secret (backed by SealedSecret "superset")
+  envFromSecret: superset
+
+  # Upstream expects a list of strings; leave empty unless you need additional secrets
+  envFromSecrets: []
+
+  init:
+    # Do not auto-create the admin in production
+    createAdmin: false
+    # Keep examples off
+    loadExamples: false
