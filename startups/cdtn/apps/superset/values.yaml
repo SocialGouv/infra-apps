@@ -17,10 +17,20 @@ superset:
   # see https://github.com/apache/superset/issues/31026#issuecomment-2494948804
   bootstrapScript: |
     #!/bin/bash
-    pip install \
+    set -e
+    PKG_DIR=/tmp/py
+    mkdir -p "$PKG_DIR"
+    export PYTHONPATH="$PKG_DIR:$PYTHONPATH"
+
+    # Install drivers into the target dir (not --user)
+    pip install --no-cache-dir --target "$PKG_DIR" \
       "clickhouse-connect>=0.6.8" \
-      "psycopg2-binary>=2.9.10" \
-      &&\
+      "psycopg2-binary>=2.9.10"
+
+    # Optional: avoid pip cache warnings
+    export PIP_NO_CACHE_DIR=1
+
+    # Your existing line
     if [ ! -f ~/bootstrap ]; then echo "Running Superset with uid {{ .Values.runAsUser }}" > ~/bootstrap; fi
 
 
