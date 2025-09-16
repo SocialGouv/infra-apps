@@ -1,12 +1,13 @@
 superset:
-  hosts:
-    - superset-cdtn.fabrique.social.gouv.fr
-  tls:
-    - secretName: superset-cdtn-tls
-      hosts:
-        - superset-cdtn.fabrique.social.gouv.fr
 
   ingress:
+    enabled: true
+    hosts:
+      - superset-cdtn.fabrique.social.gouv.fr
+    tls:
+      - secretName: superset-cdtn-tls
+        hosts:
+          - superset-cdtn.fabrique.social.gouv.fr
     annotations:
       cert-manager.io: cluster-issuer
       cert-manager.io/cluster-issuer: letsencrypt-prod
