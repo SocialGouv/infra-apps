@@ -11,7 +11,7 @@ superset:
     annotations:
       cert-manager.io: cluster-issuer
       cert-manager.io/cluster-issuer: letsencrypt-prod
-      kubernetes.io/tls-acme: true
+      kubernetes.io/tls-acme: "true"
       
   postgresql:
     enabled: true
