@@ -12,6 +12,8 @@ superset:
   # Upstream expects a list of strings; leave empty unless you need additional secrets
   envFromSecrets: []
 
+  runAsUser: 1000
+  
   # Init job configuration
   init:
     # Do not auto-create the admin in production
