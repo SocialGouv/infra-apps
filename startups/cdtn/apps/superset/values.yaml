@@ -12,8 +12,96 @@ superset:
   # Upstream expects a list of strings; leave empty unless you need additional secrets
   envFromSecrets: []
 
+  # Init job configuration
   init:
     # Do not auto-create the admin in production
     createAdmin: false
     # Keep examples off
     loadExamples: false
+    # Replicate default initContainers, overriding only securityContext
+    initContainers:
+      - name: wait-for-postgres
+        image: "{{ .Values.initImage.repository }}:{{ .Values.initImage.tag }}"
+        imagePullPolicy: "{{ .Values.initImage.pullPolicy }}"
+        envFrom:
+          - secretRef:
+              name: "{{ tpl .Values.envFromSecret . }}"
+        command:
+          - /bin/sh
+          - -c
+          - dockerize -wait "tcp://$DB_HOST:$DB_PORT" -timeout 120s
+        securityContext:
+          runAsUser: 1000
+          runAsGroup: 1000
+
+  # Superset web node
+  supersetNode:
+    # Replicate default initContainers, overriding only securityContext
+    initContainers:
+      - name: wait-for-postgres
+        image: "{{ .Values.initImage.repository }}:{{ .Values.initImage.tag }}"
+        imagePullPolicy: "{{ .Values.initImage.pullPolicy }}"
+        envFrom:
+          - secretRef:
+              name: "{{ tpl .Values.envFromSecret . }}"
+        command:
+          - /bin/sh
+          - -c
+          - dockerize -wait "tcp://$DB_HOST:$DB_PORT" -timeout 120s
+        securityContext:
+          runAsUser: 1000
+          runAsGroup: 1000
+
+  # Superset Celery worker
+  supersetWorker:
+    # Replicate default initContainers, overriding only securityContext
+    initContainers:
+      - name: wait-for-postgres-redis
+        image: "{{ .Values.initImage.repository }}:{{ .Values.initImage.tag }}"
+        imagePullPolicy: "{{ .Values.initImage.pullPolicy }}"
+        envFrom:
+          - secretRef:
+              name: "{{ tpl .Values.envFromSecret . }}"
+        command:
+          - /bin/sh
+          - -c
+          - dockerize -wait "tcp://$DB_HOST:$DB_PORT" -wait "tcp://$REDIS_HOST:$REDIS_PORT" -timeout 120s
+        securityContext:
+          runAsUser: 1000
+          runAsGroup: 1000
+
+  # Celery Beat (scheduled jobs)
+  supersetCeleryBeat:
+    # Replicate default initContainers, overriding only securityContext
+    initContainers:
+      - name: wait-for-postgres-redis
+        image: "{{ .Values.initImage.repository }}:{{ .Values.initImage.tag }}"
+        imagePullPolicy: "{{ .Values.initImage.pullPolicy }}"
+        envFrom:
+          - secretRef:
+              name: "{{ tpl .Values.envFromSecret . }}"
+        command:
+          - /bin/sh
+          - -c
+          - dockerize -wait "tcp://$DB_HOST:$DB_PORT" -wait "tcp://$REDIS_HOST:$REDIS_PORT" -timeout 120s
+        securityContext:
+          runAsUser: 1000
+          runAsGroup: 1000
+
+  # Celery Flower (monitoring UI)
+  supersetCeleryFlower:
+    # Replicate default initContainers, overriding only securityContext
+    initContainers:
+      - name: wait-for-postgres-redis
+        image: "{{ .Values.initImage.repository }}:{{ .Values.initImage.tag }}"
+        imagePullPolicy: "{{ .Values.initImage.pullPolicy }}"
+        envFrom:
+          - secretRef:
+              name: "{{ tpl .Values.envFromSecret . }}"
+        command:
+          - /bin/sh
+          - -c
+          - dockerize -wait "tcp://$DB_HOST:$DB_PORT" -wait "tcp://$REDIS_HOST:$REDIS_PORT" -timeout 120s
+        securityContext:
+          runAsUser: 1000
+          runAsGroup: 1000
