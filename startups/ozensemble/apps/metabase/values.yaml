@@ -2,6 +2,8 @@ metabase:
   enabled: true
   fullnameOverride: metabase
   cnpg-cluster:
+    persistence:
+      size: 16Gi
     backup:
       enabled: true
       barmanObjectStore:
