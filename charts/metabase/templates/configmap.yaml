@@ -20,3 +20,5 @@ data:
   MB_SITE_NAME: "Fabrique numérique des ministères sociaux"
   MB_SITE_URL: "https://{{ or .Values.host .Values.global.host }}"
   MB_PASSWORD_COMPLEXITY: strong
+  MB_QUERY_TIMEOUT_SECONDS: "900"
+  MB_DB_CONNECTION_TIMEOUT_MS: "10000"
