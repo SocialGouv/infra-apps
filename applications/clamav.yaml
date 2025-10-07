@@ -9,9 +9,6 @@ spec:
           - name: clamav-ovh-dev
             namespace: clamav
             cluster: ovh-dev
-          - name: clamav-dev
-            namespace: clamav
-            cluster: dev
   goTemplate: true
   template:
     metadata:
