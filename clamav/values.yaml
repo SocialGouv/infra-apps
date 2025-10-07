@@ -1,4 +1,6 @@
 clamav:
+  netpol:
+    enabled: false
   clamavd:
     image:
       # name: clamav/clamav
