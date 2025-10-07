@@ -1,9 +1,10 @@
-clamavd:
-  image:
-    name: clamav/clamav
-    version: 1.4.3
+clamav:
+  clamavd:
+    image:
+      # name: clamav/clamav
+      version: 1.4.3
 
-clamavRest:
-  image:
-    name: benzino77/clamav-rest-api
-    version: 1.6.2
+  clamavRest:
+    image:
+      # name: benzino77/clamav-rest-api
+      version: 1.6.2
