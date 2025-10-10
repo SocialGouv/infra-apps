@@ -1,0 +1,71 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  labels:
+    application: cdtn
+  name: refresh-views
+  namespace: startup-cdtn--metabase-prod
+spec:
+  schedule: 0 * * * *
+  successfulJobsHistoryLimit: 3
+  suspend: false
+  concurrencyPolicy: Forbid
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            application: cdtn
+          name: cdtn-cronjob-refresh-views
+        spec:
+          containers:
+          - command:
+            - psql
+            - -c
+            - |
+              REFRESH MATERIALIZED VIEW metabase_model_106;
+            env:
+            - name: PGDATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: ovh-database
+                  key: dbname
+            - name: PGHOST
+              valueFrom:
+                secretKeyRef:
+                  name: ovh-database
+                  key: host
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: ovh-database
+                  key: password
+            - name: PGPORT
+              valueFrom:
+                secretKeyRef:
+                  name: ovh-database
+                  key: port
+            - name: PGURL
+              valueFrom:
+                secretKeyRef:
+                  name: ovh-database
+                  key: uri
+            - name: PGUSER
+              valueFrom:
+                secretKeyRef:
+                  name: ovh-database
+                  key: username
+            image: ghcr.io/socialgouv/docker/psql
+            imagePullPolicy: IfNotPresent
+            name: cronjob
+            securityContext:
+              allowPrivilegeEscalation: false
+            resources:
+              requests:
+                cpu: 20m
+                memory: 32Mi
+              limits:
+                cpu: 20m
+                memory: 32Mi
+          restartPolicy: OnFailure
