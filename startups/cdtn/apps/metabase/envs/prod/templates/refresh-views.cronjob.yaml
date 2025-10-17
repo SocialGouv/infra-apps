@@ -25,6 +25,7 @@ spec:
             - -c
             - |
               REFRESH MATERIALIZED VIEW metabase_model_106;
+              REFRESH MATERIALIZED VIEW test_view_2;
             env:
             - name: PGDATABASE
               valueFrom:
