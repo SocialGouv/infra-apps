@@ -19,6 +19,7 @@ metabase-matomo-sync:
   enabled: true
   matomoSiteId: 4
   startDate: "2025-04-01"
+  forceStartDate: false
   destinationTable: "matomo_partitioned"
   pgdatabase:
     secretName: ovh-database

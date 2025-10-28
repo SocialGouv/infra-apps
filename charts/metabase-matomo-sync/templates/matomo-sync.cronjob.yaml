@@ -29,7 +29,7 @@ spec:
               securityContext:
                 allowPrivilegeEscalation: false
               {{- if .Values.command }}
-              command: 
+              command:
                 {{- .Values.command | toYaml | nindent 16 }}
               {{- end }}
               resources:
@@ -43,6 +43,8 @@ spec:
               env:
                 - name: STARTDATE
                   value: {{ .Values.startDate | quote }}
+                - name: FORCE_STARTDATE
+                  value: {{ .Values.forceStartDate | quote }}
                 - name: DEBUG
                   value: {{ .Values.debug | quote }}
                 - name: NODE_OPTIONS
