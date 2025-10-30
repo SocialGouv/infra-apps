@@ -25,6 +25,8 @@ spec:
             - -c
             - |
               REFRESH MATERIALIZED VIEW metabase_model_106;
+              REFRESH MATERIALIZED VIEW commentaires_utilisateurs;
+              REFRESH MATERIALIZED VIEW visites_uniques;
             env:
             - name: PGDATABASE
               valueFrom:
