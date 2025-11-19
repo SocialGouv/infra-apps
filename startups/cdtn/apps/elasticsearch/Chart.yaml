@@ -1,0 +1,5 @@
+apiVersion: v2
+name: cdtn-elasticsearch
+version: 0.1.0
+
+description: Elasticsearch cluster for cdtn managed by Elastic Cloud on Kubernetes (ECK)
