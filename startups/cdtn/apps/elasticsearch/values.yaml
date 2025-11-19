@@ -16,3 +16,8 @@ elasticsearch:
 
   config:
     node.store.allow_mmap: false
+
+final-appset:
+  namespace:
+    annotations:
+      field.cattle.io/projectId: c-m-4wz4v7ln:p-jgnst
