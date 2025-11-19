@@ -20,3 +20,4 @@ spec:
       ports:
         - port: 9200
           protocol: TCP
+
