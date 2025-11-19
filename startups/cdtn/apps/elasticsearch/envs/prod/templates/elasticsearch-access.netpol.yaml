@@ -1,0 +1,23 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: cdtn-es-allow-from-admin-and-cdtn
+  namespace: {{ .Release.Namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      common.k8s.elastic.co/type: elasticsearch
+      elasticsearch.k8s.elastic.co/cluster-name: cdtn-es
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: cdtn-admin
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: code-du-travail-numerique
+      ports:
+        - port: 9200
+          protocol: TCP
