@@ -1,5 +1,7 @@
 metabase:
   enabled: true
+  image:
+    tag: v0.53.3
 
   fullnameOverride: metabase
   cnpg-cluster:
