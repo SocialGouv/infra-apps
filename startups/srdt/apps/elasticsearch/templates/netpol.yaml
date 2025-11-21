@@ -13,11 +13,7 @@ spec:
     - from:
         - namespaceSelector:
             matchLabels:
-              kubernetes.io/metadata.name: srdt-admin
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: code-du-travail-numerique
+              kubernetes.io/metadata.name: srdt
       ports:
         - port: 9200
           protocol: TCP
-
