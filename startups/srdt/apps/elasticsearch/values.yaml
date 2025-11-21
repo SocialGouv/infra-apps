@@ -1,0 +1,23 @@
+elasticsearch:
+  name: srdt-es
+  version: 8.12.0
+
+  # default shape; envs can override
+  replicas: 1
+  storage: 50Gi
+
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "2Gi"
+    limits:
+      cpu: "1"
+      memory: "4Gi"
+
+  config:
+    node.store.allow_mmap: false
+
+final-appset:
+  namespace:
+    annotations:
+      field.cattle.io/projectId: c-m-4wz4v7ln:p-jgnst
