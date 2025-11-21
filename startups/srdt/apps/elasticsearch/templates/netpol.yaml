@@ -11,9 +11,16 @@ spec:
     - Ingress
   ingress:
     - from:
+        - podSelector:
+            matchLabels:
+              common.k8s.elastic.co/type: elasticsearch
+              elasticsearch.k8s.elastic.co/cluster-name: srdt-es
+      ports:
+        - port: 9300
+          protocol: TCP
+    - from:
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: srdt
       ports:
         - port: 9200
-          protocol: TCP
