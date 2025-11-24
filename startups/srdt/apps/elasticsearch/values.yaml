@@ -20,4 +20,4 @@ elasticsearch:
 final-appset:
   namespace:
     annotations:
-      field.cattle.io/projectId: c-m-4wz4v7ln:p-jgnst
+      field.cattle.io/projectId: c-m-4wz4v7ln:p-2dll4
