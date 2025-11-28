@@ -18,7 +18,7 @@ spec:
           spec:
             containers:
               - name: backup-uploads
-                image: bitnami/rclone:1.65.2-debian-12-r7
+                image: bitnamilegacy/rclone:1.65.2-debian-12-r7
                 command:
                 - "/bin/sh"
                 - "-c"
