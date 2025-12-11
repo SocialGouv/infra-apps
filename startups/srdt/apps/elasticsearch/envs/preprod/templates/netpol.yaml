@@ -1,0 +1,26 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: srdt-es-allow-from-admin-and-srdt
+spec:
+  podSelector:
+    matchLabels:
+      common.k8s.elastic.co/type: elasticsearch
+      elasticsearch.k8s.elastic.co/cluster-name: srdt-es
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              common.k8s.elastic.co/type: elasticsearch
+              elasticsearch.k8s.elastic.co/cluster-name: srdt-es
+      ports:
+        - port: 9300
+          protocol: TCP
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: srdt-preprod
+      ports:
+        - port: 9200
