@@ -1,9 +1,0 @@
-{{- define "final-appset.include-env" -}}
-{{ $appsetEnv := or .Values.appsetEnv .Values.global.appset.env }}
-{{ if $appsetEnv }}
-{{ range $path, $_ :=  .Files.Glob  (printf "envs/%s/templates/**.{yaml,yml}" $appsetEnv) }}
----
-{{ tpl ($.Files.Get $path) $ }}
-{{ end }}
-{{ end }}
-{{ end }}
