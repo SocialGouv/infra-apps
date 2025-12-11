@@ -1,5 +1,5 @@
 elasticsearch:
-  replicas: 3
+  replicas: 1
   storage: 100Gi
 
   resources:
@@ -13,4 +13,4 @@ elasticsearch:
 final-appset:
   namespace:
     annotations:
-      field.cattle.io/projectId: c-m-4wz4v7ln:p-2dll4
+      field.cattle.io/projectId: c-m-97jxtvnv:p-h5hd5
