@@ -1,0 +1,8 @@
+namespace:
+  enabled: true
+  labels: {}
+  annotations: {}
+
+importSecretsFromStartup: false
+
+importSreSecretsList: []

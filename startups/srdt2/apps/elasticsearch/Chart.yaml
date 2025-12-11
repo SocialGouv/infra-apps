@@ -1,0 +1,10 @@
+apiVersion: v2
+name: srdt-elasticsearch
+version: 0.1.0
+
+description: Elasticsearch cluster for srdt managed by Elastic Cloud on Kubernetes (ECK)
+
+dependencies:
+  - name: final-appset
+    repository: file://./charts/final-appset
+    version: 0.0.0
