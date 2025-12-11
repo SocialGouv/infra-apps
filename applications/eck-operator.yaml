@@ -1,31 +1,47 @@
 apiVersion: argoproj.io/v1alpha1
-kind: Application
+kind: ApplicationSet
 metadata:
-  name: eck-operator-ovh-prod
+  name: eck-operator
 spec:
-  project: default
-  destination:
-    name: ovh-prod
-    namespace: elastic-system
-  source:
-    repoURL: https://helm.elastic.co
-    chart: eck-operator
-    targetRevision: 3.2.0
-    helm:
-      releaseName: elastic-operator
-      values: |
-        installCRDs: true
-  syncPolicy:
-    syncOptions:
-      - CreateNamespace=true
-      - ServerSideApply=true
-    # Uncomment if you want fully automated sync
-    # automated:
-    #   prune: true
-    #   selfHeal: true
-    retry:
-      limit: 5
-      backoff:
-        duration: 5s
-        factor: 2
-        maxDuration: 3m
+  generators:
+    - list:
+        elements:
+          - name: eck-operator-ovh-dev
+            namespace: elastic-system
+            cluster: ovh-dev
+          - name: eck-operator-ovh-prod
+            namespace: elastic-system
+            cluster: ovh-prod
+  goTemplate: true
+  template:
+    metadata:
+      name: "{{ .name }}"
+      annotations:
+        argocd.argoproj.io/manifest-generate-paths: .
+    spec:
+      project: default
+      destination:
+        name: "{{ .cluster }}"
+        namespace: "{{ .namespace }}"
+      source:
+        repoURL: https://helm.elastic.co
+        chart: eck-operator
+        targetRevision: 3.2.0
+        helm:
+          releaseName: elastic-operator
+          values: |
+            installCRDs: true
+      syncPolicy:
+        syncOptions:
+          - CreateNamespace=true
+          - ServerSideApply=true
+        # Uncomment if you want fully automated sync
+        # automated:
+        #   prune: true
+        #   selfHeal: true
+        retry:
+          limit: 5
+          backoff:
+            duration: 5s
+            factor: 2
+            maxDuration: 3m
