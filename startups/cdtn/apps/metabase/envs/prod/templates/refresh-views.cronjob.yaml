@@ -6,7 +6,7 @@ metadata:
   name: refresh-views
   namespace: startup-cdtn--metabase-prod
 spec:
-  schedule: 0 * * * *
+  schedule: 0 2 * * *
   successfulJobsHistoryLimit: 3
   suspend: false
   concurrencyPolicy: Forbid
