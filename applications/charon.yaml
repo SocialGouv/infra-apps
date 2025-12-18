@@ -15,6 +15,9 @@ spec:
           - name: charon-egapro
             cluster: ovh-dev
             namespace: charon-egapro
+          - name: charon-srdt
+            cluster: ovh-dev
+            namespace: charon-srdt
 
   goTemplate: true
   template:
