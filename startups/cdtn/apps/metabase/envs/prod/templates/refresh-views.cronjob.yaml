@@ -22,6 +22,7 @@ spec:
           containers:
           - command:
             - psql
+            - --echo-all
             - -c
             - |
               REFRESH MATERIALIZED VIEW metabase_model_106;
