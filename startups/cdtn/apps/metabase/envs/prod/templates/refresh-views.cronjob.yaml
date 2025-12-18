@@ -66,9 +66,9 @@ spec:
               allowPrivilegeEscalation: false
             resources:
               requests:
-                cpu: 40m
-                memory: 64Mi
+                cpu: 20m
+                memory: 32Mi
               limits:
-                cpu: 40m
-                memory: 64Mi
+                cpu: 20m
+                memory: 32Mi
           restartPolicy: OnFailure
