@@ -25,9 +25,9 @@ spec:
             - --echo-all
             - -c
             - |
-              REFRESH MATERIALIZED VIEW metabase_model_106;
-              REFRESH MATERIALIZED VIEW commentaires_utilisateurs;
-              REFRESH MATERIALIZED VIEW visites_uniques;
+              REFRESH MATERIALIZED VIEW CONCURRENTLY metabase_model_106;
+              REFRESH MATERIALIZED VIEW CONCURRENTLY commentaires_utilisateurs;
+              REFRESH MATERIALIZED VIEW CONCURRENTLY visites_uniques;
             env:
             - name: PGDATABASE
               valueFrom:
@@ -66,9 +66,9 @@ spec:
               allowPrivilegeEscalation: false
             resources:
               requests:
-                cpu: 20m
-                memory: 32Mi
+                cpu: 40m
+                memory: 64Mi
               limits:
-                cpu: 20m
-                memory: 32Mi
+                cpu: 40m
+                memory: 64Mi
           restartPolicy: OnFailure
