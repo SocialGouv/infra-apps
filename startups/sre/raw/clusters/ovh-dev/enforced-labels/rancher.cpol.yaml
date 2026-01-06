@@ -24,13 +24,44 @@ spec:
               rancher.projectId: "{{ regex_replace_all(':', request.object.metadata.annotations.\"field.cattle.io/projectId\", '-') }}"
 
     # Prevent tenants from spoofing access by manually setting/changing the label.
-    # Any deviation from the value derived from the Rancher annotation is rejected.
-    - name: deny-manual-rancher-projectid-label-changes
+    # This is split into two simple validation rules to keep Kyverno schema-compatible
+    # for GitOps controllers.
+
+    # If the label is set but the Rancher annotation is missing, a tenant could be spoofing.
+    - name: deny-rancher-projectid-label-without-annotation
       match:
         any:
           - resources:
               kinds:
                 - Namespace
+      preconditions:
+        all:
+          - key: "{{ request.object.metadata.labels.\"rancher.projectId\" || '' }}"
+            operator: NotEquals
+            value: ""
+      validate:
+        message: >-
+          The label rancher.projectId must not be set unless the namespace has the Rancher
+          annotation field.cattle.io/projectId.
+        deny:
+          conditions:
+            any:
+              - key: "{{ request.object.metadata.annotations.\"field.cattle.io/projectId\" || '' }}"
+                operator: Equals
+                value: ""
+
+    # If the annotation exists, the label must match the encoded value.
+    - name: deny-rancher-projectid-label-mismatch
+      match:
+        any:
+          - resources:
+              kinds:
+                - Namespace
+      preconditions:
+        all:
+          - key: "{{ request.object.metadata.annotations.\"field.cattle.io/projectId\" || '' }}"
+            operator: NotEquals
+            value: ""
       validate:
         message: >-
           The label rancher.projectId is managed by Kyverno from the namespace annotation
@@ -38,19 +69,6 @@ spec:
         deny:
           conditions:
             any:
-              # If the label is set but the Rancher annotation is missing, a tenant could be spoofing.
-              - all:
-                  - key: "{{ request.object.metadata.labels.\"rancher.projectId\" || '' }}"
-                    operator: NotEquals
-                    value: ""
-                  - key: "{{ request.object.metadata.annotations.\"field.cattle.io/projectId\" || '' }}"
-                    operator: Equals
-                    value: ""
-              # If the annotation exists, the label must match the encoded value.
-              - all:
-                  - key: "{{ request.object.metadata.annotations.\"field.cattle.io/projectId\" || '' }}"
-                    operator: NotEquals
-                    value: ""
-                  - key: "{{ request.object.metadata.labels.\"rancher.projectId\" || '' }}"
-                    operator: NotEquals
-                    value: "{{ regex_replace_all(':', request.object.metadata.annotations.\"field.cattle.io/projectId\", '-') }}"
+              - key: "{{ request.object.metadata.labels.\"rancher.projectId\" || '' }}"
+                operator: NotEquals
+                value: "{{ regex_replace_all(':', request.object.metadata.annotations.\"field.cattle.io/projectId\", '-') }}"
