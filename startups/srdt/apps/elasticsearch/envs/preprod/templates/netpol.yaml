@@ -22,5 +22,11 @@ spec:
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: srdt-preprod
+        # Allow from all namespaces in the Rancher project.
+        # This relies on Kyverno mirroring the Rancher-enforced annotation
+        # `field.cattle.io/projectId: c-m-97jxtvnv:p-h5hd5` into this label.
+        - namespaceSelector:
+            matchLabels:
+              rancher.projectId: c-m-97jxtvnv-p-h5hd5
       ports:
         - port: 9200

@@ -1,0 +1,56 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: rancher-projectid-label
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+    - name: mirror-rancher-projectid-to-label
+      match:
+        any:
+          - resources:
+              kinds:
+                - Namespace
+      preconditions:
+        all:
+          - key: "{{ request.object.metadata.annotations.\"field.cattle.io/projectId\" || '' }}"
+            operator: NotEquals
+            value: ""
+      mutate:
+        patchStrategicMerge:
+          metadata:
+            labels:
+              rancher.projectId: "{{ regex_replace_all(':', request.object.metadata.annotations.\"field.cattle.io/projectId\", '-') }}"
+
+    # Prevent tenants from spoofing access by manually setting/changing the label.
+    # Any deviation from the value derived from the Rancher annotation is rejected.
+    - name: deny-manual-rancher-projectid-label-changes
+      match:
+        any:
+          - resources:
+              kinds:
+                - Namespace
+      validate:
+        message: >-
+          The label rancher.projectId is managed by Kyverno from the namespace annotation
+          field.cattle.io/projectId and must not be set to a different value.
+        deny:
+          conditions:
+            any:
+              # If the label is set but the Rancher annotation is missing, a tenant could be spoofing.
+              - all:
+                  - key: "{{ request.object.metadata.labels.\"rancher.projectId\" || '' }}"
+                    operator: NotEquals
+                    value: ""
+                  - key: "{{ request.object.metadata.annotations.\"field.cattle.io/projectId\" || '' }}"
+                    operator: Equals
+                    value: ""
+              # If the annotation exists, the label must match the encoded value.
+              - all:
+                  - key: "{{ request.object.metadata.annotations.\"field.cattle.io/projectId\" || '' }}"
+                    operator: NotEquals
+                    value: ""
+                  - key: "{{ request.object.metadata.labels.\"rancher.projectId\" || '' }}"
+                    operator: NotEquals
+                    value: "{{ regex_replace_all(':', request.object.metadata.annotations.\"field.cattle.io/projectId\", '-') }}"
