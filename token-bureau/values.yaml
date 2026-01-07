@@ -2,7 +2,7 @@ token-bureau:
   image:
     # tag: latest
     # pullPolicy: Always
-    tag: v0.0.6
+    tag: v0.0.7
     pullPolicy: IfNotPresent
   replicaCount: 2
   existingSecret: token-bureau
