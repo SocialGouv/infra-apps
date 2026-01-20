@@ -11,6 +11,14 @@ spec:
     - Ingress
   ingress:
     - from:
+        - podSelector:
+            matchLabels:
+              common.k8s.elastic.co/type: elasticsearch
+              elasticsearch.k8s.elastic.co/cluster-name: cdtn-es
+      ports:
+        - port: 9300
+          protocol: TCP
+    - from:
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: cdtn-admin
