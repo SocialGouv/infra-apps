@@ -1,0 +1,19 @@
+metabase:
+  enabled: true
+  image:
+    tag: v0.53.3
+
+  fullnameOverride: metabase
+  cnpg-cluster:
+    backup:
+      enabled: true
+      barmanObjectStore:
+        destinationPath: s3://srdt-dev-backups/metabase-dev
+        endpointURL: https://s3.gra.io.cloud.ovh.net
+        s3Credentials:
+          accessKeyId:
+            name: &s3secretName srdt-dev-backups-access-key
+          region:
+            name: *s3secretName
+          secretAccessKey:
+            name: *s3secretName

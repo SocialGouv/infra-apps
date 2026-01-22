@@ -1,0 +1,25 @@
+metabase:
+  host: metabase-prod-srdt.ovh.fabrique.social.gouv.fr
+  annotations:
+    oblik.socialgouv.io/min-request-cpu: "1"
+  ingress:
+    annotations:
+      cert-manager.io: cluster-issuer
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+      kubernetes.io/tls-acme: true
+  cnpg-cluster:
+    backup:
+      enabled: true
+      barmanObjectStore:
+        destinationPath: s3://srdt-prod-backups/metabase-20240712
+        endpointURL: https://s3.gra.io.cloud.ovh.net
+        s3Credentials:
+          accessKeyId:
+            name: &s3secretName srdt-prod-backups-access-key
+          region:
+            name: *s3secretName
+          secretAccessKey:
+            name: *s3secretName
+
+final-appset:
+  importSecretsFromStartup: true
