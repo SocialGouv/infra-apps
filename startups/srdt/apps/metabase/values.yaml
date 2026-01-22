@@ -2,7 +2,6 @@ metabase:
   enabled: true
   image:
     tag: v0.53.3
-
   fullnameOverride: metabase
   cnpg-cluster:
     backup:
@@ -13,6 +12,28 @@ metabase:
         s3Credentials:
           accessKeyId:
             name: &s3secretName srdt-dev-backups-access-key
+          region:
+            name: *s3secretName
+          secretAccessKey:
+            name: *s3secretName
+
+metabase-matomo-sync:
+  enabled: true
+  matomoSiteId: 134
+  startDate: "2025-06-01"
+  fullnameOverride: metabase-matomo-sync
+  destinationTable: "matomo_partitioned"
+  cnpg-cluster:
+    persistence:
+      size: 30Gi
+    backup:
+      enabled: true
+      barmanObjectStore:
+        destinationPath: s3://srdt-prod-backups/metabase-matomo-sync-ovh
+        endpointURL: https://s3.gra.io.cloud.ovh.net
+        s3Credentials:
+          accessKeyId:
+            name: &s3secretName srdt-prod-backups-access-key
           region:
             name: *s3secretName
           secretAccessKey:
