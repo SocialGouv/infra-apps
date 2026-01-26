@@ -2,6 +2,9 @@ metabase:
   host: &metabaseHost metabase-recosante.fabrique.social.gouv.fr
   ingress:
     enabled: false
+  cnpg-cluster:
+    persistence:
+      size: 16Gi
 
 final-appset:
   importSecretsFromStartup: true

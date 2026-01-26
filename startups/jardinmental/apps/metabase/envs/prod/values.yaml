@@ -5,6 +5,9 @@ metabase:
       cert-manager.io: cluster-issuer
       cert-manager.io/cluster-issuer: letsencrypt-prod
       kubernetes.io/tls-acme: true
+  cnpg-cluster:
+    persistence:
+      size: 16Gi
 
 final-appset:
   importSecretsFromStartup: false
