@@ -21,7 +21,7 @@ spec:
             runAsGroup: 1000
           containers:
             - name: anonymizer-dump
-              image: ghcr.io/socialgouv/docker/greenmask:1.1.4
+              image: ghcr.io/socialgouv/docker/greenmask:1.2.0
               resources:
                 requests:
                   cpu: 1000m
