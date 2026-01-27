@@ -23,3 +23,5 @@ metabase:
 
 final-appset:
   importSecretsFromStartup: true
+  importSreSecretsList:
+    - matomo-key
