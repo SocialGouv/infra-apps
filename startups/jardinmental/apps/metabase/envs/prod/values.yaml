@@ -7,7 +7,7 @@ metabase:
       kubernetes.io/tls-acme: true
   cnpg-cluster:
     persistence:
-      size: 16Gi
+      size: 32Gi
 
 final-appset:
   importSecretsFromStartup: false
