@@ -25,7 +25,7 @@ spec:
             - --echo-all
             - -c
             - |
-              REFRESH MATERIALIZED VIEW CONCURRENTLY metabase_model_106;
+              REFRESH MATERIALIZED VIEW metabase_model_106;
               REFRESH MATERIALIZED VIEW CONCURRENTLY commentaires_utilisateurs;
               REFRESH MATERIALIZED VIEW CONCURRENTLY visites_uniques;
             env:
