@@ -18,7 +18,7 @@ spec:
         app: charon
     spec:
       containers:
-        - image: ghcr.io/socialgouv/charon:add-fabrique-keycloak-provider
+        - image: ghcr.io/socialgouv/charon:main
           name: app
           ports:
             - containerPort: 3000
