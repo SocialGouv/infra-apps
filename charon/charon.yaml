@@ -18,7 +18,7 @@ spec:
         app: charon
     spec:
       containers:
-        - image: ghcr.io/socialgouv/charon:main
+        - image: ghcr.io/socialgouv/charon:sha-e3f607e
           name: app
           ports:
             - containerPort: 3000
@@ -72,4 +72,3 @@ spec:
     app: charon
   type: ClusterIP
 ---
-
