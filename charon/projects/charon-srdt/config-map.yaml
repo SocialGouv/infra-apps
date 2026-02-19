@@ -7,8 +7,8 @@ data:
     http://localhost:3000,
     https://srdt-*.ovh.fabrique.social.gouv.fr
   CHARON_CLIENT_0_PROVIDER: proconnect
-  CHARON_CLIENT_2_WILDCARDS: |
+  CHARON_CLIENT_1_WILDCARDS: |
     http://localhost:3000,
     https://srdt-*.ovh.fabrique.social.gouv.fr
-  CHARON_CLIENT_2_PROVIDER: proconnecttest
+  CHARON_CLIENT_1_PROVIDER: proconnecttest
   CHARON_PUBLIC_HOST: https://srdt-charon.ovh.fabrique.social.gouv.fr
