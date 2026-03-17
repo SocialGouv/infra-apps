@@ -31,7 +31,7 @@ spec:
       source:
         repoURL: git@pic.sg.social.gouv.fr:socialgouv/produits-dnum/citoyens/vao-gitops.git
         targetRevision: rendered-manifests
-        path: "{{ .path }}"
+        path: "{{ .path.path }}"
         directory:
           recurse: true
       syncPolicy:
