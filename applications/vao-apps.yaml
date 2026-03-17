@@ -1,0 +1,48 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: vao-apps
+spec:
+  goTemplate: true
+  generators:
+    - matrix:
+        generators:
+          - list:
+              elements:
+                - env: dev
+                  cluster: ovh-dev
+                - env: prod
+                  cluster: ovh-prod
+          - git:
+              repoURL: git@pic.sg.social.gouv.fr:socialgouv/produits-dnum/citoyens/vao-gitops.git
+              revision: rendered-manifests
+              directories:
+                - path: "apps-rendered/{{ .env }}/*"
+  template:
+    metadata:
+      name: "vao-{{ .env }}-{{ .path.basename }}"
+      annotations:
+        argocd.argoproj.io/manifest-generate-paths: .
+    spec:
+      destination:
+        name: "{{ .cluster }}"
+        namespace: "{{ .path.basename }}"
+      project: default
+      source:
+        repoURL: git@pic.sg.social.gouv.fr:socialgouv/produits-dnum/citoyens/vao-gitops.git
+        targetRevision: rendered-manifests
+        path: "{{ .path }}"
+        directory:
+          recurse: true
+      syncPolicy:
+        syncOptions:
+          - CreateNamespace=true
+          - Replace=false
+        automated:
+          selfHeal: false
+        retry:
+          limit: 5
+          backoff:
+            duration: 5s
+            factor: 2
+            maxDuration: 3m
