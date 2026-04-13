@@ -26,6 +26,9 @@ spec:
         helm:
           releaseName: huginn
       syncPolicy:
+        managedNamespaceMetadata:
+          labels:
+            application: huginn
         syncOptions:
           - CreateNamespace=true
         retry:
