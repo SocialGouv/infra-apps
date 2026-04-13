@@ -1,0 +1,46 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: kube-image-keeper
+spec:
+  generators:
+    - list:
+        elements:
+          - name: kube-image-keeper-dev
+            cluster: ovh-dev
+          # - name: kube-image-keeper-prod
+          #   cluster: ovh-prod
+  goTemplate: true
+  template:
+    metadata:
+      name: "{{ .name }}"
+      # annotations:
+      # labels:
+    spec:
+      destination:
+        name: "{{ .cluster }}"
+        namespace: "kuik-system"
+      project: default
+      source:
+        repoURL: https://charts.enix.io
+        chart: kube-image-keeper
+        targetRevision: 2.2.1
+        helm:
+          releaseName: kube-image-keeper
+          values: |
+            manager:
+              webhook:
+                namespaceSelector:
+                  matchExpressions:
+                    - key: kubernetes.io/metadata.name
+                      operator: NotIn
+                      values:
+                        - kube-system
+                        - kyverno
+                        - openebs
+                        - cattle-system
+                        - cert-manager
+      syncPolicy:
+        syncOptions:
+          - CreateNamespace=true
+        
