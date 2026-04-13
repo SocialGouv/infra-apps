@@ -22,7 +22,7 @@ spec:
         namespace: "kuik-system"
       project: default
       source:
-        repoURL: https://charts.enix.io
+        repoURL: quay.io/enix/charts
         chart: kube-image-keeper
         targetRevision: 2.2.1
         helm:
