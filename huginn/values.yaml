@@ -1,0 +1,60 @@
+image:
+  repository: ghcr.io/huginn/huginn-single-process
+  tag: latest
+  pullPolicy: IfNotPresent
+
+web:
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 50m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+worker:
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 50m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+env:
+  TIMEZONE: "Europe/Paris"
+  FORCE_SSL: "true"
+  DOMAIN: huginn.dev.fabrique.social.gouv.fr
+  DO_NOT_SEED: "true"
+  INVITATION_CODE: "try-huginn"
+  IMPORT_DEFAULT_SCENARIO_FOR_ALL_USERS: "true"
+
+ingress:
+  enabled: true
+  hostname: huginn.dev.fabrique.social.gouv.fr
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+  tls:
+    secretName: huginn-tls
+
+cnpg-cluster:
+  instances: 1
+  fullnameOverride: pg
+  postgresqlParameters:
+    TimeZone: "Europe/Paris"
+  monitoring:
+    enablePodMonitor: true
+  persistence:
+    size: 5Gi
+  image:
+    repository: "ghcr.io/cloudnative-pg/postgresql"
+    tag: "15.3"
+  clusterExtraSpec:
+    enableSuperuserAccess: true
+  resources:
+    requests:
+      memory: 128Mi
+    limits:
+      memory: 1Gi

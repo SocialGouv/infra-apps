@@ -1,0 +1,7 @@
+apiVersion: v2
+name: huginn
+version: 0.0.0
+dependencies:
+  - name: cnpg-cluster
+    version: 1.30.5
+    repository: https://socialgouv.github.io/helm-charts

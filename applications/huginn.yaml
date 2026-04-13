@@ -1,0 +1,36 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: huginn
+spec:
+  generators:
+    - list:
+        elements:
+          - name: huginn-dev
+            cluster: ovh-dev
+          # - name: huginn-prod
+          #   cluster: ovh-prod
+  goTemplate: true
+  template:
+    metadata:
+      name: "{{ .name }}"
+    spec:
+      destination:
+        name: "{{ .cluster }}"
+        namespace: huginn
+      project: default
+      source:
+        repoURL: https://github.com/SocialGouv/infra-apps.git
+        targetRevision: master
+        path: huginn
+        helm:
+          releaseName: huginn
+      syncPolicy:
+        syncOptions:
+          - CreateNamespace=true
+        retry:
+          limit: 5
+          backoff:
+            duration: 5s
+            factor: 2
+            maxDuration: 3m

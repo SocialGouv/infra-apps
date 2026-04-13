@@ -1,0 +1,6 @@
+dependencies:
+- name: cnpg-cluster
+  repository: https://socialgouv.github.io/helm-charts
+  version: 1.30.5
+digest: sha256:986653339d5302dd088a544f35d72ef9701bc948a5dec2afef95972554ffd206
+generated: "2026-04-13T14:09:38.059579367+02:00"
