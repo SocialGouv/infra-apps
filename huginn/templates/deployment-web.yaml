@@ -64,6 +64,11 @@ spec:
                 secretKeyRef:
                   name: huginn-secrets
                   key: APP_SECRET_TOKEN
+            - name: INVITATION_CODE
+              valueFrom:
+                secretKeyRef:
+                  name: huginn-secrets
+                  key: INVITATION_CODE
           readinessProbe:
             httpGet:
               path: /

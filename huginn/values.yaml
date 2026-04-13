@@ -28,7 +28,7 @@ env:
   FORCE_SSL: "false"
   DOMAIN: huginn.dev.fabrique.social.gouv.fr
   DO_NOT_CREATE_DATABASE: "true"
-  INVITATION_CODE: "try-huginn"
+  DO_NOT_SEED: "true"
   IMPORT_DEFAULT_SCENARIO_FOR_ALL_USERS: "true"
 
 ingress:
