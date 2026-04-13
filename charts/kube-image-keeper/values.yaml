@@ -1,0 +1,51 @@
+kuik:
+  manager:
+    replicas: 2
+    pdb:
+      create: true
+      minAvailable: 1
+    topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: DoNotSchedule
+        labelSelector:
+          matchLabels:
+            app.kubernetes.io/name: kuik
+            app.kubernetes.io/component: manager
+    webhook:
+      namespaceSelector:
+        matchExpressions:
+          - key: kubernetes.io/metadata.name
+            operator: NotIn
+            values:
+              - kube-system
+              - kyverno
+              - openebs
+              - cattle-system
+              - cert-manager
+
+registry:
+  replicaCount: 2
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  persistence:
+    enabled: true
+    accessMode: ReadWriteMany
+    size: 500Gi
+    storageClass: openebs-nfs-hspeed
+  podDisruptionBudget:
+    minAvailable: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+  garbageCollect:
+    enabled: true
+    deleteUntagged: true
+    schedule: "0 3 * * 0"

@@ -1,0 +1,9 @@
+dependencies:
+- name: kube-image-keeper
+  repository: oci://quay.io/enix/charts
+  version: 2.2.1
+- name: docker-registry
+  repository: https://twuni.github.io/docker-registry.helm
+  version: 3.0.0
+digest: sha256:e21f65ddddea3e8de2d03fb6b747db8c13c82edb74ee134d251c91c89b1d464c
+generated: "2026-04-13T13:14:34.117893918+02:00"

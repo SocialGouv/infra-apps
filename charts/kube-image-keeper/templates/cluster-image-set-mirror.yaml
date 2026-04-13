@@ -1,0 +1,10 @@
+apiVersion: kuik.enix.io/v1alpha1
+kind: ClusterImageSetMirror
+metadata:
+  name: local-registry
+spec:
+  imageFilter:
+    include:
+      - ".*"
+  mirrors:
+    - registry: {{ .Release.Name }}-registry.{{ .Release.Namespace }}.svc.cluster.local:5000

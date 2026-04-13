@@ -22,36 +22,11 @@ spec:
         namespace: "kuik-system"
       project: default
       source:
-        repoURL: quay.io/enix/charts
-        chart: kube-image-keeper
-        targetRevision: 2.2.1
+        repoURL: https://github.com/SocialGouv/infra-apps.git
+        targetRevision: master
+        path: charts/kube-image-keeper
         helm:
           releaseName: kube-image-keeper
-          values: |
-            manager:
-              replicas: 2
-              pdb:
-                create: true
-                minAvailable: 1
-              topologySpreadConstraints:
-                - maxSkew: 1
-                  topologyKey: kubernetes.io/hostname
-                  whenUnsatisfiable: DoNotSchedule
-                  labelSelector:
-                    matchLabels:
-                      app.kubernetes.io/name: kube-image-keeper
-                      app.kubernetes.io/component: manager
-              webhook:
-                namespaceSelector:
-                  matchExpressions:
-                    - key: kubernetes.io/metadata.name
-                      operator: NotIn
-                      values:
-                        - kube-system
-                        - kyverno
-                        - openebs
-                        - cattle-system
-                        - cert-manager
       syncPolicy:
         syncOptions:
           - CreateNamespace=true
