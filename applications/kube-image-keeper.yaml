@@ -27,6 +27,12 @@ spec:
         path: charts/kube-image-keeper
         helm:
           releaseName: kube-image-keeper
+      ignoreDifferences:
+        - group: ""
+          kind: Secret
+          name: kube-image-keeper-registry-secret
+          jsonPointers:
+            - /data
       syncPolicy:
         syncOptions:
           - CreateNamespace=true
