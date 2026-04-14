@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "name": "Veille Technique",
-  "description": "Pipeline de veille quotidienne (cyber, IA) et hebdomadaire (écosystèmes langages) avec notification Mattermost",
+  "description": "Pipeline de veille quotidienne (cyber, IA) et hebdomadaire (écosystèmes langages) avec synthèse LLM et notification Mattermost",
   "guid": "veille-tech-fabrique-2026",
   "tag_fg_color": "#ffffff",
   "tag_bg_color": "#5bc0de",
@@ -28,8 +28,8 @@
           "https://www.darkreading.com/rss.xml"
         ]
       },
-      "schedule": "every_12h",
-      "keep_events_for": 7,
+      "schedule": "every_2h",
+      "keep_events_for": 604800,
       "propagate_immediately": false
     },
     {
@@ -39,9 +39,10 @@
       "guid": "cyber-dedup",
       "options": {
         "property": "{{url}}",
-        "lookback": 200
+        "lookback": 200,
+        "expected_update_period_in_days": "3"
       },
-      "keep_events_for": 7,
+      "keep_events_for": 604800,
       "propagate_immediately": true,
       "sources": ["cyber-rss-sources"]
     },
@@ -51,14 +52,31 @@
       "disabled": false,
       "guid": "cyber-digest-daily",
       "options": {
-        "message": "## 🔒 Veille Cybersécurité — {{\"now\" | date: \"%d/%m/%Y\"}}\n\n{% for event in events %}### [{{event.title}}]({{event.url}})\n{{event.description | strip_html | truncate: 200}}\n\n{% endfor %}",
+        "message": "{% for event in events %}## {{event.title}}\nURL: {{event.url}}\n{{event.description | strip_html | truncate: 500}}\n---\n{% endfor %}",
         "expected_receive_period_in_days": "2",
         "retained_events": 0
       },
-      "schedule": "6am",
-      "keep_events_for": 7,
+      "schedule": "every_2h",
+      "keep_events_for": 604800,
       "propagate_immediately": false,
       "sources": ["cyber-dedup"]
+    },
+    {
+      "type": "Agents::OpenaiLlmAgent",
+      "name": "[Cyber] Synthèse LLM",
+      "disabled": false,
+      "guid": "cyber-llm",
+      "options": {
+        "model": "gpt-5.4",
+        "system_message": "Tu es un analyste cybersécurité qui produit des synthèses de veille pour une équipe technique francophone.\n\nÀ partir des articles fournis :\n1. Filtre les informations redondantes ou mineures\n2. Pour chaque info importante, écris un titre explicite et une synthèse de 2-3 phrases maximum\n3. Ajoute le lien source pour approfondir\n4. Classe par criticité : 🔴 Critique, 🟠 Important, 🟡 À noter\n\nFormat de sortie en Markdown. Commence par un titre avec la date. Sois concis et actionnable. Écris en français.",
+        "user_message": "Voici les articles de veille cybersécurité à synthétiser :\n\n{{message}}",
+        "temperature": "0.3",
+        "max_tokens": "2000",
+        "expected_receive_period_in_days": "2"
+      },
+      "keep_events_for": 604800,
+      "propagate_immediately": true,
+      "sources": ["cyber-digest-daily"]
     },
     {
       "type": "Agents::SlackAgent",
@@ -69,13 +87,13 @@
         "webhook_url": "{% credential mattermost_webhook_url %}",
         "channel": "#huginn",
         "username": "Huginn Cyber",
-        "icon_emoji": ":shield:",
+        "icon": ":shield:",
         "message": "{{message}}",
         "unfurl_links": true
       },
-      "keep_events_for": 2,
+      "keep_events_for": 172800,
       "propagate_immediately": false,
-      "sources": ["cyber-digest-daily"]
+      "sources": ["cyber-llm"]
     },
 
     {
@@ -98,8 +116,8 @@
           "https://blog.google/technology/ai/rss/"
         ]
       },
-      "schedule": "every_12h",
-      "keep_events_for": 7,
+      "schedule": "every_2h",
+      "keep_events_for": 604800,
       "propagate_immediately": false
     },
     {
@@ -109,9 +127,10 @@
       "guid": "ia-dedup",
       "options": {
         "property": "{{url}}",
-        "lookback": 200
+        "lookback": 200,
+        "expected_update_period_in_days": "3"
       },
-      "keep_events_for": 7,
+      "keep_events_for": 604800,
       "propagate_immediately": true,
       "sources": ["ia-rss-sources"]
     },
@@ -121,14 +140,31 @@
       "disabled": false,
       "guid": "ia-digest-daily",
       "options": {
-        "message": "## 🤖 Veille IA / LLM — {{\"now\" | date: \"%d/%m/%Y\"}}\n\n{% for event in events %}### [{{event.title}}]({{event.url}})\n{{event.description | strip_html | truncate: 200}}\n\n{% endfor %}",
+        "message": "{% for event in events %}## {{event.title}}\nURL: {{event.url}}\n{{event.description | strip_html | truncate: 500}}\n---\n{% endfor %}",
         "expected_receive_period_in_days": "2",
         "retained_events": 0
       },
-      "schedule": "6am",
-      "keep_events_for": 7,
+      "schedule": "every_2h",
+      "keep_events_for": 604800,
       "propagate_immediately": false,
       "sources": ["ia-dedup"]
+    },
+    {
+      "type": "Agents::OpenaiLlmAgent",
+      "name": "[IA/LLM] Synthèse LLM",
+      "disabled": false,
+      "guid": "ia-llm",
+      "options": {
+        "model": "gpt-5.4",
+        "system_message": "Tu es un veilleur technologique spécialisé IA, LLM et outils de développement assisté par IA, pour une équipe de développeurs francophone.\n\nÀ partir des articles fournis :\n1. Filtre les informations redondantes ou mineures\n2. Pour chaque info importante, écris un titre explicite et une synthèse de 2-3 phrases maximum\n3. Ajoute le lien source pour approfondir\n4. Classe par catégorie : 🧠 Modèles & recherche, 🛠️ Outils & frameworks, 💻 Coding assisté par IA\n\nFormat de sortie en Markdown. Commence par un titre avec la date. Sois concis. Écris en français.",
+        "user_message": "Voici les articles de veille IA/LLM à synthétiser :\n\n{{message}}",
+        "temperature": "0.3",
+        "max_tokens": "2000",
+        "expected_receive_period_in_days": "2"
+      },
+      "keep_events_for": 604800,
+      "propagate_immediately": true,
+      "sources": ["ia-digest-daily"]
     },
     {
       "type": "Agents::SlackAgent",
@@ -139,13 +175,13 @@
         "webhook_url": "{% credential mattermost_webhook_url %}",
         "channel": "#huginn",
         "username": "Huginn IA",
-        "icon_emoji": ":robot_face:",
+        "icon": ":robot_face:",
         "message": "{{message}}",
         "unfurl_links": true
       },
-      "keep_events_for": 2,
+      "keep_events_for": 172800,
       "propagate_immediately": false,
-      "sources": ["ia-digest-daily"]
+      "sources": ["ia-llm"]
     },
 
     {
@@ -167,8 +203,8 @@
           "https://hnrss.org/newest?q=TypeScript+OR+Node.js+OR+Deno+OR+Bun&points=80"
         ]
       },
-      "schedule": "every_1d",
-      "keep_events_for": 14,
+      "schedule": "every_2h",
+      "keep_events_for": 1209600,
       "propagate_immediately": false
     },
     {
@@ -178,9 +214,10 @@
       "guid": "tsjs-dedup",
       "options": {
         "property": "{{url}}",
-        "lookback": 200
+        "lookback": 200,
+        "expected_update_period_in_days": "7"
       },
-      "keep_events_for": 14,
+      "keep_events_for": 1209600,
       "propagate_immediately": true,
       "sources": ["tsjs-rss-sources"]
     },
@@ -190,14 +227,31 @@
       "disabled": false,
       "guid": "tsjs-digest-weekly",
       "options": {
-        "message": "## 📦 Veille TypeScript / JavaScript — Semaine du {{\"now\" | date: \"%d/%m/%Y\"}}\n\n{% for event in events %}### [{{event.title}}]({{event.url}})\n{{event.description | strip_html | truncate: 200}}\n\n{% endfor %}",
+        "message": "{% for event in events %}## {{event.title}}\nURL: {{event.url}}\n{{event.description | strip_html | truncate: 500}}\n---\n{% endfor %}",
         "expected_receive_period_in_days": "8",
         "retained_events": 0
       },
-      "schedule": "0 8 * * 1",
-      "keep_events_for": 14,
+      "schedule": "every_2h",
+      "keep_events_for": 1209600,
       "propagate_immediately": false,
       "sources": ["tsjs-dedup"]
+    },
+    {
+      "type": "Agents::OpenaiLlmAgent",
+      "name": "[TS/JS] Synthèse LLM",
+      "disabled": false,
+      "guid": "tsjs-llm",
+      "options": {
+        "model": "gpt-5.4",
+        "system_message": "Tu es un veilleur technologique spécialisé dans l'écosystème TypeScript/JavaScript pour une équipe de développeurs francophone.\n\nÀ partir des articles fournis :\n1. Filtre les informations redondantes ou mineures\n2. Pour chaque info importante, écris un titre explicite et une synthèse de 2-3 phrases maximum\n3. Ajoute le lien source pour approfondir\n4. Classe par catégorie : 📦 Runtimes (Node, Deno, Bun), 🔧 Frameworks, 📐 TypeScript, 📚 Écosystème\n\nFormat de sortie en Markdown. Commence par un titre avec la date. Sois concis. Écris en français.",
+        "user_message": "Voici les articles de veille TypeScript/JavaScript à synthétiser :\n\n{{message}}",
+        "temperature": "0.3",
+        "max_tokens": "2000",
+        "expected_receive_period_in_days": "8"
+      },
+      "keep_events_for": 1209600,
+      "propagate_immediately": true,
+      "sources": ["tsjs-digest-weekly"]
     },
     {
       "type": "Agents::SlackAgent",
@@ -208,13 +262,13 @@
         "webhook_url": "{% credential mattermost_webhook_url %}",
         "channel": "#huginn",
         "username": "Huginn TS/JS",
-        "icon_emoji": ":javascript:",
+        "icon": ":javascript:",
         "message": "{{message}}",
         "unfurl_links": true
       },
-      "keep_events_for": 2,
+      "keep_events_for": 172800,
       "propagate_immediately": false,
-      "sources": ["tsjs-digest-weekly"]
+      "sources": ["tsjs-llm"]
     },
 
     {
@@ -237,8 +291,8 @@
           "https://hnrss.org/newest?q=Golang+OR+Rust+OR+Python&points=80"
         ]
       },
-      "schedule": "every_1d",
-      "keep_events_for": 14,
+      "schedule": "every_2h",
+      "keep_events_for": 1209600,
       "propagate_immediately": false
     },
     {
@@ -248,9 +302,10 @@
       "guid": "gopyrust-dedup",
       "options": {
         "property": "{{url}}",
-        "lookback": 200
+        "lookback": 200,
+        "expected_update_period_in_days": "7"
       },
-      "keep_events_for": 14,
+      "keep_events_for": 1209600,
       "propagate_immediately": true,
       "sources": ["gopyrust-rss-sources"]
     },
@@ -260,14 +315,31 @@
       "disabled": false,
       "guid": "gopyrust-digest-weekly",
       "options": {
-        "message": "## 🦀🐍🐹 Veille Go / Python / Rust — Semaine du {{\"now\" | date: \"%d/%m/%Y\"}}\n\n{% for event in events %}### [{{event.title}}]({{event.url}})\n{{event.description | strip_html | truncate: 200}}\n\n{% endfor %}",
+        "message": "{% for event in events %}## {{event.title}}\nURL: {{event.url}}\n{{event.description | strip_html | truncate: 500}}\n---\n{% endfor %}",
         "expected_receive_period_in_days": "8",
         "retained_events": 0
       },
-      "schedule": "0 8 * * 1",
-      "keep_events_for": 14,
+      "schedule": "every_2h",
+      "keep_events_for": 1209600,
       "propagate_immediately": false,
       "sources": ["gopyrust-dedup"]
+    },
+    {
+      "type": "Agents::OpenaiLlmAgent",
+      "name": "[Go/Python/Rust] Synthèse LLM",
+      "disabled": false,
+      "guid": "gopyrust-llm",
+      "options": {
+        "model": "gpt-5.4",
+        "system_message": "Tu es un veilleur technologique spécialisé Go, Python et Rust pour une équipe de développeurs francophone.\n\nÀ partir des articles fournis :\n1. Filtre les informations redondantes ou mineures\n2. Pour chaque info importante, écris un titre explicite et une synthèse de 2-3 phrases maximum\n3. Ajoute le lien source pour approfondir\n4. Classe par langage : 🐹 Go, 🐍 Python, 🦀 Rust\n\nFormat de sortie en Markdown. Commence par un titre avec la date. Sois concis. Écris en français.",
+        "user_message": "Voici les articles de veille Go/Python/Rust à synthétiser :\n\n{{message}}",
+        "temperature": "0.3",
+        "max_tokens": "2000",
+        "expected_receive_period_in_days": "8"
+      },
+      "keep_events_for": 1209600,
+      "propagate_immediately": true,
+      "sources": ["gopyrust-digest-weekly"]
     },
     {
       "type": "Agents::SlackAgent",
@@ -278,13 +350,13 @@
         "webhook_url": "{% credential mattermost_webhook_url %}",
         "channel": "#huginn",
         "username": "Huginn Go/Py/Rust",
-        "icon_emoji": ":snake:",
+        "icon": ":snake:",
         "message": "{{message}}",
         "unfurl_links": true
       },
-      "keep_events_for": 2,
+      "keep_events_for": 172800,
       "propagate_immediately": false,
-      "sources": ["gopyrust-digest-weekly"]
+      "sources": ["gopyrust-llm"]
     },
 
     {
@@ -304,8 +376,8 @@
           "https://hnrss.org/newest?q=Java+OR+JVM+OR+Spring+OR+Kotlin&points=80"
         ]
       },
-      "schedule": "every_1d",
-      "keep_events_for": 14,
+      "schedule": "every_2h",
+      "keep_events_for": 1209600,
       "propagate_immediately": false
     },
     {
@@ -315,9 +387,10 @@
       "guid": "java-dedup",
       "options": {
         "property": "{{url}}",
-        "lookback": 200
+        "lookback": 200,
+        "expected_update_period_in_days": "7"
       },
-      "keep_events_for": 14,
+      "keep_events_for": 1209600,
       "propagate_immediately": true,
       "sources": ["java-rss-sources"]
     },
@@ -327,14 +400,31 @@
       "disabled": false,
       "guid": "java-digest-weekly",
       "options": {
-        "message": "## ☕ Veille Java / JVM — Semaine du {{\"now\" | date: \"%d/%m/%Y\"}}\n\n{% for event in events %}### [{{event.title}}]({{event.url}})\n{{event.description | strip_html | truncate: 200}}\n\n{% endfor %}",
+        "message": "{% for event in events %}## {{event.title}}\nURL: {{event.url}}\n{{event.description | strip_html | truncate: 500}}\n---\n{% endfor %}",
         "expected_receive_period_in_days": "8",
         "retained_events": 0
       },
-      "schedule": "0 8 * * 1",
-      "keep_events_for": 14,
+      "schedule": "every_2h",
+      "keep_events_for": 1209600,
       "propagate_immediately": false,
       "sources": ["java-dedup"]
+    },
+    {
+      "type": "Agents::OpenaiLlmAgent",
+      "name": "[Java/JVM] Synthèse LLM",
+      "disabled": false,
+      "guid": "java-llm",
+      "options": {
+        "model": "gpt-5.4",
+        "system_message": "Tu es un veilleur technologique spécialisé Java et écosystème JVM pour une équipe de développeurs francophone.\n\nÀ partir des articles fournis :\n1. Filtre les informations redondantes ou mineures\n2. Pour chaque info importante, écris un titre explicite et une synthèse de 2-3 phrases maximum\n3. Ajoute le lien source pour approfondir\n4. Classe par catégorie : ☕ Java core, 🌱 Spring, 🧰 Outils JVM, 📦 Kotlin\n\nFormat de sortie en Markdown. Commence par un titre avec la date. Sois concis. Écris en français.",
+        "user_message": "Voici les articles de veille Java/JVM à synthétiser :\n\n{{message}}",
+        "temperature": "0.3",
+        "max_tokens": "2000",
+        "expected_receive_period_in_days": "8"
+      },
+      "keep_events_for": 1209600,
+      "propagate_immediately": true,
+      "sources": ["java-digest-weekly"]
     },
     {
       "type": "Agents::SlackAgent",
@@ -345,35 +435,40 @@
         "webhook_url": "{% credential mattermost_webhook_url %}",
         "channel": "#huginn",
         "username": "Huginn Java",
-        "icon_emoji": ":coffee:",
+        "icon": ":coffee:",
         "message": "{{message}}",
         "unfurl_links": true
       },
-      "keep_events_for": 2,
+      "keep_events_for": 172800,
       "propagate_immediately": false,
-      "sources": ["java-digest-weekly"]
+      "sources": ["java-llm"]
     }
   ],
   "links": [
     {"source": 0, "receiver": 1},
     {"source": 1, "receiver": 2},
     {"source": 2, "receiver": 3},
+    {"source": 3, "receiver": 4},
 
-    {"source": 4, "receiver": 5},
     {"source": 5, "receiver": 6},
     {"source": 6, "receiver": 7},
-
+    {"source": 7, "receiver": 8},
     {"source": 8, "receiver": 9},
-    {"source": 9, "receiver": 10},
-    {"source": 10, "receiver": 11},
 
+    {"source": 10, "receiver": 11},
+    {"source": 11, "receiver": 12},
     {"source": 12, "receiver": 13},
     {"source": 13, "receiver": 14},
-    {"source": 14, "receiver": 15},
 
+    {"source": 15, "receiver": 16},
     {"source": 16, "receiver": 17},
     {"source": 17, "receiver": 18},
-    {"source": 18, "receiver": 19}
+    {"source": 18, "receiver": 19},
+
+    {"source": 20, "receiver": 21},
+    {"source": 21, "receiver": 22},
+    {"source": 22, "receiver": 23},
+    {"source": 23, "receiver": 24}
   ],
   "control_links": []
 }
