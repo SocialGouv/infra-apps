@@ -1,0 +1,379 @@
+{
+  "schema_version": 1,
+  "name": "Veille Technique",
+  "description": "Pipeline de veille quotidienne (cyber, IA) et hebdomadaire (écosystèmes langages) avec notification Mattermost",
+  "guid": "veille-tech-fabrique-2026",
+  "tag_fg_color": "#ffffff",
+  "tag_bg_color": "#5bc0de",
+  "icon": "eye",
+  "exported_at": "2026-04-14T00:00:00Z",
+  "agents": [
+    {
+      "type": "Agents::RssAgent",
+      "name": "[Cyber] Sources RSS",
+      "disabled": false,
+      "guid": "cyber-rss-sources",
+      "options": {
+        "expected_update_period_in_days": "3",
+        "clean": "true",
+        "remembered_id_count": "1000",
+        "url": [
+          "https://www.cert.ssi.gouv.fr/alerte/feed/",
+          "https://www.cert.ssi.gouv.fr/avis/feed/",
+          "https://feeds.feedburner.com/TheHackersNews",
+          "https://krebsonsecurity.com/feed/",
+          "https://www.schneier.com/feed/atom/",
+          "https://www.bleepingcomputer.com/feed/",
+          "https://threatpost.com/feed/",
+          "https://www.darkreading.com/rss.xml"
+        ]
+      },
+      "schedule": "every_12h",
+      "keep_events_for": 7,
+      "propagate_immediately": false
+    },
+    {
+      "type": "Agents::DeDuplicationAgent",
+      "name": "[Cyber] Déduplication",
+      "disabled": false,
+      "guid": "cyber-dedup",
+      "options": {
+        "property": "{{url}}",
+        "lookback": 200
+      },
+      "keep_events_for": 7,
+      "propagate_immediately": true,
+      "sources": ["cyber-rss-sources"]
+    },
+    {
+      "type": "Agents::DigestAgent",
+      "name": "[Cyber] Digest Quotidien",
+      "disabled": false,
+      "guid": "cyber-digest-daily",
+      "options": {
+        "message": "## 🔒 Veille Cybersécurité — {{\"now\" | date: \"%d/%m/%Y\"}}\n\n{% for event in events %}### [{{event.title}}]({{event.url}})\n{{event.description | strip_html | truncate: 200}}\n\n{% endfor %}",
+        "expected_receive_period_in_days": "2",
+        "retained_events": 0
+      },
+      "schedule": "6am",
+      "keep_events_for": 7,
+      "propagate_immediately": false,
+      "sources": ["cyber-dedup"]
+    },
+    {
+      "type": "Agents::SlackAgent",
+      "name": "[Cyber] Notification Mattermost",
+      "disabled": false,
+      "guid": "cyber-mattermost",
+      "options": {
+        "webhook_url": "{% credential mattermost_webhook_url %}",
+        "channel": "#huginn",
+        "username": "Huginn Cyber",
+        "icon_emoji": ":shield:",
+        "message": "{{message}}",
+        "unfurl_links": true
+      },
+      "keep_events_for": 2,
+      "propagate_immediately": false,
+      "sources": ["cyber-digest-daily"]
+    },
+
+    {
+      "type": "Agents::RssAgent",
+      "name": "[IA/LLM] Sources RSS",
+      "disabled": false,
+      "guid": "ia-rss-sources",
+      "options": {
+        "expected_update_period_in_days": "3",
+        "clean": "true",
+        "remembered_id_count": "1000",
+        "url": [
+          "https://www.anthropic.com/rss",
+          "https://openai.com/blog/rss.xml",
+          "https://simonwillison.net/atom/everything/",
+          "https://thegradient.pub/rss/",
+          "https://lilianweng.github.io/index.xml",
+          "https://hnrss.org/newest?q=LLM+OR+%22language+model%22+OR+%22AI+coding%22&points=50",
+          "https://huggingface.co/blog/feed.xml",
+          "https://blog.google/technology/ai/rss/"
+        ]
+      },
+      "schedule": "every_12h",
+      "keep_events_for": 7,
+      "propagate_immediately": false
+    },
+    {
+      "type": "Agents::DeDuplicationAgent",
+      "name": "[IA/LLM] Déduplication",
+      "disabled": false,
+      "guid": "ia-dedup",
+      "options": {
+        "property": "{{url}}",
+        "lookback": 200
+      },
+      "keep_events_for": 7,
+      "propagate_immediately": true,
+      "sources": ["ia-rss-sources"]
+    },
+    {
+      "type": "Agents::DigestAgent",
+      "name": "[IA/LLM] Digest Quotidien",
+      "disabled": false,
+      "guid": "ia-digest-daily",
+      "options": {
+        "message": "## 🤖 Veille IA / LLM — {{\"now\" | date: \"%d/%m/%Y\"}}\n\n{% for event in events %}### [{{event.title}}]({{event.url}})\n{{event.description | strip_html | truncate: 200}}\n\n{% endfor %}",
+        "expected_receive_period_in_days": "2",
+        "retained_events": 0
+      },
+      "schedule": "6am",
+      "keep_events_for": 7,
+      "propagate_immediately": false,
+      "sources": ["ia-dedup"]
+    },
+    {
+      "type": "Agents::SlackAgent",
+      "name": "[IA/LLM] Notification Mattermost",
+      "disabled": false,
+      "guid": "ia-mattermost",
+      "options": {
+        "webhook_url": "{% credential mattermost_webhook_url %}",
+        "channel": "#huginn",
+        "username": "Huginn IA",
+        "icon_emoji": ":robot_face:",
+        "message": "{{message}}",
+        "unfurl_links": true
+      },
+      "keep_events_for": 2,
+      "propagate_immediately": false,
+      "sources": ["ia-digest-daily"]
+    },
+
+    {
+      "type": "Agents::RssAgent",
+      "name": "[TS/JS] Sources RSS",
+      "disabled": false,
+      "guid": "tsjs-rss-sources",
+      "options": {
+        "expected_update_period_in_days": "7",
+        "clean": "true",
+        "remembered_id_count": "1000",
+        "url": [
+          "https://javascriptweekly.com/rss/",
+          "https://nodejs.org/en/feed/blog.xml",
+          "https://deno.com/feed",
+          "https://bun.sh/blog/rss.xml",
+          "https://devblogs.microsoft.com/typescript/feed/",
+          "https://blog.nextjs.org/rss.xml",
+          "https://hnrss.org/newest?q=TypeScript+OR+Node.js+OR+Deno+OR+Bun&points=80"
+        ]
+      },
+      "schedule": "every_1d",
+      "keep_events_for": 14,
+      "propagate_immediately": false
+    },
+    {
+      "type": "Agents::DeDuplicationAgent",
+      "name": "[TS/JS] Déduplication",
+      "disabled": false,
+      "guid": "tsjs-dedup",
+      "options": {
+        "property": "{{url}}",
+        "lookback": 200
+      },
+      "keep_events_for": 14,
+      "propagate_immediately": true,
+      "sources": ["tsjs-rss-sources"]
+    },
+    {
+      "type": "Agents::DigestAgent",
+      "name": "[TS/JS] Digest Hebdo",
+      "disabled": false,
+      "guid": "tsjs-digest-weekly",
+      "options": {
+        "message": "## 📦 Veille TypeScript / JavaScript — Semaine du {{\"now\" | date: \"%d/%m/%Y\"}}\n\n{% for event in events %}### [{{event.title}}]({{event.url}})\n{{event.description | strip_html | truncate: 200}}\n\n{% endfor %}",
+        "expected_receive_period_in_days": "8",
+        "retained_events": 0
+      },
+      "schedule": "0 8 * * 1",
+      "keep_events_for": 14,
+      "propagate_immediately": false,
+      "sources": ["tsjs-dedup"]
+    },
+    {
+      "type": "Agents::SlackAgent",
+      "name": "[TS/JS] Notification Mattermost",
+      "disabled": false,
+      "guid": "tsjs-mattermost",
+      "options": {
+        "webhook_url": "{% credential mattermost_webhook_url %}",
+        "channel": "#huginn",
+        "username": "Huginn TS/JS",
+        "icon_emoji": ":javascript:",
+        "message": "{{message}}",
+        "unfurl_links": true
+      },
+      "keep_events_for": 2,
+      "propagate_immediately": false,
+      "sources": ["tsjs-digest-weekly"]
+    },
+
+    {
+      "type": "Agents::RssAgent",
+      "name": "[Go/Python/Rust] Sources RSS",
+      "disabled": false,
+      "guid": "gopyrust-rss-sources",
+      "options": {
+        "expected_update_period_in_days": "7",
+        "clean": "true",
+        "remembered_id_count": "1000",
+        "url": [
+          "https://go.dev/blog/feed.atom",
+          "https://blog.python.org/feeds/posts/default",
+          "https://blog.rust-lang.org/feed.xml",
+          "https://this-week-in-rust.org/rss.xml",
+          "https://realpython.com/atom.xml",
+          "https://golangweekly.com/rss/",
+          "https://pythonweekly.com/rss/",
+          "https://hnrss.org/newest?q=Golang+OR+Rust+OR+Python&points=80"
+        ]
+      },
+      "schedule": "every_1d",
+      "keep_events_for": 14,
+      "propagate_immediately": false
+    },
+    {
+      "type": "Agents::DeDuplicationAgent",
+      "name": "[Go/Python/Rust] Déduplication",
+      "disabled": false,
+      "guid": "gopyrust-dedup",
+      "options": {
+        "property": "{{url}}",
+        "lookback": 200
+      },
+      "keep_events_for": 14,
+      "propagate_immediately": true,
+      "sources": ["gopyrust-rss-sources"]
+    },
+    {
+      "type": "Agents::DigestAgent",
+      "name": "[Go/Python/Rust] Digest Hebdo",
+      "disabled": false,
+      "guid": "gopyrust-digest-weekly",
+      "options": {
+        "message": "## 🦀🐍🐹 Veille Go / Python / Rust — Semaine du {{\"now\" | date: \"%d/%m/%Y\"}}\n\n{% for event in events %}### [{{event.title}}]({{event.url}})\n{{event.description | strip_html | truncate: 200}}\n\n{% endfor %}",
+        "expected_receive_period_in_days": "8",
+        "retained_events": 0
+      },
+      "schedule": "0 8 * * 1",
+      "keep_events_for": 14,
+      "propagate_immediately": false,
+      "sources": ["gopyrust-dedup"]
+    },
+    {
+      "type": "Agents::SlackAgent",
+      "name": "[Go/Python/Rust] Notification Mattermost",
+      "disabled": false,
+      "guid": "gopyrust-mattermost",
+      "options": {
+        "webhook_url": "{% credential mattermost_webhook_url %}",
+        "channel": "#huginn",
+        "username": "Huginn Go/Py/Rust",
+        "icon_emoji": ":snake:",
+        "message": "{{message}}",
+        "unfurl_links": true
+      },
+      "keep_events_for": 2,
+      "propagate_immediately": false,
+      "sources": ["gopyrust-digest-weekly"]
+    },
+
+    {
+      "type": "Agents::RssAgent",
+      "name": "[Java/JVM] Sources RSS",
+      "disabled": false,
+      "guid": "java-rss-sources",
+      "options": {
+        "expected_update_period_in_days": "7",
+        "clean": "true",
+        "remembered_id_count": "1000",
+        "url": [
+          "https://inside.java/feed.xml",
+          "https://www.baeldung.com/feed",
+          "https://spring.io/blog.atom",
+          "https://blog.jetbrains.com/idea/feed/",
+          "https://hnrss.org/newest?q=Java+OR+JVM+OR+Spring+OR+Kotlin&points=80"
+        ]
+      },
+      "schedule": "every_1d",
+      "keep_events_for": 14,
+      "propagate_immediately": false
+    },
+    {
+      "type": "Agents::DeDuplicationAgent",
+      "name": "[Java/JVM] Déduplication",
+      "disabled": false,
+      "guid": "java-dedup",
+      "options": {
+        "property": "{{url}}",
+        "lookback": 200
+      },
+      "keep_events_for": 14,
+      "propagate_immediately": true,
+      "sources": ["java-rss-sources"]
+    },
+    {
+      "type": "Agents::DigestAgent",
+      "name": "[Java/JVM] Digest Hebdo",
+      "disabled": false,
+      "guid": "java-digest-weekly",
+      "options": {
+        "message": "## ☕ Veille Java / JVM — Semaine du {{\"now\" | date: \"%d/%m/%Y\"}}\n\n{% for event in events %}### [{{event.title}}]({{event.url}})\n{{event.description | strip_html | truncate: 200}}\n\n{% endfor %}",
+        "expected_receive_period_in_days": "8",
+        "retained_events": 0
+      },
+      "schedule": "0 8 * * 1",
+      "keep_events_for": 14,
+      "propagate_immediately": false,
+      "sources": ["java-dedup"]
+    },
+    {
+      "type": "Agents::SlackAgent",
+      "name": "[Java/JVM] Notification Mattermost",
+      "disabled": false,
+      "guid": "java-mattermost",
+      "options": {
+        "webhook_url": "{% credential mattermost_webhook_url %}",
+        "channel": "#huginn",
+        "username": "Huginn Java",
+        "icon_emoji": ":coffee:",
+        "message": "{{message}}",
+        "unfurl_links": true
+      },
+      "keep_events_for": 2,
+      "propagate_immediately": false,
+      "sources": ["java-digest-weekly"]
+    }
+  ],
+  "links": [
+    {"source": 0, "receiver": 1},
+    {"source": 1, "receiver": 2},
+    {"source": 2, "receiver": 3},
+
+    {"source": 4, "receiver": 5},
+    {"source": 5, "receiver": 6},
+    {"source": 6, "receiver": 7},
+
+    {"source": 8, "receiver": 9},
+    {"source": 9, "receiver": 10},
+    {"source": 10, "receiver": 11},
+
+    {"source": 12, "receiver": 13},
+    {"source": 13, "receiver": 14},
+    {"source": 14, "receiver": 15},
+
+    {"source": 16, "receiver": 17},
+    {"source": 17, "receiver": 18},
+    {"source": 18, "receiver": 19}
+  ],
+  "control_links": []
+}
