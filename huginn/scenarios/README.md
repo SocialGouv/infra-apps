@@ -1,23 +1,48 @@
-# Scénario de veille technique
+# Scénarios de veille technique
+
+Deux scénarios sont disponibles : un pour le développement/test, un pour la production.
+
+| Fichier | Usage | Agents | Webhooks | Schedules |
+|---------|-------|--------|----------|-----------|
+| `veille-tech-dev.json` | Test | 25 | `mattermost_webhook_url_dev` → `#huginn-dev` | `every_2h` |
+| `veille-tech-prod.json` | Production | 35 | `mattermost_webhook_url_prod` (multi-canal) + `mattermost_webhook_url_dev` | Réels (6am, every_7d) |
 
 ## Architecture du pipeline
 
-Chaque catégorie de veille suit le même pipeline en 5 étapes :
+Chaque catégorie de veille suit le même pipeline :
 
 ```
-Sources RSS  →  Déduplication  →  Digest  →  Synthèse LLM  →  Mattermost
-(collecte)     (anti-doublon)    (batch)    (gpt-5.4)        (notification)
+Sources RSS  →  Déduplication  →  Digest  →  Synthèse LLM  →  Notification(s)
+(collecte)     (anti-doublon)    (batch)    (gpt-5.4)        (fan-out)
 ```
 
-### Catégories
+En prod, le LLM envoie sa synthèse vers **plusieurs SlackAgents** en parallèle (fan-out natif Huginn) :
 
-| Catégorie | Fréquence collecte | Fréquence digest | Sources |
-|-----------|--------------------|------------------|---------|
-| Cybersécurité | 12h | Quotidien (6h) | CERT-FR, The Hacker News, Krebs, Schneier, Bleeping Computer, Dark Reading |
-| IA / LLM | 12h | Quotidien (6h) | Anthropic, OpenAI, Simon Willison, The Gradient, Lilian Weng, HuggingFace, Google AI, HN |
-| TypeScript / JavaScript | 24h | Hebdomadaire (lundi) | JS Weekly, Node.js, Deno, Bun, TypeScript, Next.js, HN |
-| Go / Python / Rust | 24h | Hebdomadaire (lundi) | Go blog, Python Insider, Rust blog, This Week in Rust, Real Python, weeklies, HN |
-| Java / JVM | 24h | Hebdomadaire (lundi) | Inside Java, Baeldung, Spring, JetBrains, HN |
+```
+                    ┌→ SlackAgent (webhook1, #canal-dédié)
+LLM ───────────────┼→ SlackAgent (webhook1, #huginn)
+                    └→ SlackAgent (webhook2)
+```
+
+### Catégories et routing prod
+
+| Catégorie | Fréquence | webhook1 canaux | webhook2 |
+|-----------|-----------|-----------------|----------|
+| Cybersécurité | **Quotidien** | `#securite`, `#huginn-dev` | canal par défaut |
+| IA / LLM | **Hebdomadaire** | `#g-ia`, `#huginn-dev` | canal par défaut |
+| TypeScript / JavaScript | Hebdomadaire | `#veille-tech`, `#huginn-dev` | canal par défaut |
+| Go / Python / Rust | Hebdomadaire | `#veille-tech`, `#huginn-dev` | canal par défaut |
+| Java / JVM | Hebdomadaire | `#veille-tech`, `#huginn-dev` | canal par défaut |
+
+### Sources RSS
+
+| Catégorie | Sources |
+|-----------|---------|
+| Cybersécurité | CERT-FR (alertes + avis), The Hacker News, Krebs, Schneier, Bleeping Computer, Dark Reading |
+| IA / LLM | Anthropic, OpenAI, Simon Willison, The Gradient, Lilian Weng, HuggingFace, Google AI, HN |
+| TypeScript / JavaScript | JS Weekly, Node.js, Deno, Bun, TypeScript, Next.js, HN |
+| Go / Python / Rust | Go blog, Python Insider, Rust blog, This Week in Rust, Real Python, weeklies, HN |
+| Java / JVM | Inside Java, Baeldung, Spring, JetBrains, HN |
 
 ## Protection anti-doublons
 
@@ -73,30 +98,31 @@ Pour chaque digest, le LLM :
 | Go/Python/Rust | 🐹 Go, 🐍 Python, 🦀 Rust |
 | Java/JVM | ☕ Java core, 🌱 Spring, 🧰 Outils JVM, 📦 Kotlin |
 
-## Notification Mattermost
-
-Les synthèses sont envoyées via un `SlackAgent` (API compatible Mattermost) vers un canal dédié. Le webhook URL est stocké dans les User Credentials de Huginn (nom : `mattermost_webhook_url`).
-
-## Import du scénario
+## Import des scénarios
 
 ### Pré-requis
 
-1. Créer la User Credential `mattermost_webhook_url` dans Huginn (menu Credentials)
-2. S'assurer que `OPENAI_API_KEY` est défini dans les variables d'environnement du pod
+1. S'assurer que `OPENAI_API_KEY` est défini dans les variables d'environnement du pod
+
+2. Créer les User Credentials dans Huginn (menu Credentials) :
+
+| Scénario | Credential | Description |
+|----------|-----------|-------------|
+| Dev | `mattermost_webhook_url_dev` | Webhook verrouillé sur `#huginn-dev` |
+| Prod | `mattermost_webhook_url_prod` | Mattermost principal (déverrouillé, multi-canal) |
+| Prod | `mattermost_webhook_url_dev` | Réutilisé pour copie dans `#huginn-dev` |
 
 ### Procédure
 
 1. Menu Scenarios → Import Scenario
-2. Uploader `veille-tech.json`
-3. Les 25 agents sont créés avec leurs connexions
+2. Uploader le fichier JSON voulu
+3. Les agents sont créés avec leurs connexions
 
-### Schedules de test vs production
+### Ajouter un webhook
 
-Le fichier `veille-tech.json` contient des schedules accélérés pour le test (`every_2h`). Pour la production, modifier via l'UI :
+Pour ajouter un 3e webhook en prod :
 
-| Agent | Test | Production |
-|-------|------|------------|
-| RSS (cyber, IA) | every_2h | every_12h |
-| RSS (écosystèmes) | every_2h | every_1d |
-| Digest quotidien | every_2h | 6am |
-| Digest hebdo | every_2h | every_7d |
+1. Créer la credential (ex: `tchap_webhook`) dans l'UI
+2. Dupliquer un des SlackAgents existants par pipeline
+3. Changer le `webhook_url` vers `{% credential tchap_webhook %}`
+4. Connecter le nouvel agent au LLM correspondant (Sources → ajouter le LLM)

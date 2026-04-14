@@ -28,7 +28,7 @@
           "https://www.darkreading.com/rss.xml"
         ]
       },
-      "schedule": "every_2h",
+      "schedule": "every_12h",
       "keep_events_for": 604800,
       "propagate_immediately": false
     },
@@ -56,7 +56,7 @@
         "expected_receive_period_in_days": "2",
         "retained_events": 0
       },
-      "schedule": "every_2h",
+      "schedule": "every_1d",
       "keep_events_for": 604800,
       "propagate_immediately": false,
       "sources": ["cyber-dedup"]
@@ -84,8 +84,8 @@
       "disabled": false,
       "guid": "cyber-mattermost",
       "options": {
-        "webhook_url": "{% credential mattermost_webhook_url %}",
-        "channel": "#huginn",
+        "webhook_url": "{% credential mattermost_webhook_url_dev %}",
+        "channel": "#huginn-dev",
         "username": "Huginn Cyber",
         "icon": ":shield:",
         "message": "{{message}}",
@@ -116,8 +116,8 @@
           "https://blog.google/technology/ai/rss/"
         ]
       },
-      "schedule": "every_2h",
-      "keep_events_for": 604800,
+      "schedule": "every_1d",
+      "keep_events_for": 1209600,
       "propagate_immediately": false
     },
     {
@@ -136,7 +136,7 @@
     },
     {
       "type": "Agents::DigestAgent",
-      "name": "[IA/LLM] Digest Quotidien",
+      "name": "[IA/LLM] Digest Hebdo",
       "disabled": false,
       "guid": "ia-digest-daily",
       "options": {
@@ -144,8 +144,8 @@
         "expected_receive_period_in_days": "2",
         "retained_events": 0
       },
-      "schedule": "every_2h",
-      "keep_events_for": 604800,
+      "schedule": "every_7d",
+      "keep_events_for": 1209600,
       "propagate_immediately": false,
       "sources": ["ia-dedup"]
     },
@@ -172,8 +172,8 @@
       "disabled": false,
       "guid": "ia-mattermost",
       "options": {
-        "webhook_url": "{% credential mattermost_webhook_url %}",
-        "channel": "#huginn",
+        "webhook_url": "{% credential mattermost_webhook_url_dev %}",
+        "channel": "#huginn-dev",
         "username": "Huginn IA",
         "icon": ":robot_face:",
         "message": "{{message}}",
@@ -203,7 +203,7 @@
           "https://hnrss.org/newest?q=TypeScript+OR+Node.js+OR+Deno+OR+Bun&points=80"
         ]
       },
-      "schedule": "every_2h",
+      "schedule": "every_1d",
       "keep_events_for": 1209600,
       "propagate_immediately": false
     },
@@ -231,7 +231,7 @@
         "expected_receive_period_in_days": "8",
         "retained_events": 0
       },
-      "schedule": "every_2h",
+      "schedule": "every_7d",
       "keep_events_for": 1209600,
       "propagate_immediately": false,
       "sources": ["tsjs-dedup"]
@@ -259,8 +259,8 @@
       "disabled": false,
       "guid": "tsjs-mattermost",
       "options": {
-        "webhook_url": "{% credential mattermost_webhook_url %}",
-        "channel": "#huginn",
+        "webhook_url": "{% credential mattermost_webhook_url_dev %}",
+        "channel": "#huginn-dev",
         "username": "Huginn TS/JS",
         "icon": ":javascript:",
         "message": "{{message}}",
@@ -291,7 +291,7 @@
           "https://hnrss.org/newest?q=Golang+OR+Rust+OR+Python&points=80"
         ]
       },
-      "schedule": "every_2h",
+      "schedule": "every_1d",
       "keep_events_for": 1209600,
       "propagate_immediately": false
     },
@@ -319,7 +319,7 @@
         "expected_receive_period_in_days": "8",
         "retained_events": 0
       },
-      "schedule": "every_2h",
+      "schedule": "every_7d",
       "keep_events_for": 1209600,
       "propagate_immediately": false,
       "sources": ["gopyrust-dedup"]
@@ -347,8 +347,8 @@
       "disabled": false,
       "guid": "gopyrust-mattermost",
       "options": {
-        "webhook_url": "{% credential mattermost_webhook_url %}",
-        "channel": "#huginn",
+        "webhook_url": "{% credential mattermost_webhook_url_dev %}",
+        "channel": "#huginn-dev",
         "username": "Huginn Go/Py/Rust",
         "icon": ":snake:",
         "message": "{{message}}",
@@ -376,7 +376,7 @@
           "https://hnrss.org/newest?q=Java+OR+JVM+OR+Spring+OR+Kotlin&points=80"
         ]
       },
-      "schedule": "every_2h",
+      "schedule": "every_1d",
       "keep_events_for": 1209600,
       "propagate_immediately": false
     },
@@ -404,7 +404,7 @@
         "expected_receive_period_in_days": "8",
         "retained_events": 0
       },
-      "schedule": "every_2h",
+      "schedule": "every_7d",
       "keep_events_for": 1209600,
       "propagate_immediately": false,
       "sources": ["java-dedup"]
@@ -432,8 +432,8 @@
       "disabled": false,
       "guid": "java-mattermost",
       "options": {
-        "webhook_url": "{% credential mattermost_webhook_url %}",
-        "channel": "#huginn",
+        "webhook_url": "{% credential mattermost_webhook_url_dev %}",
+        "channel": "#huginn-dev",
         "username": "Huginn Java",
         "icon": ":coffee:",
         "message": "{{message}}",

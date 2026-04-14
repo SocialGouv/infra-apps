@@ -1,0 +1,655 @@
+{
+  "schema_version": 1,
+  "name": "Veille Technique (Prod)",
+  "description": "Pipeline de veille avec synthèse LLM et notification multi-canal multi-webhook",
+  "guid": "veille-tech-prod-fabrique-2026",
+  "tag_fg_color": "#ffffff",
+  "tag_bg_color": "#337ab7",
+  "icon": "eye",
+  "exported_at": "2026-04-14T00:00:00Z",
+  "agents": [
+
+    {
+      "type": "Agents::RssAgent",
+      "name": "[Cyber] Sources RSS",
+      "disabled": false,
+      "guid": "prod-cyber-rss",
+      "options": {
+        "expected_update_period_in_days": "3",
+        "clean": "true",
+        "remembered_id_count": "1000",
+        "url": [
+          "https://www.cert.ssi.gouv.fr/alerte/feed/",
+          "https://www.cert.ssi.gouv.fr/avis/feed/",
+          "https://feeds.feedburner.com/TheHackersNews",
+          "https://krebsonsecurity.com/feed/",
+          "https://www.schneier.com/feed/atom/",
+          "https://www.bleepingcomputer.com/feed/",
+          "https://threatpost.com/feed/",
+          "https://www.darkreading.com/rss.xml"
+        ]
+      },
+      "schedule": "every_12h",
+      "keep_events_for": 604800,
+      "propagate_immediately": false
+    },
+    {
+      "type": "Agents::DeDuplicationAgent",
+      "name": "[Cyber] Déduplication",
+      "disabled": false,
+      "guid": "prod-cyber-dedup",
+      "options": {
+        "property": "{{url}}",
+        "lookback": 200,
+        "expected_update_period_in_days": "3"
+      },
+      "keep_events_for": 604800,
+      "propagate_immediately": true,
+      "sources": ["prod-cyber-rss"]
+    },
+    {
+      "type": "Agents::DigestAgent",
+      "name": "[Cyber] Digest Quotidien",
+      "disabled": false,
+      "guid": "prod-cyber-digest",
+      "options": {
+        "message": "{% for event in events %}## {{event.title}}\nURL: {{event.url}}\n{{event.description | strip_html | truncate: 500}}\n---\n{% endfor %}",
+        "expected_receive_period_in_days": "2",
+        "retained_events": 0
+      },
+      "schedule": "6am",
+      "keep_events_for": 604800,
+      "propagate_immediately": false,
+      "sources": ["prod-cyber-dedup"]
+    },
+    {
+      "type": "Agents::OpenaiLlmAgent",
+      "name": "[Cyber] Synthèse LLM",
+      "disabled": false,
+      "guid": "prod-cyber-llm",
+      "options": {
+        "model": "gpt-5.4",
+        "system_message": "Tu es un analyste cybersécurité qui produit des synthèses de veille pour une équipe technique francophone.\n\nÀ partir des articles fournis :\n1. Filtre les informations redondantes ou mineures\n2. Pour chaque info importante, écris un titre explicite et une synthèse de 2-3 phrases maximum\n3. Ajoute le lien source pour approfondir\n4. Classe par criticité : 🔴 Critique, 🟠 Important, 🟡 À noter\n\nFormat de sortie en Markdown. Commence par un titre avec la date. Sois concis et actionnable. Écris en français.",
+        "user_message": "Voici les articles de veille cybersécurité à synthétiser :\n\n{{message}}",
+        "temperature": "0.3",
+        "request_timeout": "300",
+        "expected_receive_period_in_days": "2"
+      },
+      "keep_events_for": 604800,
+      "propagate_immediately": true,
+      "sources": ["prod-cyber-digest"]
+    },
+    {
+      "type": "Agents::SlackAgent",
+      "name": "[Cyber] → prod #securite",
+      "disabled": false,
+      "guid": "prod-cyber-wh1-securite",
+      "options": {
+        "webhook_url": "{% credential mattermost_webhook_url_prod %}",
+        "channel": "#securite",
+        "username": "Huginn Cyber",
+        "icon": ":shield:",
+        "message": "{{message}}",
+        "unfurl_links": true
+      },
+      "keep_events_for": 172800,
+      "propagate_immediately": false,
+      "sources": ["prod-cyber-llm"]
+    },
+    {
+      "type": "Agents::SlackAgent",
+      "name": "[Cyber] → prod #huginn",
+      "disabled": false,
+      "guid": "prod-cyber-wh1-huginn",
+      "options": {
+        "webhook_url": "{% credential mattermost_webhook_url_prod %}",
+        "channel": "#huginn",
+        "username": "Huginn Cyber",
+        "icon": ":shield:",
+        "message": "{{message}}",
+        "unfurl_links": true
+      },
+      "keep_events_for": 172800,
+      "propagate_immediately": false,
+      "sources": ["prod-cyber-llm"]
+    },
+    {
+      "type": "Agents::SlackAgent",
+      "name": "[Cyber] → dev",
+      "disabled": false,
+      "guid": "prod-cyber-wh2",
+      "options": {
+        "webhook_url": "{% credential mattermost_webhook_url_dev %}",
+        "channel": "#securite",
+        "username": "Huginn Cyber",
+        "icon": ":shield:",
+        "message": "{{message}}",
+        "unfurl_links": true
+      },
+      "keep_events_for": 172800,
+      "propagate_immediately": false,
+      "sources": ["prod-cyber-llm"]
+    },
+
+    {
+      "type": "Agents::RssAgent",
+      "name": "[IA/LLM] Sources RSS",
+      "disabled": false,
+      "guid": "prod-ia-rss",
+      "options": {
+        "expected_update_period_in_days": "3",
+        "clean": "true",
+        "remembered_id_count": "1000",
+        "url": [
+          "https://www.anthropic.com/rss",
+          "https://openai.com/blog/rss.xml",
+          "https://simonwillison.net/atom/everything/",
+          "https://thegradient.pub/rss/",
+          "https://lilianweng.github.io/index.xml",
+          "https://hnrss.org/newest?q=LLM+OR+%22language+model%22+OR+%22AI+coding%22&points=50",
+          "https://huggingface.co/blog/feed.xml",
+          "https://blog.google/technology/ai/rss/"
+        ]
+      },
+      "schedule": "every_1d",
+      "keep_events_for": 1209600,
+      "propagate_immediately": false
+    },
+    {
+      "type": "Agents::DeDuplicationAgent",
+      "name": "[IA/LLM] Déduplication",
+      "disabled": false,
+      "guid": "prod-ia-dedup",
+      "options": {
+        "property": "{{url}}",
+        "lookback": 200,
+        "expected_update_period_in_days": "3"
+      },
+      "keep_events_for": 604800,
+      "propagate_immediately": true,
+      "sources": ["prod-ia-rss"]
+    },
+    {
+      "type": "Agents::DigestAgent",
+      "name": "[IA/LLM] Digest Hebdo",
+      "disabled": false,
+      "guid": "prod-ia-digest",
+      "options": {
+        "message": "{% for event in events %}## {{event.title}}\nURL: {{event.url}}\n{{event.description | strip_html | truncate: 500}}\n---\n{% endfor %}",
+        "expected_receive_period_in_days": "2",
+        "retained_events": 0
+      },
+      "schedule": "every_7d",
+      "keep_events_for": 1209600,
+      "propagate_immediately": false,
+      "sources": ["prod-ia-dedup"]
+    },
+    {
+      "type": "Agents::OpenaiLlmAgent",
+      "name": "[IA/LLM] Synthèse LLM",
+      "disabled": false,
+      "guid": "prod-ia-llm",
+      "options": {
+        "model": "gpt-5.4",
+        "system_message": "Tu es un veilleur technologique spécialisé IA, LLM et outils de développement assisté par IA, pour une équipe de développeurs francophone.\n\nÀ partir des articles fournis :\n1. Filtre les informations redondantes ou mineures\n2. Pour chaque info importante, écris un titre explicite et une synthèse de 2-3 phrases maximum\n3. Ajoute le lien source pour approfondir\n4. Classe par catégorie : 🧠 Modèles & recherche, 🛠️ Outils & frameworks, 💻 Coding assisté par IA\n\nFormat de sortie en Markdown. Commence par un titre avec la date. Sois concis. Écris en français.",
+        "user_message": "Voici les articles de veille IA/LLM à synthétiser :\n\n{{message}}",
+        "temperature": "0.3",
+        "request_timeout": "300",
+        "expected_receive_period_in_days": "2"
+      },
+      "keep_events_for": 604800,
+      "propagate_immediately": true,
+      "sources": ["prod-ia-digest"]
+    },
+    {
+      "type": "Agents::SlackAgent",
+      "name": "[IA/LLM] → prod #g/ia",
+      "disabled": false,
+      "guid": "prod-ia-wh1-gia",
+      "options": {
+        "webhook_url": "{% credential mattermost_webhook_url_prod %}",
+        "channel": "#g-ia",
+        "username": "Huginn IA",
+        "icon": ":robot_face:",
+        "message": "{{message}}",
+        "unfurl_links": true
+      },
+      "keep_events_for": 172800,
+      "propagate_immediately": false,
+      "sources": ["prod-ia-llm"]
+    },
+    {
+      "type": "Agents::SlackAgent",
+      "name": "[IA/LLM] → prod #huginn",
+      "disabled": false,
+      "guid": "prod-ia-wh1-huginn",
+      "options": {
+        "webhook_url": "{% credential mattermost_webhook_url_prod %}",
+        "channel": "#huginn",
+        "username": "Huginn IA",
+        "icon": ":robot_face:",
+        "message": "{{message}}",
+        "unfurl_links": true
+      },
+      "keep_events_for": 172800,
+      "propagate_immediately": false,
+      "sources": ["prod-ia-llm"]
+    },
+    {
+      "type": "Agents::SlackAgent",
+      "name": "[IA/LLM] → dev",
+      "disabled": false,
+      "guid": "prod-ia-wh2",
+      "options": {
+        "webhook_url": "{% credential mattermost_webhook_url_dev %}",
+        "channel": "#g-ia",
+        "username": "Huginn IA",
+        "icon": ":robot_face:",
+        "message": "{{message}}",
+        "unfurl_links": true
+      },
+      "keep_events_for": 172800,
+      "propagate_immediately": false,
+      "sources": ["prod-ia-llm"]
+    },
+
+    {
+      "type": "Agents::RssAgent",
+      "name": "[TS/JS] Sources RSS",
+      "disabled": false,
+      "guid": "prod-tsjs-rss",
+      "options": {
+        "expected_update_period_in_days": "7",
+        "clean": "true",
+        "remembered_id_count": "1000",
+        "url": [
+          "https://javascriptweekly.com/rss/",
+          "https://nodejs.org/en/feed/blog.xml",
+          "https://deno.com/feed",
+          "https://bun.sh/blog/rss.xml",
+          "https://devblogs.microsoft.com/typescript/feed/",
+          "https://blog.nextjs.org/rss.xml",
+          "https://hnrss.org/newest?q=TypeScript+OR+Node.js+OR+Deno+OR+Bun&points=80"
+        ]
+      },
+      "schedule": "every_1d",
+      "keep_events_for": 1209600,
+      "propagate_immediately": false
+    },
+    {
+      "type": "Agents::DeDuplicationAgent",
+      "name": "[TS/JS] Déduplication",
+      "disabled": false,
+      "guid": "prod-tsjs-dedup",
+      "options": {
+        "property": "{{url}}",
+        "lookback": 200,
+        "expected_update_period_in_days": "7"
+      },
+      "keep_events_for": 1209600,
+      "propagate_immediately": true,
+      "sources": ["prod-tsjs-rss"]
+    },
+    {
+      "type": "Agents::DigestAgent",
+      "name": "[TS/JS] Digest Hebdo",
+      "disabled": false,
+      "guid": "prod-tsjs-digest",
+      "options": {
+        "message": "{% for event in events %}## {{event.title}}\nURL: {{event.url}}\n{{event.description | strip_html | truncate: 500}}\n---\n{% endfor %}",
+        "expected_receive_period_in_days": "8",
+        "retained_events": 0
+      },
+      "schedule": "every_7d",
+      "keep_events_for": 1209600,
+      "propagate_immediately": false,
+      "sources": ["prod-tsjs-dedup"]
+    },
+    {
+      "type": "Agents::OpenaiLlmAgent",
+      "name": "[TS/JS] Synthèse LLM",
+      "disabled": false,
+      "guid": "prod-tsjs-llm",
+      "options": {
+        "model": "gpt-5.4",
+        "system_message": "Tu es un veilleur technologique spécialisé dans l'écosystème TypeScript/JavaScript pour une équipe de développeurs francophone.\n\nÀ partir des articles fournis :\n1. Filtre les informations redondantes ou mineures\n2. Pour chaque info importante, écris un titre explicite et une synthèse de 2-3 phrases maximum\n3. Ajoute le lien source pour approfondir\n4. Classe par catégorie : 📦 Runtimes (Node, Deno, Bun), 🔧 Frameworks, 📐 TypeScript, 📚 Écosystème\n\nFormat de sortie en Markdown. Commence par un titre avec la date. Sois concis. Écris en français.",
+        "user_message": "Voici les articles de veille TypeScript/JavaScript à synthétiser :\n\n{{message}}",
+        "temperature": "0.3",
+        "request_timeout": "300",
+        "expected_receive_period_in_days": "8"
+      },
+      "keep_events_for": 1209600,
+      "propagate_immediately": true,
+      "sources": ["prod-tsjs-digest"]
+    },
+    {
+      "type": "Agents::SlackAgent",
+      "name": "[TS/JS] → prod #veille-tech",
+      "disabled": false,
+      "guid": "prod-tsjs-wh1-veille",
+      "options": {
+        "webhook_url": "{% credential mattermost_webhook_url_prod %}",
+        "channel": "#veille-tech",
+        "username": "Huginn TS/JS",
+        "icon": ":javascript:",
+        "message": "{{message}}",
+        "unfurl_links": true
+      },
+      "keep_events_for": 172800,
+      "propagate_immediately": false,
+      "sources": ["prod-tsjs-llm"]
+    },
+    {
+      "type": "Agents::SlackAgent",
+      "name": "[TS/JS] → prod #huginn",
+      "disabled": false,
+      "guid": "prod-tsjs-wh1-huginn",
+      "options": {
+        "webhook_url": "{% credential mattermost_webhook_url_prod %}",
+        "channel": "#huginn",
+        "username": "Huginn TS/JS",
+        "icon": ":javascript:",
+        "message": "{{message}}",
+        "unfurl_links": true
+      },
+      "keep_events_for": 172800,
+      "propagate_immediately": false,
+      "sources": ["prod-tsjs-llm"]
+    },
+    {
+      "type": "Agents::SlackAgent",
+      "name": "[TS/JS] → dev",
+      "disabled": false,
+      "guid": "prod-tsjs-wh2",
+      "options": {
+        "webhook_url": "{% credential mattermost_webhook_url_dev %}",
+        "channel": "#veille-tech",
+        "username": "Huginn TS/JS",
+        "icon": ":javascript:",
+        "message": "{{message}}",
+        "unfurl_links": true
+      },
+      "keep_events_for": 172800,
+      "propagate_immediately": false,
+      "sources": ["prod-tsjs-llm"]
+    },
+
+    {
+      "type": "Agents::RssAgent",
+      "name": "[Go/Python/Rust] Sources RSS",
+      "disabled": false,
+      "guid": "prod-gopyrust-rss",
+      "options": {
+        "expected_update_period_in_days": "7",
+        "clean": "true",
+        "remembered_id_count": "1000",
+        "url": [
+          "https://go.dev/blog/feed.atom",
+          "https://blog.python.org/feeds/posts/default",
+          "https://blog.rust-lang.org/feed.xml",
+          "https://this-week-in-rust.org/rss.xml",
+          "https://realpython.com/atom.xml",
+          "https://golangweekly.com/rss/",
+          "https://pythonweekly.com/rss/",
+          "https://hnrss.org/newest?q=Golang+OR+Rust+OR+Python&points=80"
+        ]
+      },
+      "schedule": "every_1d",
+      "keep_events_for": 1209600,
+      "propagate_immediately": false
+    },
+    {
+      "type": "Agents::DeDuplicationAgent",
+      "name": "[Go/Python/Rust] Déduplication",
+      "disabled": false,
+      "guid": "prod-gopyrust-dedup",
+      "options": {
+        "property": "{{url}}",
+        "lookback": 200,
+        "expected_update_period_in_days": "7"
+      },
+      "keep_events_for": 1209600,
+      "propagate_immediately": true,
+      "sources": ["prod-gopyrust-rss"]
+    },
+    {
+      "type": "Agents::DigestAgent",
+      "name": "[Go/Python/Rust] Digest Hebdo",
+      "disabled": false,
+      "guid": "prod-gopyrust-digest",
+      "options": {
+        "message": "{% for event in events %}## {{event.title}}\nURL: {{event.url}}\n{{event.description | strip_html | truncate: 500}}\n---\n{% endfor %}",
+        "expected_receive_period_in_days": "8",
+        "retained_events": 0
+      },
+      "schedule": "every_7d",
+      "keep_events_for": 1209600,
+      "propagate_immediately": false,
+      "sources": ["prod-gopyrust-dedup"]
+    },
+    {
+      "type": "Agents::OpenaiLlmAgent",
+      "name": "[Go/Python/Rust] Synthèse LLM",
+      "disabled": false,
+      "guid": "prod-gopyrust-llm",
+      "options": {
+        "model": "gpt-5.4",
+        "system_message": "Tu es un veilleur technologique spécialisé Go, Python et Rust pour une équipe de développeurs francophone.\n\nÀ partir des articles fournis :\n1. Filtre les informations redondantes ou mineures\n2. Pour chaque info importante, écris un titre explicite et une synthèse de 2-3 phrases maximum\n3. Ajoute le lien source pour approfondir\n4. Classe par langage : 🐹 Go, 🐍 Python, 🦀 Rust\n\nFormat de sortie en Markdown. Commence par un titre avec la date. Sois concis. Écris en français.",
+        "user_message": "Voici les articles de veille Go/Python/Rust à synthétiser :\n\n{{message}}",
+        "temperature": "0.3",
+        "request_timeout": "300",
+        "expected_receive_period_in_days": "8"
+      },
+      "keep_events_for": 1209600,
+      "propagate_immediately": true,
+      "sources": ["prod-gopyrust-digest"]
+    },
+    {
+      "type": "Agents::SlackAgent",
+      "name": "[Go/Python/Rust] → prod #veille-tech",
+      "disabled": false,
+      "guid": "prod-gopyrust-wh1-veille",
+      "options": {
+        "webhook_url": "{% credential mattermost_webhook_url_prod %}",
+        "channel": "#veille-tech",
+        "username": "Huginn Go/Py/Rust",
+        "icon": ":snake:",
+        "message": "{{message}}",
+        "unfurl_links": true
+      },
+      "keep_events_for": 172800,
+      "propagate_immediately": false,
+      "sources": ["prod-gopyrust-llm"]
+    },
+    {
+      "type": "Agents::SlackAgent",
+      "name": "[Go/Python/Rust] → prod #huginn",
+      "disabled": false,
+      "guid": "prod-gopyrust-wh1-huginn",
+      "options": {
+        "webhook_url": "{% credential mattermost_webhook_url_prod %}",
+        "channel": "#huginn",
+        "username": "Huginn Go/Py/Rust",
+        "icon": ":snake:",
+        "message": "{{message}}",
+        "unfurl_links": true
+      },
+      "keep_events_for": 172800,
+      "propagate_immediately": false,
+      "sources": ["prod-gopyrust-llm"]
+    },
+    {
+      "type": "Agents::SlackAgent",
+      "name": "[Go/Python/Rust] → dev",
+      "disabled": false,
+      "guid": "prod-gopyrust-wh2",
+      "options": {
+        "webhook_url": "{% credential mattermost_webhook_url_dev %}",
+        "channel": "#veille-tech",
+        "username": "Huginn Go/Py/Rust",
+        "icon": ":snake:",
+        "message": "{{message}}",
+        "unfurl_links": true
+      },
+      "keep_events_for": 172800,
+      "propagate_immediately": false,
+      "sources": ["prod-gopyrust-llm"]
+    },
+
+    {
+      "type": "Agents::RssAgent",
+      "name": "[Java/JVM] Sources RSS",
+      "disabled": false,
+      "guid": "prod-java-rss",
+      "options": {
+        "expected_update_period_in_days": "7",
+        "clean": "true",
+        "remembered_id_count": "1000",
+        "url": [
+          "https://inside.java/feed.xml",
+          "https://www.baeldung.com/feed",
+          "https://spring.io/blog.atom",
+          "https://blog.jetbrains.com/idea/feed/",
+          "https://hnrss.org/newest?q=Java+OR+JVM+OR+Spring+OR+Kotlin&points=80"
+        ]
+      },
+      "schedule": "every_1d",
+      "keep_events_for": 1209600,
+      "propagate_immediately": false
+    },
+    {
+      "type": "Agents::DeDuplicationAgent",
+      "name": "[Java/JVM] Déduplication",
+      "disabled": false,
+      "guid": "prod-java-dedup",
+      "options": {
+        "property": "{{url}}",
+        "lookback": 200,
+        "expected_update_period_in_days": "7"
+      },
+      "keep_events_for": 1209600,
+      "propagate_immediately": true,
+      "sources": ["prod-java-rss"]
+    },
+    {
+      "type": "Agents::DigestAgent",
+      "name": "[Java/JVM] Digest Hebdo",
+      "disabled": false,
+      "guid": "prod-java-digest",
+      "options": {
+        "message": "{% for event in events %}## {{event.title}}\nURL: {{event.url}}\n{{event.description | strip_html | truncate: 500}}\n---\n{% endfor %}",
+        "expected_receive_period_in_days": "8",
+        "retained_events": 0
+      },
+      "schedule": "every_7d",
+      "keep_events_for": 1209600,
+      "propagate_immediately": false,
+      "sources": ["prod-java-dedup"]
+    },
+    {
+      "type": "Agents::OpenaiLlmAgent",
+      "name": "[Java/JVM] Synthèse LLM",
+      "disabled": false,
+      "guid": "prod-java-llm",
+      "options": {
+        "model": "gpt-5.4",
+        "system_message": "Tu es un veilleur technologique spécialisé Java et écosystème JVM pour une équipe de développeurs francophone.\n\nÀ partir des articles fournis :\n1. Filtre les informations redondantes ou mineures\n2. Pour chaque info importante, écris un titre explicite et une synthèse de 2-3 phrases maximum\n3. Ajoute le lien source pour approfondir\n4. Classe par catégorie : ☕ Java core, 🌱 Spring, 🧰 Outils JVM, 📦 Kotlin\n\nFormat de sortie en Markdown. Commence par un titre avec la date. Sois concis. Écris en français.",
+        "user_message": "Voici les articles de veille Java/JVM à synthétiser :\n\n{{message}}",
+        "temperature": "0.3",
+        "request_timeout": "300",
+        "expected_receive_period_in_days": "8"
+      },
+      "keep_events_for": 1209600,
+      "propagate_immediately": true,
+      "sources": ["prod-java-digest"]
+    },
+    {
+      "type": "Agents::SlackAgent",
+      "name": "[Java/JVM] → prod #veille-tech",
+      "disabled": false,
+      "guid": "prod-java-wh1-veille",
+      "options": {
+        "webhook_url": "{% credential mattermost_webhook_url_prod %}",
+        "channel": "#veille-tech",
+        "username": "Huginn Java",
+        "icon": ":coffee:",
+        "message": "{{message}}",
+        "unfurl_links": true
+      },
+      "keep_events_for": 172800,
+      "propagate_immediately": false,
+      "sources": ["prod-java-llm"]
+    },
+    {
+      "type": "Agents::SlackAgent",
+      "name": "[Java/JVM] → prod #huginn",
+      "disabled": false,
+      "guid": "prod-java-wh1-huginn",
+      "options": {
+        "webhook_url": "{% credential mattermost_webhook_url_prod %}",
+        "channel": "#huginn",
+        "username": "Huginn Java",
+        "icon": ":coffee:",
+        "message": "{{message}}",
+        "unfurl_links": true
+      },
+      "keep_events_for": 172800,
+      "propagate_immediately": false,
+      "sources": ["prod-java-llm"]
+    },
+    {
+      "type": "Agents::SlackAgent",
+      "name": "[Java/JVM] → dev",
+      "disabled": false,
+      "guid": "prod-java-wh2",
+      "options": {
+        "webhook_url": "{% credential mattermost_webhook_url_dev %}",
+        "channel": "#veille-tech",
+        "username": "Huginn Java",
+        "icon": ":coffee:",
+        "message": "{{message}}",
+        "unfurl_links": true
+      },
+      "keep_events_for": 172800,
+      "propagate_immediately": false,
+      "sources": ["prod-java-llm"]
+    }
+  ],
+  "links": [
+    {"source": 0, "receiver": 1},
+    {"source": 1, "receiver": 2},
+    {"source": 2, "receiver": 3},
+    {"source": 3, "receiver": 4},
+    {"source": 3, "receiver": 5},
+    {"source": 3, "receiver": 6},
+
+    {"source": 7, "receiver": 8},
+    {"source": 8, "receiver": 9},
+    {"source": 9, "receiver": 10},
+    {"source": 10, "receiver": 11},
+    {"source": 10, "receiver": 12},
+    {"source": 10, "receiver": 13},
+
+    {"source": 14, "receiver": 15},
+    {"source": 15, "receiver": 16},
+    {"source": 16, "receiver": 17},
+    {"source": 17, "receiver": 18},
+    {"source": 17, "receiver": 19},
+    {"source": 17, "receiver": 20},
+
+    {"source": 21, "receiver": 22},
+    {"source": 22, "receiver": 23},
+    {"source": 23, "receiver": 24},
+    {"source": 24, "receiver": 25},
+    {"source": 24, "receiver": 26},
+    {"source": 24, "receiver": 27},
+
+    {"source": 28, "receiver": 29},
+    {"source": 29, "receiver": 30},
+    {"source": 30, "receiver": 31},
+    {"source": 31, "receiver": 32},
+    {"source": 31, "receiver": 33},
+    {"source": 31, "receiver": 34}
+  ],
+  "control_links": []
+}
