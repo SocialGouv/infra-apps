@@ -1,0 +1,17 @@
+cluster: ovh-prod
+
+env:
+  DOMAIN: huginn.fabrique.social.gouv.fr
+
+ingress:
+  hostname: huginn.fabrique.social.gouv.fr
+
+cnpg-cluster:
+  instances: 2
+  persistence:
+    size: 10Gi
+  resources:
+    requests:
+      memory: 256Mi
+    limits:
+      memory: 2Gi

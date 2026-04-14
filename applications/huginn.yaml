@@ -8,8 +8,8 @@ spec:
         elements:
           - name: huginn-dev
             cluster: ovh-dev
-          # - name: huginn-prod
-          #   cluster: ovh-prod
+          - name: huginn-prod
+            cluster: ovh-prod
   goTemplate: true
   template:
     metadata:
@@ -25,6 +25,9 @@ spec:
         path: huginn
         helm:
           releaseName: huginn
+          valueFiles:
+            - values.yaml
+            - "values.{{ .cluster }}.yaml"
       syncPolicy:
         managedNamespaceMetadata:
           labels:

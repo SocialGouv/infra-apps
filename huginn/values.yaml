@@ -1,3 +1,5 @@
+cluster: ""
+
 image:
   repository: ghcr.io/huginn/huginn-single-process
   tag: latest
@@ -26,7 +28,6 @@ worker:
 env:
   TIMEZONE: "Europe/Paris"
   FORCE_SSL: "false"
-  DOMAIN: huginn.dev.fabrique.social.gouv.fr
   DO_NOT_CREATE_DATABASE: "true"
   DO_NOT_SEED: "true"
   IMPORT_DEFAULT_SCENARIO_FOR_ALL_USERS: "true"
@@ -40,7 +41,6 @@ env:
 
 ingress:
   enabled: true
-  hostname: huginn.dev.fabrique.social.gouv.fr
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-prod
   tls:

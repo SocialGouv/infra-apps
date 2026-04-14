@@ -1,0 +1,7 @@
+cluster: ovh-dev
+
+env:
+  DOMAIN: huginn.dev.fabrique.social.gouv.fr
+
+ingress:
+  hostname: huginn.dev.fabrique.social.gouv.fr
