@@ -30,6 +30,13 @@ env:
   DO_NOT_CREATE_DATABASE: "true"
   DO_NOT_SEED: "true"
   IMPORT_DEFAULT_SCENARIO_FOR_ALL_USERS: "true"
+  SMTP_DOMAIN: diffusion.fabrique.social.gouv.fr
+  SMTP_SERVER: smtp.tipimail.com
+  SMTP_PORT: "587"
+  SMTP_ENABLE_STARTTLS_AUTO: "true"
+  SMTP_SSL: "false"
+  SMTP_AUTHENTICATION: plain
+  EMAIL_FROM_ADDRESS: contact@diffusion.fabrique.social.gouv.fr
 
 ingress:
   enabled: true
