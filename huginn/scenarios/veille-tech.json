@@ -71,7 +71,7 @@
         "system_message": "Tu es un analyste cybersécurité qui produit des synthèses de veille pour une équipe technique francophone.\n\nÀ partir des articles fournis :\n1. Filtre les informations redondantes ou mineures\n2. Pour chaque info importante, écris un titre explicite et une synthèse de 2-3 phrases maximum\n3. Ajoute le lien source pour approfondir\n4. Classe par criticité : 🔴 Critique, 🟠 Important, 🟡 À noter\n\nFormat de sortie en Markdown. Commence par un titre avec la date. Sois concis et actionnable. Écris en français.",
         "user_message": "Voici les articles de veille cybersécurité à synthétiser :\n\n{{message}}",
         "temperature": "0.3",
-        "max_tokens": "2000",
+        "request_timeout": "300",
         "expected_receive_period_in_days": "2"
       },
       "keep_events_for": 604800,
@@ -159,7 +159,7 @@
         "system_message": "Tu es un veilleur technologique spécialisé IA, LLM et outils de développement assisté par IA, pour une équipe de développeurs francophone.\n\nÀ partir des articles fournis :\n1. Filtre les informations redondantes ou mineures\n2. Pour chaque info importante, écris un titre explicite et une synthèse de 2-3 phrases maximum\n3. Ajoute le lien source pour approfondir\n4. Classe par catégorie : 🧠 Modèles & recherche, 🛠️ Outils & frameworks, 💻 Coding assisté par IA\n\nFormat de sortie en Markdown. Commence par un titre avec la date. Sois concis. Écris en français.",
         "user_message": "Voici les articles de veille IA/LLM à synthétiser :\n\n{{message}}",
         "temperature": "0.3",
-        "max_tokens": "2000",
+        "request_timeout": "300",
         "expected_receive_period_in_days": "2"
       },
       "keep_events_for": 604800,
@@ -246,7 +246,7 @@
         "system_message": "Tu es un veilleur technologique spécialisé dans l'écosystème TypeScript/JavaScript pour une équipe de développeurs francophone.\n\nÀ partir des articles fournis :\n1. Filtre les informations redondantes ou mineures\n2. Pour chaque info importante, écris un titre explicite et une synthèse de 2-3 phrases maximum\n3. Ajoute le lien source pour approfondir\n4. Classe par catégorie : 📦 Runtimes (Node, Deno, Bun), 🔧 Frameworks, 📐 TypeScript, 📚 Écosystème\n\nFormat de sortie en Markdown. Commence par un titre avec la date. Sois concis. Écris en français.",
         "user_message": "Voici les articles de veille TypeScript/JavaScript à synthétiser :\n\n{{message}}",
         "temperature": "0.3",
-        "max_tokens": "2000",
+        "request_timeout": "300",
         "expected_receive_period_in_days": "8"
       },
       "keep_events_for": 1209600,
@@ -334,7 +334,7 @@
         "system_message": "Tu es un veilleur technologique spécialisé Go, Python et Rust pour une équipe de développeurs francophone.\n\nÀ partir des articles fournis :\n1. Filtre les informations redondantes ou mineures\n2. Pour chaque info importante, écris un titre explicite et une synthèse de 2-3 phrases maximum\n3. Ajoute le lien source pour approfondir\n4. Classe par langage : 🐹 Go, 🐍 Python, 🦀 Rust\n\nFormat de sortie en Markdown. Commence par un titre avec la date. Sois concis. Écris en français.",
         "user_message": "Voici les articles de veille Go/Python/Rust à synthétiser :\n\n{{message}}",
         "temperature": "0.3",
-        "max_tokens": "2000",
+        "request_timeout": "300",
         "expected_receive_period_in_days": "8"
       },
       "keep_events_for": 1209600,
@@ -419,7 +419,7 @@
         "system_message": "Tu es un veilleur technologique spécialisé Java et écosystème JVM pour une équipe de développeurs francophone.\n\nÀ partir des articles fournis :\n1. Filtre les informations redondantes ou mineures\n2. Pour chaque info importante, écris un titre explicite et une synthèse de 2-3 phrases maximum\n3. Ajoute le lien source pour approfondir\n4. Classe par catégorie : ☕ Java core, 🌱 Spring, 🧰 Outils JVM, 📦 Kotlin\n\nFormat de sortie en Markdown. Commence par un titre avec la date. Sois concis. Écris en français.",
         "user_message": "Voici les articles de veille Java/JVM à synthétiser :\n\n{{message}}",
         "temperature": "0.3",
-        "max_tokens": "2000",
+        "request_timeout": "300",
         "expected_receive_period_in_days": "8"
       },
       "keep_events_for": 1209600,
