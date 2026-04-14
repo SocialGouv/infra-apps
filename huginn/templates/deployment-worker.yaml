@@ -81,11 +81,6 @@ spec:
                 secretKeyRef:
                   name: huginn-secrets
                   key: OPENAI_API_KEY
-            - name: MATTERMOST_WEBHOOK_URL
-              valueFrom:
-                secretKeyRef:
-                  name: huginn-secrets
-                  key: MATTERMOST_WEBHOOK_URL
           resources:
             {{- toYaml .Values.worker.resources | nindent 12 }}
           securityContext:
