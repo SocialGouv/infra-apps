@@ -28,6 +28,7 @@ worker:
 env:
   TIMEZONE: "Europe/Paris"
   FORCE_SSL: "false"
+  NATIVE_JSON_COLUMNS: "true"
   DO_NOT_CREATE_DATABASE: "true"
   DO_NOT_SEED: "true"
   IMPORT_DEFAULT_SCENARIO_FOR_ALL_USERS: "true"
