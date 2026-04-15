@@ -114,24 +114,6 @@
       "sources": ["prod-cyber-llm"]
     },
     {
-      "type": "Agents::SlackAgent",
-      "name": "[Cyber] → dev",
-      "disabled": false,
-      "guid": "prod-cyber-wh2",
-      "options": {
-        "webhook_url": "{% credential mattermost_webhook_url_dev %}",
-        "channel": "#securite",
-        "username": "Huginn Cyber",
-        "icon": ":shield:",
-        "message": "{{message}}",
-        "unfurl_links": true
-      },
-      "keep_events_for": 172800,
-      "propagate_immediately": false,
-      "sources": ["prod-cyber-llm"]
-    },
-
-    {
       "type": "Agents::RssAgent",
       "name": "[IA/LLM] Sources RSS",
       "disabled": false,
@@ -179,7 +161,7 @@
         "expected_receive_period_in_days": "2",
         "retained_events": 0
       },
-      "schedule": "every_7d",
+      "schedule": "never",
       "keep_events_for": 1209600,
       "propagate_immediately": false,
       "sources": ["prod-ia-dedup"]
@@ -236,24 +218,6 @@
       "sources": ["prod-ia-llm"]
     },
     {
-      "type": "Agents::SlackAgent",
-      "name": "[IA/LLM] → dev",
-      "disabled": false,
-      "guid": "prod-ia-wh2",
-      "options": {
-        "webhook_url": "{% credential mattermost_webhook_url_dev %}",
-        "channel": "#g-ia",
-        "username": "Huginn IA",
-        "icon": ":robot_face:",
-        "message": "{{message}}",
-        "unfurl_links": true
-      },
-      "keep_events_for": 172800,
-      "propagate_immediately": false,
-      "sources": ["prod-ia-llm"]
-    },
-
-    {
       "type": "Agents::RssAgent",
       "name": "[TS/JS] Sources RSS",
       "disabled": false,
@@ -300,7 +264,7 @@
         "expected_receive_period_in_days": "8",
         "retained_events": 0
       },
-      "schedule": "every_7d",
+      "schedule": "never",
       "keep_events_for": 1209600,
       "propagate_immediately": false,
       "sources": ["prod-tsjs-dedup"]
@@ -357,24 +321,6 @@
       "sources": ["prod-tsjs-llm"]
     },
     {
-      "type": "Agents::SlackAgent",
-      "name": "[TS/JS] → dev",
-      "disabled": false,
-      "guid": "prod-tsjs-wh2",
-      "options": {
-        "webhook_url": "{% credential mattermost_webhook_url_dev %}",
-        "channel": "#veille-tech",
-        "username": "Huginn TS/JS",
-        "icon": ":javascript:",
-        "message": "{{message}}",
-        "unfurl_links": true
-      },
-      "keep_events_for": 172800,
-      "propagate_immediately": false,
-      "sources": ["prod-tsjs-llm"]
-    },
-
-    {
       "type": "Agents::RssAgent",
       "name": "[Go/Python/Rust] Sources RSS",
       "disabled": false,
@@ -422,7 +368,7 @@
         "expected_receive_period_in_days": "8",
         "retained_events": 0
       },
-      "schedule": "every_7d",
+      "schedule": "never",
       "keep_events_for": 1209600,
       "propagate_immediately": false,
       "sources": ["prod-gopyrust-dedup"]
@@ -479,24 +425,6 @@
       "sources": ["prod-gopyrust-llm"]
     },
     {
-      "type": "Agents::SlackAgent",
-      "name": "[Go/Python/Rust] → dev",
-      "disabled": false,
-      "guid": "prod-gopyrust-wh2",
-      "options": {
-        "webhook_url": "{% credential mattermost_webhook_url_dev %}",
-        "channel": "#veille-tech",
-        "username": "Huginn Go/Py/Rust",
-        "icon": ":snake:",
-        "message": "{{message}}",
-        "unfurl_links": true
-      },
-      "keep_events_for": 172800,
-      "propagate_immediately": false,
-      "sources": ["prod-gopyrust-llm"]
-    },
-
-    {
       "type": "Agents::RssAgent",
       "name": "[Java/JVM] Sources RSS",
       "disabled": false,
@@ -541,7 +469,7 @@
         "expected_receive_period_in_days": "8",
         "retained_events": 0
       },
-      "schedule": "every_7d",
+      "schedule": "never",
       "keep_events_for": 1209600,
       "propagate_immediately": false,
       "sources": ["prod-java-dedup"]
@@ -597,22 +525,18 @@
       "propagate_immediately": false,
       "sources": ["prod-java-llm"]
     },
+
     {
-      "type": "Agents::SlackAgent",
-      "name": "[Java/JVM] → dev",
+      "type": "Agents::SchedulerAgent",
+      "name": "Scheduler Hebdo Lundi 8h",
       "disabled": false,
-      "guid": "prod-java-wh2",
+      "guid": "prod-scheduler-hebdo",
       "options": {
-        "webhook_url": "{% credential mattermost_webhook_url_dev %}",
-        "channel": "#veille-tech",
-        "username": "Huginn Java",
-        "icon": ":coffee:",
-        "message": "{{message}}",
-        "unfurl_links": true
+        "schedule": "0 8 * * Mon Europe/Paris",
+        "action": "run"
       },
-      "keep_events_for": 172800,
-      "propagate_immediately": false,
-      "sources": ["prod-java-llm"]
+      "keep_events_for": 0,
+      "control_targets": ["prod-ia-digest", "prod-tsjs-digest", "prod-gopyrust-digest", "prod-java-digest"]
     }
   ],
   "links": [
@@ -621,35 +545,30 @@
     {"source": 2, "receiver": 3},
     {"source": 3, "receiver": 4},
     {"source": 3, "receiver": 5},
-    {"source": 3, "receiver": 6},
 
+    {"source": 6, "receiver": 7},
     {"source": 7, "receiver": 8},
     {"source": 8, "receiver": 9},
     {"source": 9, "receiver": 10},
-    {"source": 10, "receiver": 11},
-    {"source": 10, "receiver": 12},
-    {"source": 10, "receiver": 13},
+    {"source": 9, "receiver": 11},
 
+    {"source": 12, "receiver": 13},
+    {"source": 13, "receiver": 14},
     {"source": 14, "receiver": 15},
     {"source": 15, "receiver": 16},
-    {"source": 16, "receiver": 17},
-    {"source": 17, "receiver": 18},
-    {"source": 17, "receiver": 19},
-    {"source": 17, "receiver": 20},
+    {"source": 15, "receiver": 17},
 
+    {"source": 18, "receiver": 19},
+    {"source": 19, "receiver": 20},
+    {"source": 20, "receiver": 21},
     {"source": 21, "receiver": 22},
-    {"source": 22, "receiver": 23},
-    {"source": 23, "receiver": 24},
-    {"source": 24, "receiver": 25},
-    {"source": 24, "receiver": 26},
-    {"source": 24, "receiver": 27},
+    {"source": 21, "receiver": 23},
 
-    {"source": 28, "receiver": 29},
-    {"source": 29, "receiver": 30},
-    {"source": 30, "receiver": 31},
-    {"source": 31, "receiver": 32},
-    {"source": 31, "receiver": 33},
-    {"source": 31, "receiver": 34}
+    {"source": 24, "receiver": 25},
+    {"source": 25, "receiver": 26},
+    {"source": 26, "receiver": 27},
+    {"source": 27, "receiver": 28},
+    {"source": 27, "receiver": 29}
   ],
   "control_links": []
 }

@@ -5,7 +5,7 @@ Deux scénarios sont disponibles : un pour le développement/test, un pour la pr
 | Fichier | Usage | Agents | Webhooks | Schedules |
 |---------|-------|--------|----------|-----------|
 | `veille-tech-dev.json` | Test | 25 | `mattermost_webhook_url_dev` → `#huginn-dev` | `every_2h` |
-| `veille-tech-prod.json` | Production | 35 | `mattermost_webhook_url_prod` (multi-canal) + `mattermost_webhook_url_dev` | Réels (6am, every_7d) |
+| `veille-tech-prod.json` | Production | 30 | `mattermost_webhook_url_prod` (multi-canal) | Réels (6am, every_7d) |
 
 ## Architecture du pipeline
 
@@ -19,20 +19,19 @@ Sources RSS  →  Déduplication  →  Digest  →  Synthèse LLM  →  Notifica
 En prod, le LLM envoie sa synthèse vers **plusieurs SlackAgents** en parallèle (fan-out natif Huginn) :
 
 ```
-                    ┌→ SlackAgent (webhook1, #canal-dédié)
-LLM ───────────────┼→ SlackAgent (webhook1, #huginn)
-                    └→ SlackAgent (webhook2)
+LLM ───────────────┬→ SlackAgent (prod, #canal-dédié)
+                    └→ SlackAgent (prod, #huginn)
 ```
 
 ### Catégories et routing prod
 
-| Catégorie | Fréquence | webhook1 canaux | webhook2 |
-|-----------|-----------|-----------------|----------|
-| Cybersécurité | **Quotidien** | `#securite`, `#huginn-dev` | canal par défaut |
-| IA / LLM | **Hebdomadaire** | `#g-ia`, `#huginn-dev` | canal par défaut |
-| TypeScript / JavaScript | Hebdomadaire | `#veille-tech`, `#huginn-dev` | canal par défaut |
-| Go / Python / Rust | Hebdomadaire | `#veille-tech`, `#huginn-dev` | canal par défaut |
-| Java / JVM | Hebdomadaire | `#veille-tech`, `#huginn-dev` | canal par défaut |
+| Catégorie | Fréquence | Canaux prod |
+|-----------|-----------|-------------|
+| Cybersécurité | **Quotidien** | `#securite`, `#huginn` |
+| IA / LLM | **Hebdomadaire** | `#g-ia`, `#huginn` |
+| TypeScript / JavaScript | Hebdomadaire | `#veille-tech`, `#huginn` |
+| Go / Python / Rust | Hebdomadaire | `#veille-tech`, `#huginn` |
+| Java / JVM | Hebdomadaire | `#veille-tech`, `#huginn` |
 
 ### Sources RSS
 
@@ -110,7 +109,6 @@ Pour chaque digest, le LLM :
 |----------|-----------|-------------|
 | Dev | `mattermost_webhook_url_dev` | Webhook verrouillé sur `#huginn-dev` |
 | Prod | `mattermost_webhook_url_prod` | Mattermost principal (déverrouillé, multi-canal) |
-| Prod | `mattermost_webhook_url_dev` | Réutilisé pour copie dans `#huginn-dev` |
 
 ### Procédure
 
