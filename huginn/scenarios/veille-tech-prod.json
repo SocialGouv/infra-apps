@@ -18,6 +18,7 @@
         "expected_update_period_in_days": "3",
         "clean": "true",
         "remembered_id_count": "1000",
+        "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36",
         "url": [
           "https://www.cert.ssi.gouv.fr/alerte/feed/",
           "https://www.cert.ssi.gouv.fr/avis/feed/",
@@ -122,8 +123,9 @@
         "expected_update_period_in_days": "3",
         "clean": "true",
         "remembered_id_count": "1000",
+        "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36",
         "url": [
-          "https://www.anthropic.com/rss",
+          "https://hnrss.org/newest?q=Anthropic&points=30",
           "https://openai.com/blog/rss.xml",
           "https://simonwillison.net/atom/everything/",
           "https://thegradient.pub/rss/",
@@ -226,11 +228,12 @@
         "expected_update_period_in_days": "7",
         "clean": "true",
         "remembered_id_count": "1000",
+        "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36",
         "url": [
           "https://javascriptweekly.com/rss/",
           "https://nodejs.org/en/feed/blog.xml",
           "https://deno.com/feed",
-          "https://bun.sh/blog/rss.xml",
+          "https://bun.sh/rss.xml",
           "https://devblogs.microsoft.com/typescript/feed/",
           "https://blog.nextjs.org/rss.xml",
           "https://hnrss.org/newest?q=TypeScript+OR+Node.js+OR+Deno+OR+Bun&points=80"
@@ -329,6 +332,7 @@
         "expected_update_period_in_days": "7",
         "clean": "true",
         "remembered_id_count": "1000",
+        "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36",
         "url": [
           "https://go.dev/blog/feed.atom",
           "https://blog.python.org/feeds/posts/default",
@@ -433,6 +437,7 @@
         "expected_update_period_in_days": "7",
         "clean": "true",
         "remembered_id_count": "1000",
+        "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36",
         "url": [
           "https://inside.java/feed.xml",
           "https://www.baeldung.com/feed",
