@@ -47,8 +47,8 @@ Conséquence pratique sur OVH :
 - **Pas de routage proactif** vers Harbor (`spec.priority: -1` ignoré)
 - **Fallback OK** quand docker.io retourne une erreur au HEAD (rate limit 429, timeout, DNS fail)
 
-Bug remonté upstream : voir TODO (issue à ouvrir). En attendant, la protection est
-limitée au scénario « upstream en panne au moment du pod CREATE ».
+Bug remonté upstream : [enix/kube-image-keeper#561](https://github.com/enix/kube-image-keeper/issues/561).
+En attendant, la protection est limitée au scénario « upstream en panne au moment du pod CREATE ».
 
 ## Ce que ça NE couvre PAS
 
