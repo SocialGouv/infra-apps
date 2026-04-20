@@ -13,16 +13,12 @@ kuik:
             app.kubernetes.io/name: kuik
             app.kubernetes.io/component: manager
     webhook:
+      # Opt-in selector: only namespaces explicitly labelled kuik.enix.io/enabled=true
+      # are mutated. Webhook rewrites Job pod images to the in-cluster registry, but
+      # OVH managed K8s containerd cannot pull plain-HTTP from it — see C debug.
       namespaceSelector:
-        matchExpressions:
-          - key: kubernetes.io/metadata.name
-            operator: NotIn
-            values:
-              - kube-system
-              - kyverno
-              - openebs
-              - cattle-system
-              - cert-manager
+        matchLabels:
+          kuik.enix.io/enabled: "true"
 
 registry:
   replicaCount: 2
@@ -34,7 +30,7 @@ registry:
   persistence:
     enabled: true
     accessMode: ReadWriteMany
-    size: 500Gi
+    size: 100Gi
     storageClass: openebs-nfs-hspeed
   podDisruptionBudget:
     minAvailable: 1

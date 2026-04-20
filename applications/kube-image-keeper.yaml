@@ -8,8 +8,10 @@ spec:
         elements:
           - name: kube-image-keeper-dev
             cluster: ovh-dev
-          # - name: kube-image-keeper-prod
-          #   cluster: ovh-prod
+          - name: kube-image-keeper-prod
+            cluster: ovh-prod
+          - name: kube-image-keeper-tools
+            cluster: in-cluster
   goTemplate: true
   template:
     metadata:
@@ -27,6 +29,9 @@ spec:
         path: charts/kube-image-keeper
         helm:
           releaseName: kube-image-keeper
+          valueFiles:
+            - values.yaml
+            - "values.{{ .cluster }}.yaml"
       ignoreDifferences:
         - group: ""
           kind: Secret
@@ -36,4 +41,3 @@ spec:
       syncPolicy:
         syncOptions:
           - CreateNamespace=true
-        
