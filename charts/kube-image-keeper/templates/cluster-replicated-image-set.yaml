@@ -1,0 +1,18 @@
+apiVersion: kuik.enix.io/v1alpha1
+kind: ClusterReplicatedImageSet
+metadata:
+  name: docker-hub-via-harbor
+spec:
+  # Prefer Harbor proxy cache before the original docker.io
+  # — avoids rate limits, provides local resilience if docker.io throttles
+  priority: -1
+  upstreams:
+    - registry: {{ .Values.harborRegistry }}
+      path: {{ .Values.harborDockerHubProxyPath }}
+      imageFilter:
+        include:
+          - "{{ .Values.harborDockerHubProxyPath }}/.+"
+    - registry: docker.io
+      imageFilter:
+        include:
+          - "/.+"

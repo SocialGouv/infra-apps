@@ -1,74 +1,90 @@
 # kube-image-keeper (kuik) v2
 
-Chart umbrella déployant :
-- **kuik manager** (2 replicas) — webhook mutant + contrôleur de mirroring
-- **docker-registry** (2 replicas) — registry cache locale (Distribution v3)
-- **ClusterImageSetMirror** — définit le mirroring de toutes les images vers la registry locale
+Chart umbrella déployant kuik v2 en mode **registry externe** (pas de registry ni de proxy in-cluster).
 
 ## Architecture
 
 ```
 Pod CREATE → MutatingWebhook (kuik manager) → annotation kuik.enix.io/original-images
-                                             → routing transparent vers la registry cache
+                                             → réécriture vers Harbor proxy cache si applicable
 
-ClusterImageSetMirror → contrôleur kuik → copie les images de tous les pods vers la registry locale
+ClusterReplicatedImageSet → déclare l'équivalence entre docker.io/X et harbor/hub/X
+                          → kuik HEAD check Harbor ; si OK, réécrit ; sinon fallback docker.io
 ```
 
-En v2, kuik ne réécrit plus l'image dans le spec du pod. Le routing est transparent : l'image affichée reste l'originale, mais le trafic est redirigé vers le cache local quand disponible.
+## Pourquoi pas de registry in-cluster ?
+
+kuik v2 a retiré l'archi v1 (proxy DaemonSet + registry bundlée). Voir
+[docs v1→v2 migration](https://github.com/enix/kube-image-keeper/blob/main/docs/v1-to-v2-migration-path.md) :
+
+> v2 removes both components entirely. Image routing is handled at the mutating webhook level.
+> Images are pulled directly from external registries without any intermediate layer inside the cluster.
+
+Tentative initiale : docker-registry in-cluster pointé par `ClusterImageSetMirror`. Cassé sur
+OVH Managed K8s (containerd nodes ne peuvent pas pull HTTP plain d'un service `.svc.cluster.local`,
+et OVH ne permet pas de config `/etc/containerd/certs.d` via DaemonSet hostPath raisonnable).
+
+## Ce que ça couvre
+
+- **Rate limits docker.io** → Harbor proxy cache `/hub` (projet `hub` côté Harbor) sert comme
+  source privilégiée (`spec.priority: -1`). Les pulls docker.io massifs lors d'upgrades passent
+  par Harbor, qui cache.
+- **Indisponibilité docker.io** → fallback automatique sur l'original (`priority 20` implicite)
+  via `ClusterReplicatedImageSet`.
+
+## Ce que ça NE couvre PAS
+
+- **Indisponibilité Harbor** pour les images Fabrique (buildées et poussées uniquement sur Harbor).
+  kuik ne peut pas créer de la résilience à partir d'une source unique.
+  → Pour y remédier : dual-push CI vers un second registre (ghcr.io, OVH MPR…) puis ajouter
+    un `ClusterReplicatedImageSet` supplémentaire.
+- **Upgrade du cluster `tools`** (où tourne Harbor). Pendant le rolling, Harbor bouge ; tout
+  pod rescheduled qui doit puller une image Fabrique est stuck jusqu'à réveil Harbor.
+  → kuik n'est DÉLIBÉRÉMENT PAS déployé sur `tools` : router vers Harbor-sur-tools depuis
+    tools-lui-même serait circulaire et amplifierait les indisponibilités d'upgrade.
 
 ## Namespaces exclus du webhook
 
-- `kube-system` — composants critiques du cluster
-- `kyverno` — autre admission controller (risque d'ordering)
-- `openebs` — stockage (dépendance de la registry cache)
+- `kube-system` — composants critiques
+- `kyverno` — autre admission controller (ordering)
+- `openebs` — stockage
 - `cattle-system` — Rancher
-- `cert-manager` — dépendance TLS du webhook kuik (risque de deadlock)
+- `cert-manager` — dépendance TLS du webhook kuik (deadlock)
+- `kuik-system` — kuik lui-même (boucle)
+
+## Prérequis Harbor
+
+Le projet `hub` sur `harbor.fabrique.social.gouv.fr` doit être configuré comme **proxy cache** vers
+`docker.io`. Visible via l'API : `GET /api/v2.0/projects/hub` → `registry_id: 4`.
+
+Pour étendre à `ghcr.io`, `quay.io` etc., créer des projets proxy cache supplémentaires côté
+Harbor puis ajouter des `ClusterReplicatedImageSet` correspondants.
 
 ## Runbook : débrancher kuik en urgence
 
-### Symptôme
-Les pods ne démarrent pas ou sont bloqués à cause du webhook kuik ou de la registry cache.
-
-### Action immédiate (effet instantané)
+Symptôme : pods bloqués à cause du webhook ou de Harbor.
 
 ```bash
-# Supprimer le webhook — tous les nouveaux pods passent en images directes
+# Effet immédiat : supprimer le webhook — les nouveaux pods passent en images directes
 kubectl delete mutatingwebhookconfiguration kube-image-keeper-kuik-mutating-webhook
-```
 
-> Les pods déjà en cours d'exécution ne sont **pas impactés** — kuik ne mute qu'au `CREATE`.
-
-### Empêcher ArgoCD de recréer le webhook
-
-```bash
-# Option 1 : scaler le manager à 0
+# Empêcher ArgoCD de recréer
 kubectl scale deployment kube-image-keeper-kuik-manager -n kuik-system --replicas=0
+# ou désactiver auto-sync dans ArgoCD
 
-# Option 2 : désactiver le auto-sync dans ArgoCD
-```
-
-### Revenir à la normale
-
-```bash
-# Remettre le nombre de replicas
+# Remettre en route
 kubectl scale deployment kube-image-keeper-kuik-manager -n kuik-system --replicas=2
-
-# Forcer un sync ArgoCD pour recréer le webhook
-# (ou attendre le prochain sync automatique)
+# Force sync ArgoCD pour recréer le webhook
 ```
 
-### Vérifier l'état
+Les pods déjà running ne sont **pas impactés** — kuik ne mute qu'au `CREATE`.
+
+## Vérifier l'état
 
 ```bash
-# Images en cache
-kubectl get clusterimagesetmirrors
-kubectl logs -n kuik-system -l app.kubernetes.io/name=kuik | grep "mirrored"
+kubectl get clusterreplicatedimagesets
+kubectl logs -n kuik-system -l app.kubernetes.io/name=kuik | grep -i reroute
 
-# Pods annotés par kuik
-kubectl get pods -A -o json | jq '.items[] | select(.metadata.annotations["kuik.enix.io/original-images"]) | {namespace: .metadata.namespace, name: .metadata.name, original: .metadata.annotations["kuik.enix.io/original-images"]}'
+# Pods réécrits
+kubectl get pods -A -o json | jq '.items[] | select(.spec.containers[].image | test("harbor.fabrique.social.gouv.fr/hub")) | {namespace: .metadata.namespace, name: .metadata.name, image: .spec.containers[0].image}'
 ```
-
-## Stockage
-
-- PVC 500Gi en `openebs-nfs-hspeed` (Cinder SSD + NFS RWX)
-- Garbage collection hebdomadaire (dimanche 3h)

@@ -10,14 +10,14 @@ spec:
             cluster: ovh-dev
           - name: kube-image-keeper-prod
             cluster: ovh-prod
-          - name: kube-image-keeper-tools
-            cluster: in-cluster
+          # Not deployed on tools:
+          # - Harbor runs on tools, so kuik→Harbor routing would be circular
+          # - During tools upgrade, Harbor moves → rewriting to Harbor would amplify outages
+          # See charts/kube-image-keeper/README.md for details.
   goTemplate: true
   template:
     metadata:
       name: "{{ .name }}"
-      # annotations:
-      # labels:
     spec:
       destination:
         name: "{{ .cluster }}"
@@ -29,15 +29,6 @@ spec:
         path: charts/kube-image-keeper
         helm:
           releaseName: kube-image-keeper
-          valueFiles:
-            - values.yaml
-            - "values.{{ .cluster }}.yaml"
-      ignoreDifferences:
-        - group: ""
-          kind: Secret
-          name: kube-image-keeper-registry-secret
-          jsonPointers:
-            - /data
       syncPolicy:
         syncOptions:
           - CreateNamespace=true
