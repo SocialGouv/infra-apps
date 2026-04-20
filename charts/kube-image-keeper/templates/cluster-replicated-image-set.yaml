@@ -13,6 +13,7 @@ spec:
         include:
           - "{{ .Values.harborDockerHubProxyPath }}/.+"
     - registry: docker.io
+      path: /
       imageFilter:
         include:
           - "/.+"
