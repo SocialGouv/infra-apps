@@ -12,6 +12,9 @@ spec:
           - name: openebs-nfs-ovh-prod
             namespace: openebs
             cluster: ovh-prod
+          - name: openebs-nfs-tools
+            namespace: openebs
+            cluster: in-cluster
   goTemplate: true
   template:
     metadata:
