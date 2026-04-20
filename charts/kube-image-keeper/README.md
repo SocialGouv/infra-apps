@@ -32,6 +32,24 @@ et OVH ne permet pas de config `/etc/containerd/certs.d` via DaemonSet hostPath 
 - **Indisponibilité docker.io** → fallback automatique sur l'original (`priority 20` implicite)
   via `ClusterReplicatedImageSet`.
 
+## Limite : routage proactif sur pods `Always`
+
+OVH Managed K8s active l'admission plugin `AlwaysPullImages` — tous les pods ont
+`imagePullPolicy: Always`, impossible de spécifier autre chose.
+
+kuik v2 [pod_webhook.go:398-399](https://github.com/enix/kube-image-keeper/blob/v2.2.2/internal/webhook/core/v1/pod_webhook.go#L398-L399)
+gère les pods `Always` dans une branche spéciale : l'image originale est placée
+inconditionnellement en `container.Images[0]`, **avant** les alternatives triées.
+`parallel.FirstSuccessful` attend d'abord index 0 et le retourne s'il répond au
+HEAD, ce qui **court-circuite le `spec.priority` des CRIS/CISM**.
+
+Conséquence pratique sur OVH :
+- **Pas de routage proactif** vers Harbor (`spec.priority: -1` ignoré)
+- **Fallback OK** quand docker.io retourne une erreur au HEAD (rate limit 429, timeout, DNS fail)
+
+Bug remonté upstream : voir TODO (issue à ouvrir). En attendant, la protection est
+limitée au scénario « upstream en panne au moment du pod CREATE ».
+
 ## Ce que ça NE couvre PAS
 
 - **Indisponibilité Harbor** pour les images Fabrique (buildées et poussées uniquement sur Harbor).
