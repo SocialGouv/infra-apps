@@ -115,6 +115,23 @@
       "sources": ["prod-cyber-llm"]
     },
     {
+      "type": "Agents::SlackAgent",
+      "name": "[Cyber] → mattermost2 veille-huginn-secu",
+      "disabled": false,
+      "guid": "prod-cyber-wh2-securite",
+      "options": {
+        "webhook_url": "{% credential mattermost2_webhook_url_securite %}",
+        "channel": "#veille-huginn-secu",
+        "username": "Huginn Cyber",
+        "icon": ":shield:",
+        "message": "{{message}}",
+        "unfurl_links": true
+      },
+      "keep_events_for": 172800,
+      "propagate_immediately": false,
+      "sources": ["prod-cyber-llm"]
+    },
+    {
       "type": "Agents::RssAgent",
       "name": "[IA/LLM] Sources RSS",
       "disabled": false,
@@ -220,6 +237,23 @@
       "sources": ["prod-ia-llm"]
     },
     {
+      "type": "Agents::SlackAgent",
+      "name": "[IA/LLM] → mattermost2 veille-huginn-tech",
+      "disabled": false,
+      "guid": "prod-ia-wh2-veille",
+      "options": {
+        "webhook_url": "{% credential mattermost2_webhook_url_veille %}",
+        "channel": "#veille-huginn-tech",
+        "username": "Huginn IA",
+        "icon": ":robot_face:",
+        "message": "{{message}}",
+        "unfurl_links": true
+      },
+      "keep_events_for": 172800,
+      "propagate_immediately": false,
+      "sources": ["prod-ia-llm"]
+    },
+    {
       "type": "Agents::RssAgent",
       "name": "[TS/JS] Sources RSS",
       "disabled": false,
@@ -314,6 +348,23 @@
       "options": {
         "webhook_url": "{% credential mattermost_webhook_url_prod %}",
         "channel": "#huginn",
+        "username": "Huginn TS/JS",
+        "icon": ":javascript:",
+        "message": "{{message}}",
+        "unfurl_links": true
+      },
+      "keep_events_for": 172800,
+      "propagate_immediately": false,
+      "sources": ["prod-tsjs-llm"]
+    },
+    {
+      "type": "Agents::SlackAgent",
+      "name": "[TS/JS] → mattermost2 veille-huginn-tech",
+      "disabled": false,
+      "guid": "prod-tsjs-wh2-veille",
+      "options": {
+        "webhook_url": "{% credential mattermost2_webhook_url_veille %}",
+        "channel": "#veille-huginn-tech",
         "username": "Huginn TS/JS",
         "icon": ":javascript:",
         "message": "{{message}}",
@@ -429,6 +480,23 @@
       "sources": ["prod-gopyrust-llm"]
     },
     {
+      "type": "Agents::SlackAgent",
+      "name": "[Go/Python/Rust] → mattermost2 veille-huginn-tech",
+      "disabled": false,
+      "guid": "prod-gopyrust-wh2-veille",
+      "options": {
+        "webhook_url": "{% credential mattermost2_webhook_url_veille %}",
+        "channel": "#veille-huginn-tech",
+        "username": "Huginn Go/Py/Rust",
+        "icon": ":snake:",
+        "message": "{{message}}",
+        "unfurl_links": true
+      },
+      "keep_events_for": 172800,
+      "propagate_immediately": false,
+      "sources": ["prod-gopyrust-llm"]
+    },
+    {
       "type": "Agents::RssAgent",
       "name": "[Java/JVM] Sources RSS",
       "disabled": false,
@@ -530,6 +598,23 @@
       "propagate_immediately": false,
       "sources": ["prod-java-llm"]
     },
+    {
+      "type": "Agents::SlackAgent",
+      "name": "[Java/JVM] → mattermost2 veille-huginn-tech",
+      "disabled": false,
+      "guid": "prod-java-wh2-veille",
+      "options": {
+        "webhook_url": "{% credential mattermost2_webhook_url_veille %}",
+        "channel": "#veille-huginn-tech",
+        "username": "Huginn Java",
+        "icon": ":coffee:",
+        "message": "{{message}}",
+        "unfurl_links": true
+      },
+      "keep_events_for": 172800,
+      "propagate_immediately": false,
+      "sources": ["prod-java-llm"]
+    },
 
     {
       "type": "Agents::SchedulerAgent",
@@ -550,30 +635,35 @@
     {"source": 2, "receiver": 3},
     {"source": 3, "receiver": 4},
     {"source": 3, "receiver": 5},
+    {"source": 3, "receiver": 6},
 
-    {"source": 6, "receiver": 7},
     {"source": 7, "receiver": 8},
     {"source": 8, "receiver": 9},
     {"source": 9, "receiver": 10},
-    {"source": 9, "receiver": 11},
+    {"source": 10, "receiver": 11},
+    {"source": 10, "receiver": 12},
+    {"source": 10, "receiver": 13},
 
-    {"source": 12, "receiver": 13},
-    {"source": 13, "receiver": 14},
     {"source": 14, "receiver": 15},
     {"source": 15, "receiver": 16},
-    {"source": 15, "receiver": 17},
+    {"source": 16, "receiver": 17},
+    {"source": 17, "receiver": 18},
+    {"source": 17, "receiver": 19},
+    {"source": 17, "receiver": 20},
 
-    {"source": 18, "receiver": 19},
-    {"source": 19, "receiver": 20},
-    {"source": 20, "receiver": 21},
     {"source": 21, "receiver": 22},
-    {"source": 21, "receiver": 23},
-
+    {"source": 22, "receiver": 23},
+    {"source": 23, "receiver": 24},
     {"source": 24, "receiver": 25},
-    {"source": 25, "receiver": 26},
-    {"source": 26, "receiver": 27},
-    {"source": 27, "receiver": 28},
-    {"source": 27, "receiver": 29}
+    {"source": 24, "receiver": 26},
+    {"source": 24, "receiver": 27},
+
+    {"source": 28, "receiver": 29},
+    {"source": 29, "receiver": 30},
+    {"source": 30, "receiver": 31},
+    {"source": 31, "receiver": 32},
+    {"source": 31, "receiver": 33},
+    {"source": 31, "receiver": 34}
   ],
   "control_links": []
 }
