@@ -87,7 +87,7 @@ cnpg-cluster:
     size: 10Gi
   image:
     repository: "ghcr.io/cloudnative-pg/postgresql"
-    tag: "15.3"
+    tag: "15.15"
   clusterExtraSpec:
     enableSuperuserAccess: true
   backup:
