@@ -1,0 +1,6 @@
+dependencies:
+- name: final-appset
+  repository: file://./charts/final-appset
+  version: 0.0.0
+digest: sha256:0b3b2a59b1a69c3a8ea65fadf95c5a11e66404de0f2f463d64c0bba709777a06
+generated: "2026-04-23T18:01:42.785384545+02:00"
