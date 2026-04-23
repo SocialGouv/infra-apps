@@ -8,6 +8,12 @@ metadata:
 spec:
   version: {{ .Values.elasticsearch.version | quote }}
 
+  {{- with .Values.elasticsearch.fileRealmSecret }}
+  auth:
+    fileRealm:
+      - secretName: {{ . }}
+  {{- end }}
+
   nodeSets:
     - name: default
       count: {{ .Values.elasticsearch.replicas }}

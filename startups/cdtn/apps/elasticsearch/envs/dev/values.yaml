@@ -1,0 +1,25 @@
+elasticsearch:
+  replicas: 1
+  storage: 50Gi
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "2Gi"
+    limits:
+      cpu: "1"
+      memory: "4Gi"
+  fileRealmSecret: cdtn-es-file-realm
+
+kibana:
+  enabled: true
+  ingress:
+    enabled: true
+    host: kibana-cdtn.ovh.fabrique.social.gouv.fr
+    tlsSecretName: wildcard-crt
+
+final-appset:
+  namespace:
+    annotations:
+      field.cattle.io/projectId: c-m-97jxtvnv:p-5kn66
+    labels:
+      cert: wildcard

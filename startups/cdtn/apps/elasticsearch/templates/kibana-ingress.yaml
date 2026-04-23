@@ -1,0 +1,28 @@
+{{- if and .Values.kibana.enabled .Values.kibana.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Values.kibana.name }}
+  annotations:
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+    {{- range $key, $value := .Values.kibana.ingress.annotations }}
+    {{ $key }}: {{ $value | quote }}
+    {{- end }}
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - {{ .Values.kibana.ingress.host }}
+      secretName: {{ .Values.kibana.ingress.tlsSecretName }}
+  rules:
+    - host: {{ .Values.kibana.ingress.host }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Values.kibana.name }}-kb-http
+                port:
+                  number: 5601
+{{- end }}
