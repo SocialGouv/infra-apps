@@ -37,3 +37,12 @@ spec:
       ports:
         - port: 9200
           protocol: TCP
+    # Allow from the nginx ingress controller (cross-project) so the
+    # Elasticsearch Ingress upstream can reach the ES service.
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              network-policy/source: ingress-controller
+      ports:
+        - port: 9200
+          protocol: TCP
