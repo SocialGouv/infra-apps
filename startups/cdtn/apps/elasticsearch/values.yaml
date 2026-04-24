@@ -17,6 +17,12 @@ elasticsearch:
   config:
     node.store.allow_mmap: false
 
+  ingress:
+    enabled: false
+    host: ""
+    tlsSecretName: wildcard-crt
+    annotations: {}
+
 kibana:
   enabled: false
   name: cdtn-kibana

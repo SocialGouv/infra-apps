@@ -9,6 +9,10 @@ elasticsearch:
       cpu: "1"
       memory: "4Gi"
   fileRealmSecret: cdtn-es-file-realm
+  ingress:
+    enabled: true
+    host: es-cdtn.ovh.fabrique.social.gouv.fr
+    tlsSecretName: wildcard-crt
 
 kibana:
   enabled: true

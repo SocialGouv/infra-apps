@@ -1,0 +1,28 @@
+{{- if .Values.elasticsearch.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Values.elasticsearch.name }}
+  annotations:
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+    {{- range $key, $value := .Values.elasticsearch.ingress.annotations }}
+    {{ $key }}: {{ $value | quote }}
+    {{- end }}
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - {{ .Values.elasticsearch.ingress.host }}
+      secretName: {{ .Values.elasticsearch.ingress.tlsSecretName }}
+  rules:
+    - host: {{ .Values.elasticsearch.ingress.host }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Values.elasticsearch.name }}-es-http
+                port:
+                  number: 9200
+{{- end }}
