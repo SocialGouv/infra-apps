@@ -8,11 +8,8 @@ spec:
         elements:
           - name: kube-image-keeper-dev
             cluster: ovh-dev
-          # Soak on ovh-dev for at least 1 week before enabling prod.
-          # Target enable-on-prod date: 2026-04-27 or later.
-          # - name: kube-image-keeper-prod
-          #   cluster: ovh-prod
-          #
+          - name: kube-image-keeper-prod
+            cluster: ovh-prod
           # Not deployed on tools:
           # - Harbor runs on tools, so kuik→Harbor routing would be circular
           # - During tools upgrade, Harbor moves → rewriting to Harbor would amplify outages
