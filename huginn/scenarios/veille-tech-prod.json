@@ -269,7 +269,7 @@
           "https://deno.com/feed",
           "https://bun.sh/rss.xml",
           "https://devblogs.microsoft.com/typescript/feed/",
-          "https://blog.nextjs.org/rss.xml",
+          "https://nextjs.org/feed.xml",
           "https://hnrss.org/newest?q=TypeScript+OR+Node.js+OR+Deno+OR+Bun&points=80"
         ]
       },
@@ -391,7 +391,7 @@
           "https://this-week-in-rust.org/rss.xml",
           "https://realpython.com/atom.xml",
           "https://golangweekly.com/rss/",
-          "https://pythonweekly.com/rss/",
+          "https://feeds.feedburner.com/PythonWeekly",
           "https://hnrss.org/newest?q=Golang+OR+Rust+OR+Python&points=80"
         ]
       },
@@ -508,7 +508,7 @@
         "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36",
         "url": [
           "https://inside.java/feed.xml",
-          "https://www.baeldung.com/feed",
+          "https://feeds.feedblitz.com/baeldung&x=1",
           "https://spring.io/blog.atom",
           "https://blog.jetbrains.com/idea/feed/",
           "https://hnrss.org/newest?q=Java+OR+JVM+OR+Spring+OR+Kotlin&points=80"
