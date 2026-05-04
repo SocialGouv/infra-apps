@@ -140,14 +140,15 @@
         "expected_update_period_in_days": "3",
         "clean": "true",
         "remembered_id_count": "1000",
+        "max_events_per_run": "30",
         "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36",
         "url": [
-          "https://hnrss.org/newest?q=Anthropic&points=30",
+          "https://hnrss.org/newest?q=Anthropic&points=100",
           "https://openai.com/blog/rss.xml",
           "https://simonwillison.net/atom/everything/",
           "https://thegradient.pub/rss/",
           "https://lilianweng.github.io/index.xml",
-          "https://hnrss.org/newest?q=LLM+OR+%22language+model%22+OR+%22AI+coding%22&points=50",
+          "https://hnrss.org/newest?q=LLM+OR+%22language+model%22+OR+%22AI+coding%22&points=150",
           "https://huggingface.co/blog/feed.xml",
           "https://blog.google/technology/ai/rss/"
         ]
@@ -176,7 +177,7 @@
       "disabled": false,
       "guid": "prod-ia-digest",
       "options": {
-        "message": "{% for event in events %}## {{event.title}}\nURL: {{event.url}}\n{{event.description | strip_html | truncate: 500}}\n---\n{% endfor %}",
+        "message": "{% for event in events %}## {{event.title}}\nURL: {{event.url}}\n{{event.description | strip_html | truncate: 200}}\n---\n{% endfor %}",
         "expected_receive_period_in_days": "2",
         "retained_events": 0
       },
