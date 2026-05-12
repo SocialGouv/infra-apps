@@ -205,12 +205,12 @@
     },
     {
       "type": "Agents::SlackAgent",
-      "name": "[IA/LLM] → prod #g/ia",
+      "name": "[IA/LLM] → prod #veille-huginn-ia",
       "disabled": false,
       "guid": "prod-ia-wh1-gia",
       "options": {
         "webhook_url": "{% credential mattermost_webhook_url_prod %}",
-        "channel": "#g-ia",
+        "channel": "#veille-huginn-ia",
         "username": "Huginn IA",
         "icon": ":robot_face:",
         "message": "{{message}}",
