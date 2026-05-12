@@ -82,12 +82,12 @@
     },
     {
       "type": "Agents::SlackAgent",
-      "name": "[Cyber] → prod #securite",
+      "name": "[Cyber] → prod #veille-huginn-secu",
       "disabled": false,
       "guid": "prod-cyber-wh1-securite",
       "options": {
         "webhook_url": "{% credential mattermost_webhook_url_prod %}",
-        "channel": "#securite",
+        "channel": "#veille-huginn-secu",
         "username": "Huginn Cyber",
         "icon": ":shield:",
         "message": "{{message}}",
@@ -326,12 +326,12 @@
     },
     {
       "type": "Agents::SlackAgent",
-      "name": "[TS/JS] → prod #veille-tech",
+      "name": "[TS/JS] → prod #veille-huginn-tech",
       "disabled": false,
       "guid": "prod-tsjs-wh1-veille",
       "options": {
         "webhook_url": "{% credential mattermost_webhook_url_prod %}",
-        "channel": "#veille-tech",
+        "channel": "#veille-huginn-tech",
         "username": "Huginn TS/JS",
         "icon": ":javascript:",
         "message": "{{message}}",
@@ -448,12 +448,12 @@
     },
     {
       "type": "Agents::SlackAgent",
-      "name": "[Go/Python/Rust] → prod #veille-tech",
+      "name": "[Go/Python/Rust] → prod #veille-huginn-tech",
       "disabled": false,
       "guid": "prod-gopyrust-wh1-veille",
       "options": {
         "webhook_url": "{% credential mattermost_webhook_url_prod %}",
-        "channel": "#veille-tech",
+        "channel": "#veille-huginn-tech",
         "username": "Huginn Go/Py/Rust",
         "icon": ":snake:",
         "message": "{{message}}",
@@ -567,12 +567,12 @@
     },
     {
       "type": "Agents::SlackAgent",
-      "name": "[Java/JVM] → prod #veille-tech",
+      "name": "[Java/JVM] → prod #veille-huginn-tech",
       "disabled": false,
       "guid": "prod-java-wh1-veille",
       "options": {
         "webhook_url": "{% credential mattermost_webhook_url_prod %}",
-        "channel": "#veille-tech",
+        "channel": "#veille-huginn-tech",
         "username": "Huginn Java",
         "icon": ":coffee:",
         "message": "{{message}}",
