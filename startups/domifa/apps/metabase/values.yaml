@@ -17,3 +17,16 @@ metabase:
             name: *s3secretName
           secretAccessKey:
             name: *s3secretName
+
+oauth2-proxy:
+  fullnameOverride: oauth2-proxy
+  enabled: true
+  upstream: http://metabase
+  envFrom:
+    - configMapRef:
+        name: oauth2-proxy-configmap
+    - secretRef:
+        name: oauth2-proxy-sealed-secret
+  additionalArgs:
+    - --skip-auth-route
+    - ^/public/.*,^/app/dist/.*,^/api/public/.*,^/api/session/.*,^/app/assets/.*

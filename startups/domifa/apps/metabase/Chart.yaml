@@ -9,3 +9,7 @@ dependencies:
     repository: file://./charts/metabase
     version: 0.0.0
     condition: metabase.enabled
+  - name: oauth2-proxy
+    repository: file://./charts/oauth2-proxy
+    version: 0.0.0
+    condition: oauth2-proxy.enabled
