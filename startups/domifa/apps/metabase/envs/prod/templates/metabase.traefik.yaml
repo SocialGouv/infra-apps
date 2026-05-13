@@ -1,0 +1,36 @@
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: metabase
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - kind: Rule
+      match: Host(`metabase-prod-domifa.ovh.fabrique.social.gouv.fr`)
+      middlewares:
+        - name: metabase-body-limit
+      priority: 10000
+      services:
+        - name: oauth2-proxy
+          port: 80
+          serversTransport: metabase-timeout
+  tls:
+    secretName: metabase-crt
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: metabase-body-limit
+spec:
+  buffering:
+    maxRequestBodyBytes: 8388608
+---
+apiVersion: traefik.io/v1alpha1
+kind: ServersTransport
+metadata:
+  name: metabase-timeout
+spec:
+  forwardingTimeouts:
+    dialTimeout: 30s
+    responseHeaderTimeout: 1800s
