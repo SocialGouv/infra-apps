@@ -4,7 +4,7 @@ version: 0.0.0
 dependencies:
   - repository: https://guerzon.github.io/vaultwarden
     name: vaultwarden
-    version: "^0.31.6"
+    version: "^0.34.0"
   - name: cnpg-cluster
     version: 1.30.5
     repository: https://socialgouv.github.io/helm-charts
