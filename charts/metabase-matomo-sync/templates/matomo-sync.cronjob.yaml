@@ -25,7 +25,7 @@ spec:
           restartPolicy: OnFailure
           containers:
             - name: {{ include "common.names.fullname" . }}-container
-              image: node:14-alpine
+              image: node:24-alpine
               securityContext:
                 allowPrivilegeEscalation: false
               {{- if .Values.command }}
