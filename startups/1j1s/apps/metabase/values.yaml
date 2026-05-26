@@ -22,7 +22,7 @@ metabase-matomo-sync:
   fullnameOverride: metabase-matomo-sync
   cnpg-cluster:
     persistence:
-      size: 20Gi
+      size: 40Gi
     backup:
       enabled: true
       barmanObjectStore:
