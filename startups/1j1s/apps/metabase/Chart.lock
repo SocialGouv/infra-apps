@@ -1,0 +1,12 @@
+dependencies:
+- name: final-appset
+  repository: file://./charts/final-appset
+  version: 0.0.0
+- name: metabase
+  repository: file://./charts/metabase
+  version: 0.0.0
+- name: metabase-matomo-sync
+  repository: file://./charts/metabase-matomo-sync
+  version: 0.0.0
+digest: sha256:c125d796fda517b1e65dff7bb4acf66baa126f39f305b4fb07b2d78f06ce3bbf
+generated: "2026-05-26T20:25:55.01106819+02:00"
