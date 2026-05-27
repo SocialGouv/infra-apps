@@ -10,6 +10,9 @@ spec:
   - name: tcp
     port: 1234
     targetPort: tcp
+  - name: https
+    port: 443
+    targetPort: tcp
   selector:
     app.kubernetes.io/instance: buildkit-service
     app.kubernetes.io/name: buildkit-service
@@ -25,6 +28,9 @@ spec:
   ports:
   - name: tcp
     port: 1234
+    targetPort: tcp
+  - name: https
+    port: 443
     targetPort: tcp
   selector:
     statefulset.kubernetes.io/pod-name: buildkit-service-{{ $i }}
