@@ -97,6 +97,61 @@ iterion:
         memoryStore:
           enabled: true
           size: 1Gi
+    # The cluster (Kyverno) requires runAsNonRoot, but the nats images default
+    # to root → without an explicit non-root UID the pod stays in
+    # CreateContainerConfigError and server+runner CrashLoop ("no servers
+    # available"). Set a non-root securityContext on every nats container
+    # (+ pod fsGroup so the pid / jetstream emptyDirs stay writable).
+    container:
+      merge:
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          runAsGroup: 1000
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: [ALL]
+          seccompProfile:
+            type: RuntimeDefault
+    reloader:
+      merge:
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          runAsGroup: 1000
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: [ALL]
+          seccompProfile:
+            type: RuntimeDefault
+    podTemplate:
+      merge:
+        spec:
+          securityContext:
+            fsGroup: 1000
+            runAsNonRoot: true
+            seccompProfile:
+              type: RuntimeDefault
+    natsBox:
+      container:
+        merge:
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+            seccompProfile:
+              type: RuntimeDefault
+      podTemplate:
+        merge:
+          spec:
+            securityContext:
+              fsGroup: 1000
+              runAsNonRoot: true
+              seccompProfile:
+                type: RuntimeDefault
   minio:
     enabled: true
     networkPolicy:
