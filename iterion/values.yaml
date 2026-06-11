@@ -133,25 +133,7 @@ iterion:
             seccompProfile:
               type: RuntimeDefault
     natsBox:
-      container:
-        merge:
-          securityContext:
-            runAsNonRoot: true
-            runAsUser: 1000
-            runAsGroup: 1000
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop: [ALL]
-            seccompProfile:
-              type: RuntimeDefault
-      podTemplate:
-        merge:
-          spec:
-            securityContext:
-              fsGroup: 1000
-              runAsNonRoot: true
-              seccompProfile:
-                type: RuntimeDefault
+      enabled: false # debug-only nats CLI box; iterion doesn't use it (removes a non-essential, perpetually-restarting pod)
   minio:
     enabled: true
     networkPolicy:
