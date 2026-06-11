@@ -1,0 +1,112 @@
+# iterion @ ovh-dev — cloud (server + runner + bundled Mongo/NATS/MinIO).
+# The iterion chart is pulled from oci://ghcr.io/socialgouv/charts (0.14.0) as a
+# dependency, so every chart value nests under the `iterion:` key here.
+#
+# First cloud validation overlay: self-contained datastores in-namespace, image
+# pinned to the glab+bots :edge tag, Revi (review-pr) runs in the runner pod
+# (no sandbox). LLM keys come from an out-of-band Secret (iterion-llm); the JWT
+# + master key from the iterion-auth SealedSecret (templates/).
+iterion:
+  mode: cloud
+
+  image:
+    repository: ghcr.io/socialgouv/iterion
+    tag: edge # glab + bots-on-disk build; pin a digest before prod
+    pullPolicy: Always
+
+  server:
+    replicas: 1
+    hpa:
+      enabled: false
+
+  runner:
+    enabled: true
+    replicas: 1
+    keda:
+      enabled: false
+    sandbox:
+      enabled: false # review-pr (Revi) has no sandbox block → runs in the runner pod
+
+  ingress:
+    enabled: true
+    className: nginx
+    # *.ovh.fabrique dev hosts reuse the Kyverno-replicated wildcard cert
+    # (ns label cert=wildcard); external-dns publishes the A record from the host.
+    annotations:
+      nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+      nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    hosts:
+      - host: iterion.ovh.fabrique.social.gouv.fr
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: wildcard-crt
+        hosts:
+          - iterion.ovh.fabrique.social.gouv.fr
+
+  config:
+    log:
+      format: json
+      level: debug
+    mongo:
+      uri: mongodb://iterion-mongodb-headless:27017
+      database: iterion
+    nats:
+      url: nats://iterion-nats:4222
+    s3:
+      endpoint: http://iterion-minio:9000
+      region: us-east-1
+      bucket: iterion-artifacts
+      usePathStyle: true
+    auth:
+      publicUrl: https://iterion.ovh.fabrique.social.gouv.fr
+      cookieSecure: true
+      signupMode: invite_only
+
+  secrets:
+    llm:
+      create: false
+      existingSecret: iterion-llm # out-of-band (sealed real keys / placeholder)
+    storage:
+      create: true # bundled minio creds — internal, not real secrets
+      s3AccessKeyId: minioadmin
+      s3SecretAccessKey: minioadmin
+    auth:
+      create: false
+      existingSecret: iterion-auth # SealedSecret in templates/
+
+  mongodb:
+    enabled: true
+    networkPolicy:
+      enabled: false # single-namespace dev stack; subchart NP would block iterion→mongo
+    fullnameOverride: iterion-mongodb
+    architecture: replicaset
+    replicaCount: 1
+    auth:
+      enabled: false
+    image:
+      registry: docker.io
+      repository: bitnamilegacy/mongodb
+  nats:
+    enabled: true
+    fullnameOverride: iterion-nats
+    config:
+      jetstream:
+        enabled: true
+        memoryStore:
+          enabled: true
+          size: 1Gi
+  minio:
+    enabled: true
+    networkPolicy:
+      enabled: false
+    fullnameOverride: iterion-minio
+    mode: standalone
+    auth:
+      rootUser: minioadmin
+      rootPassword: minioadmin
+    defaultBuckets: iterion-artifacts
+    image:
+      registry: docker.io
+      repository: bitnamilegacy/minio

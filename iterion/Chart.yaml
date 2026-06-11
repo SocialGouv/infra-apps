@@ -1,0 +1,8 @@
+apiVersion: v2
+name: iterion
+version: 0.0.0
+description: Iterion cloud (workflow engine) — server + runner + bundled Mongo/NATS/MinIO
+dependencies:
+  - name: iterion
+    repository: oci://ghcr.io/socialgouv/charts
+    version: 0.14.0

@@ -1,0 +1,45 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: iterion
+spec:
+  generators:
+    - list:
+        elements:
+          - name: iterion-dev
+            cluster: ovh-dev
+  goTemplate: true
+  template:
+    metadata:
+      name: "{{ .name }}"
+    spec:
+      destination:
+        name: "{{ .cluster }}"
+        namespace: iterion
+      project: default
+      source:
+        repoURL: https://github.com/SocialGouv/infra-apps.git
+        targetRevision: master
+        path: iterion
+        helm:
+          releaseName: iterion
+          valueFiles:
+            - values.yaml
+      syncPolicy:
+        # Auto-sync ON so the GitOps push self-deploys (most infra-apps apps
+        # leave this commented for a manual first sync via the ArgoCD UI; this
+        # one is an operator-driven cloud validation on ovh-dev).
+        automated:
+          prune: true
+          selfHeal: true
+        managedNamespaceMetadata:
+          labels:
+            cert: wildcard # Kyverno replicates cert-manager/wildcard-crt into the ns
+        syncOptions:
+          - CreateNamespace=true
+        retry:
+          limit: 5
+          backoff:
+            duration: 5s
+            factor: 2
+            maxDuration: 3m
