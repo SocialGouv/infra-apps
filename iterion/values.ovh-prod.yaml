@@ -99,6 +99,9 @@ iterion:
     enabled: true
     className: nginx
     annotations:
+      # prod TLS: cert-manager issues a per-subdomain Let's Encrypt cert into
+      # iterion-tls. The dev `wildcard-crt` mechanism does NOT exist on ovh-prod.
+      cert-manager.io/cluster-issuer: letsencrypt-prod
       nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
       nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
     hosts:
@@ -107,7 +110,7 @@ iterion:
           - path: /
             pathType: Prefix
     tls:
-      - secretName: wildcard-crt # Kyverno-mirrored (ns label cert=wildcard)
+      - secretName: iterion-tls # cert-manager fills this from the letsencrypt-prod issuer
         hosts:
           - iterion.fabrique.social.gouv.fr
 
