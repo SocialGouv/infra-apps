@@ -6,3 +6,16 @@ dependencies:
   - name: iterion
     repository: oci://ghcr.io/socialgouv/charts
     version: 0.14.0
+  # --- ovh-prod community datastores (replace the iterion subchart's deprecated
+  # Bitnami mongodb+minio). Their values live at top-level `mongodb:` / `minio:`
+  # (distinct from `iterion.mongodb` / `iterion.minio` which gate the bundled
+  # Bitnami subcharts — disabled in values.ovh-prod.yaml).
+  # ovh-dev keeps the Bitnami subcharts on (conditions below stay false there).
+  - name: mongodb
+    repository: https://groundhog2k.github.io/helm-charts/
+    version: 0.7.8
+    condition: mongodb.enabled
+  - name: minio
+    repository: https://charts.min.io/
+    version: 5.4.0
+    condition: minio.enabled

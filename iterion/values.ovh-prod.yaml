@@ -1,18 +1,49 @@
 # iterion @ ovh-prod — HA cloud overlay (overrides values.yaml, loaded after it).
 #
-# Bundled datastores in HA topology: Mongo replicaset-3, NATS cluster-3
-# (JetStream fileStore), MinIO distributed-4. App tier: server x3 + HPA + soft
-# anti-affinity + auto-PDB; runner x3 + auto-PDB (KEDA is NOT installed on
-# ovh-prod → static replicas for V1). The `cluster:` key gates the per-env
-# SealedSecrets (templates/*.ovh-prod.sealedsecret.yaml).
+# Datastores (off Bitnami subcharts, onto community/official charts at the
+# umbrella level):
+#   - mongodb: groundhog2k/mongodb 0.7.8, RS3 (1 primary + 2 secondaries).
+#     Values live at top-level `mongodb:` (umbrella dep), distinct from the
+#     bundled Bitnami subchart at `iterion.mongodb` which is disabled below.
+#     Auth comes from the SealedSecret `iterion-mongodb-creds` (env-secret
+#     wired via `mongodb.extraEnvSecrets:`, which the chart turns into an
+#     `envFrom: secretRef` on the mongod container — keys
+#     MONGO_INITDB_ROOT_USERNAME / MONGO_INITDB_ROOT_PASSWORD).
+#   - minio: official minio/minio 5.4.0, DISTRIBUTED HA (4 nodes, 1 drive each,
+#     erasure-coded). Values at top-level `minio:`. Root creds come from the
+#     SealedSecret `iterion-minio-creds` (keys `rootUser` / `rootPassword`)
+#     via `minio.existingSecret`.
+#   - nats: UNCHANGED — still the iterion subchart's nats-io chart at
+#     iterion.nats, cluster-3 JetStream fileStore.
+# App tier: server x3 + HPA + soft anti-affinity + auto-PDB; runner x3 +
+# auto-PDB (KEDA is NOT installed on ovh-prod → static replicas for V1). The
+# `cluster:` key gates the per-env SealedSecrets (templates/*.ovh-prod.sealedsecret.yaml).
 #
-# Deferred prod hardening (tracked, not blockers for the HA topology):
+# --- Sealed-secret topology (created out-of-band; this overlay only references
+#     them — see the secrets-spec report at handover time):
+#   iterion-mongodb-creds → MONGO_INITDB_ROOT_USERNAME, MONGO_INITDB_ROOT_PASSWORD
+#                          (consumed by the mongod pods at boot)
+#   iterion-minio-creds   → rootUser, rootPassword
+#                          (consumed by the minio pods at boot)
+#   iterion-storage       → ITERION_S3_ACCESS_KEY_ID, ITERION_S3_SECRET_ACCESS_KEY
+#                          (consumed by the iterion server/runner — must MATCH
+#                          iterion-minio-creds so the app can talk to S3)
+#   iterion-auth          → existing SealedSecret (JWT + master key + bootstrap
+#                          admin) + also carries ITERION_MONGO_URI = the full
+#                          credentials-bearing replicaset URI. The iterion
+#                          server envFrom loads configmap → llm secret →
+#                          storage secret → auth secret, so the auth secret's
+#                          ITERION_MONGO_URI overrides the credential-free one
+#                          in the configmap. This keeps the actual mongo
+#                          credentials out of git AND out of the rendered
+#                          configmap.
+#   iterion-llm           → existing SealedSecret (LLM API keys, unchanged)
+#
+# CHANGEME — remaining V1 hardening before real traffic:
 #   - pin image.tag to a digest (currently :edge),
-#   - enable Mongo auth (needs a secret-based ITERION_MONGO_URI; chart change),
 #   - enable iterion.networkPolicy + subchart networkPolicies,
 #   - JetStream stream replication R3 (iterion-side) for data-HA, not just
 #     connection-HA,
-#   - rotate the bundled MinIO creds to an existingSecret,
 #   - enable metrics.podMonitor / prometheusRule once the Prometheus operator
 #     CRDs are confirmed present on ovh-prod.
 cluster: ovh-prod
@@ -85,8 +116,19 @@ iterion:
       format: json
       level: info # prod: info, not debug
     mongo:
-      # Multi-host replica-set URI (Bitnami RS name defaults to rs0).
-      uri: mongodb://iterion-mongodb-0.iterion-mongodb-headless:27017,iterion-mongodb-1.iterion-mongodb-headless:27017,iterion-mongodb-2.iterion-mongodb-headless:27017/?replicaSet=rs0
+      # CREDENTIAL-FREE multi-host RS seed URI for the groundhog2k mongodb
+      # chart (top-level umbrella dep). Pod DNS:
+      # <fullname>-<ordinal>.<fullname>-<headlessServiceSuffix>;
+      # headlessServiceSuffix defaults to "internal" → headless svc =
+      # iterion-mongodb-internal. groundhog2k/mongodb in replicaSet mode
+      # unconditionally enables `--keyFile` (=> requires auth), so the EFFECTIVE
+      # URI must carry credentials — that creds-bearing URI lives in the
+      # `iterion-auth` SealedSecret as ITERION_MONGO_URI and overrides this
+      # configmap value at envFrom load time (auth secret is loaded AFTER the
+      # configmap; later env wins). This no-cred URI lets a fresh helm-template
+      # render without leaking secrets while still working as a fallback if the
+      # auth secret were ever empty (mongo would simply reject the auth).
+      uri: mongodb://iterion-mongodb-0.iterion-mongodb-internal:27017,iterion-mongodb-1.iterion-mongodb-internal:27017,iterion-mongodb-2.iterion-mongodb-internal:27017/?replicaSet=rs0
       database: iterion
     nats:
       url: nats://iterion-nats:4222
@@ -105,20 +147,26 @@ iterion:
       create: false
       existingSecret: iterion-llm
     storage:
-      create: true # bundled minio creds (internal); rotate via existingSecret in hardening
-      s3AccessKeyId: minioadmin
-      s3SecretAccessKey: minioadmin
+      # Out-of-band SealedSecret carrying ITERION_S3_ACCESS_KEY_ID +
+      # ITERION_S3_SECRET_ACCESS_KEY. Must MATCH the rootUser / rootPassword in
+      # `iterion-minio-creds` below (the iterion server/runner uses these
+      # creds to talk to MinIO).
+      create: false
+      existingSecret: iterion-storage
     auth:
       create: false
-      existingSecret: iterion-auth # incl. ITERION_BOOTSTRAP_ADMIN_PASSWORD (declarative admin)
+      existingSecret: iterion-auth # incl. ITERION_BOOTSTRAP_ADMIN_PASSWORD + ITERION_MONGO_URI
 
-  # --- Bundled datastores, HA topology ---
+  # --- Disable the bundled Bitnami subcharts (we drive Mongo+MinIO from the
+  # umbrella deps below; NATS stays on the bundled nats-io subchart, configured
+  # at iterion.nats further down). ovh-dev still gets the Bitnami subcharts via
+  # values.yaml unchanged.
   mongodb:
-    replicaCount: 3 # RS3 (survives one node loss); architecture: replicaset from values.yaml
-    persistence:
-      storageClass: sc-classic-retain # Retain reclaim → data survives PVC deletion
-      size: 20Gi
+    enabled: false
+  minio:
+    enabled: false
 
+  # --- NATS stays on the bundled subchart (cluster-3 JetStream fileStore). ---
   nats:
     config:
       cluster:
@@ -134,23 +182,151 @@ iterion:
         memoryStore:
           enabled: false # prod: persistent fileStore, not memory
 
-  minio:
-    mode: distributed
-    defaultBuckets: "" # distributed mode rejects defaultBuckets → use a provisioning job
-    provisioning:
-      enabled: true
-      buckets:
-        - name: iterion-artifacts
-    statefulset:
-      replicaCount: 4 # distributed erasure coding (min 4)
-      drivesPerNode: 1
-    persistence:
-      storageClass: csi-cinder-high-speed
-      size: 20Gi
-
   metrics:
     enabled: true
     podMonitor:
       enabled: false # enable once Prometheus-operator CRDs confirmed on ovh-prod
     prometheusRule:
       enabled: false
+
+# --- Top-level umbrella datastores (ovh-prod only) -------------------------
+# These keys are siblings of `iterion:` because Chart.yaml lists `mongodb` and
+# `minio` as top-level umbrella deps. The bundled Bitnami subcharts under
+# `iterion.mongodb` / `iterion.minio` are disabled above. Conditions
+# `mongodb.enabled` / `minio.enabled` gate them — they default to true here
+# (and are absent => disabled on ovh-dev where this file isn't loaded).
+
+mongodb:
+  enabled: true
+  fullnameOverride: iterion-mongodb
+  # 1 primary + 2 secondaries = RS3, survives one-node loss
+  replicaSet:
+    enabled: true
+    name: rs0
+    secondaries: 2
+    # Inter-node auth keyfile — RS mode REQUIRES it (an empty --keyFile makes
+    # mongod reject peer auth and the RS never forms). SealedSecret with a
+    # single "keyfile" key (base64 random, 6-1024 chars).
+    keySecretName: iterion-mongodb-keyfile
+  # Root creds come from the SealedSecret `iterion-mongodb-creds` (keys
+  # MONGO_INITDB_ROOT_USERNAME / MONGO_INITDB_ROOT_PASSWORD). With
+  # settings.rootUsername / settings.rootPassword left UNSET, the groundhog2k
+  # chart skips its internal createSecureConfig Secret and instead picks up
+  # the env vars from the secret listed in extraEnvSecrets (rendered as
+  # `envFrom: secretRef` on the mongod container).
+  extraEnvSecrets:
+    - iterion-mongodb-creds
+  storage:
+    className: sc-classic-retain # Retain reclaim → data survives PVC deletion
+    requestedSize: 20Gi
+  # Kyverno-restricted cluster (PSA restricted): override the chart's default
+  # UID/GID 999 with the cluster-standard 1000:1000 + add seccompProfile
+  # RuntimeDefault (the chart's default securityContext is otherwise compliant:
+  # runAsNonRoot, allowPrivilegeEscalation: false, readOnlyRootFilesystem,
+  # capabilities.drop ALL).
+  podSecurityContext:
+    fsGroup: 1000
+    supplementalGroups:
+      - 1000
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
+  securityContext:
+    allowPrivilegeEscalation: false
+    privileged: false
+    readOnlyRootFilesystem: true
+    runAsNonRoot: true
+    runAsGroup: 1000
+    runAsUser: 1000
+    capabilities:
+      drop:
+        - ALL
+    seccompProfile:
+      type: RuntimeDefault
+
+minio:
+  # Official minio/minio 5.4.0 — DISTRIBUTED MULTI-NODE HA (4 nodes, 1 drive
+  # per node = 4 erasure-coded drives, tolerates 2-node loss with the default
+  # EC:2 parity). Single pool (default). The chart's bucket-provisioning
+  # post-install Job creates iterion-artifacts.
+  enabled: true
+  fullnameOverride: iterion-minio
+  mode: distributed
+  replicas: 4
+  drivesPerNode: 1
+  pools: 1
+  # Root creds come from the SealedSecret `iterion-minio-creds` (keys
+  # `rootUser` / `rootPassword` — see secretName/existingSecret in the chart's
+  # secrets.yaml + the env wiring in statefulset.yaml). The matching iterion
+  # access creds live in `iterion-storage`.
+  existingSecret: iterion-minio-creds
+  persistence:
+    enabled: true
+    storageClass: csi-cinder-high-speed
+    size: 20Gi
+    accessMode: ReadWriteOnce
+  # Auto-create the iterion-artifacts bucket via the chart's post-install
+  # Job (mc make-bucket). policy=none = no anonymous access; purge=false so
+  # an upgrade doesn't wipe data.
+  buckets:
+    - name: iterion-artifacts
+      policy: none
+      purge: false
+  # Disable the default `console` admin user the chart provisions out of the
+  # box (its plaintext password lives in values + post-Job env => sealed-only
+  # rule). The MinIO Console still works with the root creds; additional users
+  # can be added via a separate sealed `extraSecret` if needed.
+  users: []
+  # Kyverno-restricted cluster (PSA restricted): the chart's default
+  # securityContext already runs as UID/GID 1000, runAsNonRoot, fsGroup 1000.
+  # We just add seccompProfile RuntimeDefault on the pod and a hardened
+  # containerSecurityContext (drop ALL caps, no privilege escalation,
+  # runAsNonRoot) — the official chart's containerSecurityContext default is
+  # `readOnlyRootFilesystem: false` only, so the other PSA-restricted knobs
+  # must be set here.
+  securityContext:
+    enabled: true
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+    fsGroupChangePolicy: OnRootMismatch
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+    readOnlyRootFilesystem: false # minio writes to /tmp + /export
+    capabilities:
+      drop:
+        - ALL
+    seccompProfile:
+      type: RuntimeDefault
+  # The post-install Job (bucket creation) must also satisfy PSA restricted —
+  # enable its securityContext + restrictive containerSecurityContext.
+  postJob:
+    securityContext:
+      enabled: true
+      runAsUser: 1000
+      runAsGroup: 1000
+      fsGroup: 1000
+      runAsNonRoot: true
+      seccompProfile:
+        type: RuntimeDefault
+  makeBucketJob:
+    securityContext:
+      enabled: true
+      runAsUser: 1000
+      runAsGroup: 1000
+    containerSecurityContext:
+      allowPrivilegeEscalation: false
+      runAsNonRoot: true
+      runAsUser: 1000
+      runAsGroup: 1000
+      capabilities:
+        drop:
+          - ALL
+      seccompProfile:
+        type: RuntimeDefault

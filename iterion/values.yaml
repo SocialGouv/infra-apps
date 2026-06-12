@@ -147,3 +147,13 @@ iterion:
     image:
       registry: docker.io
       repository: bitnamilegacy/minio
+
+# --- Top-level umbrella datastores (off by default; ovh-prod opts in) ------
+# Chart.yaml declares `mongodb` (groundhog2k) and `minio` (official minio/minio
+# in distributed HA mode) as umbrella deps gated by these top-level keys.
+# ovh-dev keeps the Bitnami subcharts under `iterion.{mongodb,minio}` above;
+# values.ovh-prod.yaml flips the Bitnami ones off and these two on.
+mongodb:
+  enabled: false
+minio:
+  enabled: false
