@@ -1,0 +1,156 @@
+# iterion @ ovh-prod — HA cloud overlay (overrides values.yaml, loaded after it).
+#
+# Bundled datastores in HA topology: Mongo replicaset-3, NATS cluster-3
+# (JetStream fileStore), MinIO distributed-4. App tier: server x3 + HPA + soft
+# anti-affinity + auto-PDB; runner x3 + auto-PDB (KEDA is NOT installed on
+# ovh-prod → static replicas for V1). The `cluster:` key gates the per-env
+# SealedSecrets (templates/*.ovh-prod.sealedsecret.yaml).
+#
+# Deferred prod hardening (tracked, not blockers for the HA topology):
+#   - pin image.tag to a digest (currently :edge),
+#   - enable Mongo auth (needs a secret-based ITERION_MONGO_URI; chart change),
+#   - enable iterion.networkPolicy + subchart networkPolicies,
+#   - JetStream stream replication R3 (iterion-side) for data-HA, not just
+#     connection-HA,
+#   - rotate the bundled MinIO creds to an existingSecret,
+#   - enable metrics.podMonitor / prometheusRule once the Prometheus operator
+#     CRDs are confirmed present on ovh-prod.
+cluster: ovh-prod
+
+iterion:
+  image:
+    tag: edge # TODO(prod-hardening): pin a digest before real traffic
+
+  server:
+    replicas: 3
+    hpa:
+      enabled: true
+      minReplicas: 3
+      maxReplicas: 10
+      targetCPUUtilizationPercentage: 70
+    resources:
+      requests:
+        cpu: 500m
+        memory: 1Gi
+      limits:
+        cpu: "2"
+        memory: 2Gi
+    # Soft anti-affinity: best-effort spread the server replicas across nodes
+    # (preferred, not required, so a node hiccup never makes a replica
+    # unschedulable). 12 nodes available.
+    affinity:
+      podAntiAffinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              topologyKey: kubernetes.io/hostname
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/name: iterion
+                  app.kubernetes.io/component: server
+
+  runner:
+    enabled: true
+    replicas: 3
+    keda:
+      enabled: false # KEDA not installed on ovh-prod; static replicas V1
+    sandbox:
+      enabled: false
+    resources:
+      requests:
+        cpu: 500m
+        memory: 1Gi
+      limits:
+        cpu: "2"
+        memory: 4Gi
+
+  ingress:
+    enabled: true
+    className: nginx
+    annotations:
+      nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+      nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    hosts:
+      - host: iterion.fabrique.social.gouv.fr
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: wildcard-crt # Kyverno-mirrored (ns label cert=wildcard)
+        hosts:
+          - iterion.fabrique.social.gouv.fr
+
+  config:
+    log:
+      format: json
+      level: info # prod: info, not debug
+    mongo:
+      # Multi-host replica-set URI (Bitnami RS name defaults to rs0).
+      uri: mongodb://iterion-mongodb-0.iterion-mongodb-headless:27017,iterion-mongodb-1.iterion-mongodb-headless:27017,iterion-mongodb-2.iterion-mongodb-headless:27017/?replicaSet=rs0
+      database: iterion
+    nats:
+      url: nats://iterion-nats:4222
+    s3:
+      endpoint: http://iterion-minio:9000
+      region: us-east-1
+      bucket: iterion-artifacts
+      usePathStyle: true
+    auth:
+      publicUrl: https://iterion.fabrique.social.gouv.fr
+      cookieSecure: true
+      signupMode: invite_only
+
+  secrets:
+    llm:
+      create: false
+      existingSecret: iterion-llm
+    storage:
+      create: true # bundled minio creds (internal); rotate via existingSecret in hardening
+      s3AccessKeyId: minioadmin
+      s3SecretAccessKey: minioadmin
+    auth:
+      create: false
+      existingSecret: iterion-auth # incl. ITERION_BOOTSTRAP_ADMIN_PASSWORD (declarative admin)
+
+  # --- Bundled datastores, HA topology ---
+  mongodb:
+    replicaCount: 3 # RS3 (survives one node loss); architecture: replicaset from values.yaml
+    persistence:
+      storageClass: sc-classic-retain # Retain reclaim → data survives PVC deletion
+      size: 20Gi
+
+  nats:
+    config:
+      cluster:
+        enabled: true
+        replicas: 3
+      jetstream:
+        fileStore:
+          enabled: true
+          pvc:
+            enabled: true
+            size: 10Gi
+            storageClassName: csi-cinder-high-speed
+        memoryStore:
+          enabled: false # prod: persistent fileStore, not memory
+
+  minio:
+    mode: distributed
+    defaultBuckets: "" # distributed mode rejects defaultBuckets → use a provisioning job
+    provisioning:
+      enabled: true
+      buckets:
+        - name: iterion-artifacts
+    statefulset:
+      replicaCount: 4 # distributed erasure coding (min 4)
+      drivesPerNode: 1
+    persistence:
+      storageClass: csi-cinder-high-speed
+      size: 20Gi
+
+  metrics:
+    enabled: true
+    podMonitor:
+      enabled: false # enable once Prometheus-operator CRDs confirmed on ovh-prod
+    prometheusRule:
+      enabled: false

@@ -8,6 +8,8 @@ spec:
         elements:
           - name: iterion-dev
             cluster: ovh-dev
+          - name: iterion-prod
+            cluster: ovh-prod
   goTemplate: true
   template:
     metadata:
@@ -25,6 +27,7 @@ spec:
           releaseName: iterion
           valueFiles:
             - values.yaml
+            - "values.{{ .cluster }}.yaml"
       syncPolicy:
         # Auto-sync ON so the GitOps push self-deploys (most infra-apps apps
         # leave this commented for a manual first sync via the ArgoCD UI; this

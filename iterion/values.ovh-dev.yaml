@@ -1,0 +1,5 @@
+# iterion @ ovh-dev — env marker (the dev config lives in values.yaml, which is
+# loaded first; this file only sets the cluster key the per-env SealedSecret
+# templates gate on). Loaded after values.yaml via the ApplicationSet's
+# "values.{{ .cluster }}.yaml".
+cluster: ovh-dev
