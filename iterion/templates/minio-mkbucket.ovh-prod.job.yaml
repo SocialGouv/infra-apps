@@ -1,0 +1,85 @@
+{{- if eq .Values.cluster "ovh-prod" }}
+# Non-hook MinIO bucket provisioner — breaks the official-minio bucket deadlock
+# on a COLD deploy. The chart's own post-job (charts/minio/templates/post-job.yaml)
+# is a Helm post-install hook → ArgoCD runs it PostSync, i.e. only after the app
+# is Healthy. But the iterion server gates /readyz on HeadBucket(iterion-artifacts)
+# (pkg/store/blob/s3.go) and never creates the bucket → server unhealthy → the
+# sync never completes → PostSync never runs → deadlock (cost us a manual
+# `helm template --show-only | sed /hook/d | kubectl apply` to recover).
+#
+# This is a verbatim copy of that post-job WITHOUT the Helm hook annotations
+# (renamed so it doesn't collide with the chart's hook job), so it runs as a
+# normal resource DURING the sync, retrying (backoffLimit) until MinIO answers
+# and creating the bucket before the server's readiness needs it. It reuses the
+# chart's own `iterion-minio` configmap (the /config/initialize script) +
+# `iterion-minio-creds` secret + `minio-sa` ServiceAccount — all regular
+# resources — so it stays in lock-step with the chart's bucket list. Idempotent
+# with the chart's hook (which then re-runs harmlessly once the app is Healthy).
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: iterion-minio-mkbucket
+  namespace: iterion
+  annotations:
+    argocd.argoproj.io/sync-options: Replace=true
+spec:
+  backoffLimit: 60 # retry while the distributed MinIO finishes coming up
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata:
+      labels:
+        app: minio-job
+        release: iterion
+    spec:
+      restartPolicy: OnFailure
+      securityContext:
+        fsGroup: 1000
+        runAsGroup: 1000
+        runAsNonRoot: true
+        runAsUser: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      volumes:
+        - name: etc-path
+          emptyDir: {}
+        - name: tmp
+          emptyDir: {}
+        - name: minio-configuration
+          projected:
+            sources:
+              - configMap:
+                  name: iterion-minio
+              - secret:
+                  name: iterion-minio-creds
+      serviceAccountName: minio-sa
+      containers:
+        - name: minio-make-bucket
+          image: "quay.io/minio/mc:RELEASE.2024-11-21T17-21-54Z"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            runAsGroup: 1000
+            runAsNonRoot: true
+            runAsUser: 1000
+            seccompProfile:
+              type: RuntimeDefault
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh", "/config/initialize"]
+          env:
+            - name: MINIO_ENDPOINT
+              value: iterion-minio
+            - name: MINIO_PORT
+              value: "9000"
+          volumeMounts:
+            - name: etc-path
+              mountPath: /etc/minio/mc
+            - name: tmp
+              mountPath: /tmp
+            - name: minio-configuration
+              mountPath: /config
+          resources:
+            requests:
+              memory: 128Mi
+{{- end }}
