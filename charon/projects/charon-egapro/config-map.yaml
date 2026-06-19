@@ -21,7 +21,8 @@ data:
   CHARON_CLIENT_3_PROVIDER: fabriqueKeycloak
   CHARON_CLIENT_4_WILDCARDS: |
     http://localhost:3000,
-    https://egapro-*.ovh.fabrique.social.gouv.fr
+    https://egapro-*.ovh.fabrique.social.gouv.fr,
+    https://egapro-preprod.env-01kvfaqhty48zhd7fjy1bbknx7.dev.atlas-prod.public-cloud.social.gouv.fr
   CHARON_CLIENT_4_PROVIDER: proconnecttest
   CHARON_CLIENT_5_WILDCARDS: |
     http://localhost:3000,
