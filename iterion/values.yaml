@@ -1,4 +1,6 @@
-# iterion @ ovh-dev — cloud (server + runner + bundled Mongo/NATS/MinIO).
+# iterion @ ovh-dev — PREPROD env (ns iterion-preprod), cloud (server + runner
+# + bundled Mongo/NATS/MinIO). Tracks main via the :edge image; ovh-prod runs a
+# pinned tagged release. Host: iterion-preprod.ovh.fabrique.social.gouv.fr.
 # The iterion chart is pulled from oci://ghcr.io/socialgouv/charts (0.14.0) as a
 # dependency, so every chart value nests under the `iterion:` key here.
 #
@@ -36,14 +38,14 @@ iterion:
       nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
       nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
     hosts:
-      - host: iterion.ovh.fabrique.social.gouv.fr
+      - host: iterion-preprod.ovh.fabrique.social.gouv.fr
         paths:
           - path: /
             pathType: Prefix
     tls:
       - secretName: wildcard-crt
         hosts:
-          - iterion.ovh.fabrique.social.gouv.fr
+          - iterion-preprod.ovh.fabrique.social.gouv.fr
 
   config:
     log:
@@ -60,7 +62,7 @@ iterion:
       bucket: iterion-artifacts
       usePathStyle: true
     auth:
-      publicUrl: https://iterion.ovh.fabrique.social.gouv.fr
+      publicUrl: https://iterion-preprod.ovh.fabrique.social.gouv.fr
       cookieSecure: true
       signupMode: invite_only
 

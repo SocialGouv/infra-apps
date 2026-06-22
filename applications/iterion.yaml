@@ -8,8 +8,10 @@ spec:
         elements:
           - name: iterion-dev
             cluster: ovh-dev
+            namespace: iterion-preprod
           - name: iterion-prod
             cluster: ovh-prod
+            namespace: iterion
   goTemplate: true
   template:
     metadata:
@@ -17,7 +19,7 @@ spec:
     spec:
       destination:
         name: "{{ .cluster }}"
-        namespace: iterion
+        namespace: "{{ .namespace }}"
       project: default
       source:
         repoURL: https://github.com/SocialGouv/infra-apps.git
