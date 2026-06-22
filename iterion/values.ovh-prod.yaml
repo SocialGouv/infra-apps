@@ -50,7 +50,10 @@ cluster: ovh-prod
 
 iterion:
   image:
-    tag: edge # TODO(prod-hardening): pin a digest before real traffic
+    # Pinned tagged release (immutable, reproducible). ovh-dev/preprod tracks
+    # main via :edge; ovh-prod runs the cut release. Bump on each release after
+    # validating on preprod. v0.15.0 is forward of the previous :edge.
+    tag: v0.15.0
 
   server:
     replicas: 3
