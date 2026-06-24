@@ -5,10 +5,11 @@ description: Iterion cloud (workflow engine) — server + runner + bundled Mongo
 dependencies:
   - name: iterion
     repository: oci://ghcr.io/socialgouv/charts
-    # 0.16.1: first chart version that injects ITERION_POD_IP on the runner via
-    # the downward API (status.podIP), required by the kubernetes sandbox driver's
-    # network proxy. 0.14.0 predated it, so sandboxed bots failed on preprod.
-    version: 0.16.1
+    # 0.17.1: wires the FULL k8s sandbox on the runner (one flag,
+    # runner.sandbox.enabled) — ITERION_POD_IP (downward API) + the sandbox RBAC
+    # + ITERION_SANDBOX_HOST_STATE=none (k8s has no host fs to bind). 0.16.x was
+    # missing host_state, so sandboxed bots still failed at sandbox start.
+    version: 0.17.1
   # --- ovh-prod community datastores (replace the iterion subchart's deprecated
   # Bitnami mongodb+minio). Their values live at top-level `mongodb:` / `minio:`
   # (distinct from `iterion.mongodb` / `iterion.minio` which gate the bundled
