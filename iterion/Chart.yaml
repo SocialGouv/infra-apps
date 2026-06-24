@@ -5,11 +5,13 @@ description: Iterion cloud (workflow engine) — server + runner + bundled Mongo
 dependencies:
   - name: iterion
     repository: oci://ghcr.io/socialgouv/charts
-    # 0.17.1: wires the FULL k8s sandbox on the runner (one flag,
-    # runner.sandbox.enabled) — ITERION_POD_IP (downward API) + the sandbox RBAC
-    # + ITERION_SANDBOX_HOST_STATE=none (k8s has no host fs to bind). 0.16.x was
-    # missing host_state, so sandboxed bots still failed at sandbox start.
-    version: 0.17.1
+    # 0.17.2: completes the FULL k8s sandbox on the runner (one flag,
+    # runner.sandbox.enabled) — ITERION_POD_IP (downward API) + sandbox RBAC for
+    # pods/secrets/networkpolicies + ITERION_SANDBOX_HOST_STATE=none (k8s has no
+    # host fs to bind). 0.17.2 adds the per-run Secrets RBAC the driver needs for
+    # `as: file` secrets (forge_token) + the proxy TLS CA; 0.17.1 lacked it so a
+    # sandboxed bot with a file secret failed at sandbox start.
+    version: 0.17.2
   # --- ovh-prod community datastores (replace the iterion subchart's deprecated
   # Bitnami mongodb+minio). Their values live at top-level `mongodb:` / `minio:`
   # (distinct from `iterion.mongodb` / `iterion.minio` which gate the bundled
