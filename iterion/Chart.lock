@@ -1,12 +1,12 @@
 dependencies:
 - name: iterion
   repository: oci://ghcr.io/socialgouv/charts
-  version: 0.14.0
+  version: 0.16.1
 - name: mongodb
   repository: https://groundhog2k.github.io/helm-charts/
   version: 0.7.8
 - name: minio
   repository: https://charts.min.io/
   version: 5.4.0
-digest: sha256:690788c1a7a48744f0df77111df6f782b00a3389403f7e70c1366e876a71c458
-generated: "2026-06-12T10:24:17.993549144+02:00"
+digest: sha256:e885f35d9b75862577933932e04840f00cf03acd6d301f57b2ee5272703229a8
+generated: "2026-06-24T04:23:37.855915195+02:00"

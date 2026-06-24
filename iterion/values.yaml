@@ -27,7 +27,13 @@ iterion:
     keda:
       enabled: false
     sandbox:
-      enabled: false # review-pr (Revi) has no sandbox block → runs in the runner pod
+      # Enabled so bots that declare `sandbox: auto` (feature-dev / whole-improve-loop /
+      # branch-improve-loop — the issue-comment→improvement-MR flow) work on the k8s
+      # runner. This flag gates BOTH the ITERION_POD_IP downward-API env
+      # (runner-deployment, needs chart ≥ 0.15.0) AND the sandbox RBAC (runner-rbac)
+      # the kubernetes sandbox driver needs to create sibling sandbox pods. review-pr
+      # (Revi), which has no sandbox block, still just runs in the runner pod.
+      enabled: true
 
   ingress:
     enabled: true
