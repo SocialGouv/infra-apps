@@ -52,8 +52,10 @@ iterion:
   image:
     # Pinned tagged release (immutable, reproducible). ovh-dev/preprod tracks
     # main via :edge; ovh-prod runs the cut release. Bump on each release after
-    # validating on preprod. v0.16.1 is forward of v0.16.0 (ancestor-checked).
-    tag: v0.16.1
+    # validating on preprod. v0.19.0 is forward of v0.16.1 (ancestor-checked).
+    # v0.19.0 brings author-filtered webhooks + the Vetty dependency-PR guard
+    # (forge_token file-secret RBAC already provided by chart dep 0.17.2).
+    tag: v0.19.0
 
   server:
     replicas: 3
