@@ -20,6 +20,20 @@ iterion:
     replicas: 1
     hpa:
       enabled: false
+    # Point the server's working directory at the image's bundled catalog
+    # (Dockerfile `COPY bots /opt/iterion/bots`, WORKDIR is /home/iterion).
+    # Without --dir the server's workdir is /home/iterion, so the marketplace
+    # seeding ("bots" relative path) finds nothing and webhook-driven bot
+    # launches can't resolve the catalog. Seeding only reads the bundles, so a
+    # read-only /opt is fine. Mirrors the image CMD + appends --dir.
+    args:
+      - "server"
+      - "--port"
+      - "4891"
+      - "--bind"
+      - "0.0.0.0"
+      - "--dir"
+      - "/opt/iterion"
 
   runner:
     enabled: true
