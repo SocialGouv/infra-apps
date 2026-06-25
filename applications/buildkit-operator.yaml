@@ -2,14 +2,15 @@
 # VM-isolated untrusted forks (Kata/clh) and off-cluster exposure. Coexists with the incumbent
 # buildkit-service on the prod-build nodepool. Pair with applications/kata.yaml (the runtime).
 #
-# Single source: the Helm chart stays canonical in the operator repo (pulled directly, no vendoring or
-# drift); the ovh-prod values are inline below. Pinned to the commit carrying the OVH LB-timeout fix —
-# replace with a tagged release (e.g. v0.2.4) once cut.
+# Single source: the Helm chart stays canonical in the operator repo (pulled directly at the v0.3.0 tag,
+# no vendoring or drift); the ovh-prod values are inline below.
 #
 # NOTE (adoption): the operator is deployed by hand on ovh-prod today. `automated` is intentionally
 # OMITTED so the first sync only ADOPTS the live release after you review the diff; flip it on once clean.
-# NOTE (prereqs before first sync): the mTLS + auth Secrets must exist (see ../buildkit-operator/README.md)
-# and the buildkit-operator namespace must be excluded from the add-custom-mas-securitycontext policy.
+# NOTE (prereqs before first sync): cert-manager issues the mTLS Secrets (certManager.enabled below), so
+# only the `buildkit-operator-auth` token Secret must pre-exist; the buildkit-operator namespace must be
+# excluded from add-custom-mas-securitycontext (apps-infra!974). After the first sync, re-export the
+# cert-manager client Secret to the CI runner's cert/key/ca (the CA changes from the mkcert pilot).
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
 metadata:
@@ -34,15 +35,15 @@ spec:
         namespace: "{{ .namespace }}"
       source:
         repoURL: https://github.com/socialgouv/buildkit-operator
-        targetRevision: 085b9de37e008c978a3d1cfeb018320435207990
+        targetRevision: v0.3.0
         path: deploy/helm/buildkit-operator
         helm:
           releaseName: buildkit-operator
           valuesObject:
             namespace: buildkit-operator
             # Operator + companion (inode-GC sidecar) images. Daemon image is the chart default (rootless).
-            image: { tag: "0.2.3" }
-            companion: { image: { tag: "0.2.3" } }
+            image: { tag: "0.3.0" }
+            companion: { image: { tag: "0.3.0" } }
             # Off-cluster exposure: /route API LB (bearer auth) + SNI gateway LB (e2e mTLS). The chart
             # default raises the OpenStack LB idle timeout so cold-start /route isn't cut.
             service: { type: LoadBalancer }
@@ -67,8 +68,15 @@ spec:
             # Untrusted fork daemons run as non-rootless privileged buildkit inside a kata-clh microVM.
             sandbox:
               runtimeClass: kata-clh
-            # Product-prefixed Secret names (a cluster-wide Kyverno-synced `buildkit-client-certs` from the
-            # incumbent would otherwise collide). Provisioned out-of-band today — see README.
+            # cert-manager issues + auto-renews the daemon + client mTLS material into the Secrets below
+            # (no mkcert / manual Secrets). ca.create bootstraps a self-signed CA Issuer in-namespace — the
+            # platform's only issuer is public Let's Encrypt, which can't sign a private mTLS chain.
+            certManager:
+              enabled: true
+              ca:
+                create: true
+            # Product-prefixed Secret names: a cluster-wide Kyverno-synced `buildkit-client-certs` from the
+            # incumbent would otherwise collide. cert-manager writes these (daemon SAN covers *.gw.bko.ovh).
             certs:
               daemonSecretName: buildkit-operator-daemon-certs
               clientSecretName: buildkit-operator-client-certs
