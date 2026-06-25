@@ -52,8 +52,10 @@ iterion:
   image:
     # Pinned tagged release (immutable, reproducible). ovh-dev/preprod tracks
     # main via :edge; ovh-prod runs the cut release. Bump on each release after
-    # validating on preprod. v0.16.1 is forward of v0.16.0 (ancestor-checked).
-    tag: v0.16.1
+    # validating on preprod. v0.21.0 brings the commercial cloud landing +
+    # public marketplace + GitHub SSO login (validated on preprod), forward of
+    # v0.16.1 (ancestor-checked).
+    tag: v0.21.0
 
   server:
     replicas: 3
@@ -147,6 +149,14 @@ iterion:
       publicUrl: https://iterion.fabrique.social.gouv.fr
       cookieSecure: true
       signupMode: invite_only
+      # GitHub SSO login provider — OAuth App "iterion" (prod) on the
+      # SocialGouv org. Distinct OAuth App from preprod, so its clientId is
+      # set here (not in the shared values.yaml). Client secret is
+      # ITERION_OIDC_GITHUB_CLIENT_SECRET in the iterion-auth SealedSecret.
+      # Callback: https://iterion.fabrique.social.gouv.fr/api/auth/oidc/github/callback
+      oidc:
+        github:
+          clientId: "Ov23lif4EIjH5DZgzwRm"
 
   secrets:
     llm:
@@ -162,6 +172,11 @@ iterion:
     auth:
       create: false
       existingSecret: iterion-auth # incl. ITERION_BOOTSTRAP_ADMIN_PASSWORD + ITERION_MONGO_URI
+      # Gates ITERION_OIDC_GITHUB_ENABLED/CLIENT_ID in the configmap; the
+      # matching client secret comes from the iterion-auth SealedSecret.
+      oidc:
+        github:
+          enabled: true
 
   # --- Disable the bundled Bitnami subcharts (we drive Mongo+MinIO from the
   # umbrella deps below; NATS stays on the bundled nats-io subchart, configured

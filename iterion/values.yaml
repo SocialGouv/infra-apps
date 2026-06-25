@@ -67,6 +67,11 @@ iterion:
       region: us-east-1
       bucket: iterion-artifacts
       usePathStyle: true
+    # Hosted bot marketplace — public browse + .botz download + authenticated
+    # submit/moderation, seeded with the image's bots/ catalog. Shared by both
+    # clusters (chart ≥ 0.21.0 exposes this toggle → ITERION_CLOUD_MARKETPLACE).
+    marketplace:
+      enabled: true
     auth:
       publicUrl: https://iterion-preprod.ovh.fabrique.social.gouv.fr
       cookieSecure: true
