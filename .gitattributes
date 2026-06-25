@@ -1,1 +1,9 @@
 **/charts/*.tgz binary
+
+# Vendored upstream kata-deploy chart (v3.32.0) — collapse in PR diffs (linguist-generated). The
+# additions reviewers should read are kata/templates/kata-clh-vcpu-tune.yaml and kata/README.md.
+kata/Chart.yaml linguist-generated=true
+kata/Chart.lock linguist-generated=true
+kata/values.yaml linguist-generated=true
+kata/templates/** linguist-generated=true
+kata/templates/kata-clh-vcpu-tune.yaml linguist-generated=false

@@ -1,0 +1,80 @@
+# buildkit-operator — the distributed-BuildKit control plane (one hot daemon per project+arch), with
+# VM-isolated untrusted forks (Kata/clh) and off-cluster exposure. Coexists with the incumbent
+# buildkit-service on the prod-build nodepool. Pair with applications/kata.yaml (the runtime).
+#
+# Single source: the Helm chart stays canonical in the operator repo (pulled directly, no vendoring or
+# drift); the ovh-prod values are inline below. Pinned to the commit carrying the OVH LB-timeout fix —
+# replace with a tagged release (e.g. v0.2.4) once cut.
+#
+# NOTE (adoption): the operator is deployed by hand on ovh-prod today. `automated` is intentionally
+# OMITTED so the first sync only ADOPTS the live release after you review the diff; flip it on once clean.
+# NOTE (prereqs before first sync): the mTLS + auth Secrets must exist (see ../buildkit-operator/README.md)
+# and the buildkit-operator namespace must be excluded from the add-custom-mas-securitycontext policy.
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: buildkit-operator
+spec:
+  goTemplate: true
+  generators:
+    - list:
+        elements:
+          - name: buildkit-operator-prod
+            namespace: buildkit-operator
+            cluster: ovh-prod
+  template:
+    metadata:
+      name: "{{ .name }}"
+      annotations:
+        notifications.argoproj.io/subscribe.mattermost: moojipgstjgsixs6mgycxpe5ua
+    spec:
+      project: default
+      destination:
+        name: "{{ .cluster }}"
+        namespace: "{{ .namespace }}"
+      source:
+        repoURL: https://github.com/socialgouv/buildkit-operator
+        targetRevision: 085b9de37e008c978a3d1cfeb018320435207990
+        path: deploy/helm/buildkit-operator
+        helm:
+          releaseName: buildkit-operator
+          valuesObject:
+            namespace: buildkit-operator
+            # Operator + companion (inode-GC sidecar) images. Daemon image is the chart default (rootless).
+            image: { tag: "0.2.3" }
+            companion: { image: { tag: "0.2.3" } }
+            # Off-cluster exposure: /route API LB (bearer auth) + SNI gateway LB (e2e mTLS). The chart
+            # default raises the OpenStack LB idle timeout so cold-start /route isn't cut.
+            service: { type: LoadBalancer }
+            # gateway.host is only an SNI label here: clients map <daemon>.<host> -> the gateway LB IP via
+            # the Action's `gateway-ip` input (no wildcard DNS for this L4 gateway). Swap in real DNS later.
+            gateway:
+              host: gw.bko.ovh
+              service: { type: LoadBalancer }
+            auth:
+              tokenSecret: buildkit-operator-auth
+            # Pin daemons to prod-build, mirroring buildkit-service: pool toleration + soft node-affinity.
+            daemonScheduling:
+              tolerations:
+                - { key: pool, operator: Equal, value: ci, effect: NoSchedule }
+              affinity:
+                nodeAffinity:
+                  preferredDuringSchedulingIgnoredDuringExecution:
+                    - weight: 100
+                      preference:
+                        matchExpressions:
+                          - { key: nodepool, operator: In, values: [prod-build] }
+            # Untrusted fork daemons run as non-rootless privileged buildkit inside a kata-clh microVM.
+            sandbox:
+              runtimeClass: kata-clh
+            # Product-prefixed Secret names (a cluster-wide Kyverno-synced `buildkit-client-certs` from the
+            # incumbent would otherwise collide). Provisioned out-of-band today — see README.
+            certs:
+              daemonSecretName: buildkit-operator-daemon-certs
+              clientSecretName: buildkit-operator-client-certs
+      syncPolicy:
+        syncOptions:
+          - CreateNamespace=true
+        retry:
+          limit: 5
+          backoff: { duration: 5s, factor: 2, maxDuration: 3m }
