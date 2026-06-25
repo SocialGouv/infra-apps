@@ -90,6 +90,15 @@ iterion:
       publicUrl: https://iterion-preprod.ovh.fabrique.social.gouv.fr
       cookieSecure: true
       signupMode: invite_only
+      # GitHub tiered access (both envs): a GitHub login matching no
+      # allow-listed team is admitted as a teamless marketplace-submitter
+      # instead of being refused. Per-env clientId lives in values.<env>.yaml;
+      # this policy is shared. Effective only once a GitHub team grant makes
+      # gating active (studio org SSO tab); until then GitHub admission still
+      # follows signupMode.
+      oidc:
+        github:
+          ungrantedPolicy: submitter
 
   secrets:
     llm:
