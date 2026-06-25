@@ -52,9 +52,10 @@ iterion:
   image:
     # Pinned tagged release (immutable, reproducible). ovh-dev/preprod tracks
     # main via :edge; ovh-prod runs the cut release. Bump on each release after
-    # validating on preprod. v0.22.0 adds GitHub SSO tiered access (teamless
-    # marketplace-submitter vs authorized-team full access), forward of v0.21.0.
-    tag: v0.22.0
+    # validating on preprod. v0.23.0 adds Valkey-distributed ephemeral state
+    # (forge CSRF / board-MCP tokens / rate-limit shared across the x3 replicas)
+    # + studio fixes (logout-on-click, AuditTab, autofill), forward of v0.22.0.
+    tag: v0.23.0
 
   server:
     replicas: 3
@@ -144,6 +145,14 @@ iterion:
       region: us-east-1
       bucket: iterion-artifacts
       usePathStyle: true
+    # Valkey HA (Sentinel) — shares forge OAuth/CSRF state, board-MCP tokens
+    # and auth rate-limit across the x3 server replicas (fixes the GitHub-App
+    # manifest "state expired" on multi-pod). Points at the valkeyha subchart's
+    # sentinel service. Auth is disabled on the Valkey nodes (in-cluster,
+    # ephemeral state) — same posture as no-package-malware — so no password.
+    redis:
+      sentinelAddrs: "iterion-valkeyha-sentinel:26379"
+      masterName: mymaster
     auth:
       publicUrl: https://iterion.fabrique.social.gouv.fr
       cookieSecure: true
@@ -355,3 +364,50 @@ minio:
           - ALL
       seccompProfile:
         type: RuntimeDefault
+
+# --- Valkey HA (Sentinel) — distributed ephemeral state (ovh-prod only) -----
+# cloudpirates/valkey, the same chart no-package-malware runs in prod:
+# replication + Sentinel failover. The iterion server reaches it via
+# iterion.config.redis.sentinelAddrs (iterion-valkeyha-sentinel:26379). Auth
+# disabled (in-cluster, ephemeral CSRF/run-token/rate-limit data). Service:
+# iterion-valkeyha (data) + iterion-valkeyha-sentinel (sentinels).
+valkeyha:
+  enabled: true
+  architecture: replication
+  replicaCount: 3
+  auth:
+    enabled: false
+  persistence:
+    enabled: true
+    size: 5Gi
+    storageClass: ""
+  sentinel:
+    enabled: true
+    masterName: mymaster
+    quorum: 2
+    downAfterMilliseconds: 1500
+    failoverTimeout: 15000
+    parallelSyncs: 1
+    service:
+      type: ClusterIP
+      port: 26379
+  # Spread Valkey pods across nodes for availability (mirrors no-package-malware).
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            topologyKey: kubernetes.io/hostname
+            labelSelector:
+              matchExpressions:
+                - key: app.kubernetes.io/name
+                  operator: In
+                  values:
+                    - valkey
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
