@@ -148,7 +148,12 @@ iterion:
     auth:
       publicUrl: https://iterion.fabrique.social.gouv.fr
       cookieSecure: true
-      signupMode: invite_only
+      # Open self-service signup: GitHub SSO (and email/password) provision a
+      # new account + personal team on first login. Required for the public
+      # landing's "Continue with GitHub" to work without a prior invite — under
+      # invite_only a new SSO user is refused (ErrSignupClosed → login_failed).
+      # Preprod stays invite_only (values.yaml).
+      signupMode: open
       # GitHub SSO login provider — OAuth App "iterion" (prod) on the
       # SocialGouv org. Distinct OAuth App from preprod, so its clientId is
       # set here (not in the shared values.yaml). Client secret is
