@@ -193,3 +193,7 @@ mongodb:
   enabled: false
 minio:
   enabled: false
+# Valkey HA (Sentinel) — opted into only on ovh-prod (multi-replica). ovh-dev
+# runs a single server replica, so its in-memory stores are fine.
+valkeyha:
+  enabled: false

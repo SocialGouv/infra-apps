@@ -5,11 +5,20 @@ description: Iterion cloud (workflow engine) — server + runner + bundled Mongo
 dependencies:
   - name: iterion
     repository: oci://ghcr.io/socialgouv/charts
-    # 0.22.0: adds config.auth.oidc.github.ungrantedPolicy →
-    # ITERION_OIDC_GITHUB_UNGRANTED_POLICY (GitHub tiered access). 0.21.0 had
-    # added config.marketplace.enabled → ITERION_CLOUD_MARKETPLACE + the
-    # checksum/config pod-reload annotations on the server+runner deployments.
-    version: 0.22.0
+    # 0.23.0: adds config.redis → ITERION_REDIS_* (distributed ephemeral state
+    # via Valkey, so the x3 server replicas share forge OAuth/CSRF state +
+    # board-MCP tokens + auth rate-limit). 0.22.0 added the GitHub tiered-access
+    # ungrantedPolicy; 0.21.0 the marketplace toggle + checksum/config reload.
+    version: 0.23.0
+  # Valkey HA (Sentinel) — distributed ephemeral state for the multi-replica
+  # server. cloudpirates/valkey (architecture: replication + sentinel), the
+  # same chart no-package-malware runs in prod. ovh-prod opts in via
+  # `valkeyha.enabled`; ovh-dev (single replica) stays in-memory.
+  - alias: valkeyha
+    name: valkey
+    repository: https://cloudpirates-io.github.io/helm-charts
+    version: 0.10.3
+    condition: valkeyha.enabled
   # --- ovh-prod community datastores (replace the iterion subchart's deprecated
   # Bitnami mongodb+minio). Their values live at top-level `mongodb:` / `minio:`
   # (distinct from `iterion.mongodb` / `iterion.minio` which gate the bundled
