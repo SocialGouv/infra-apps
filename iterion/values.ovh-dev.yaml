@@ -2,4 +2,27 @@
 # loaded first; this file only sets the cluster key the per-env SealedSecret
 # templates gate on). Loaded after values.yaml via the ApplicationSet's
 # "values.{{ .cluster }}.yaml".
+#
+# values.yaml is shared by BOTH clusters (ovh-prod overrides it), so anything
+# preprod-specific that must NOT bleed into prod (e.g. the preprod GitHub OAuth
+# App's clientId) lives HERE, not in values.yaml.
 cluster: ovh-dev
+
+iterion:
+  config:
+    auth:
+      # GitHub SSO login provider — OAuth App "iterion preprod" on the
+      # SocialGouv org. clientId is non-secret (rendered into the configmap);
+      # the client secret is ITERION_OIDC_GITHUB_CLIENT_SECRET in the
+      # iterion-auth SealedSecret. Callback:
+      # https://iterion-preprod.ovh.fabrique.social.gouv.fr/api/auth/oidc/github/callback
+      oidc:
+        github:
+          clientId: "Ov23liycsxuQIlhvhOJW"
+  secrets:
+    auth:
+      # Gates ITERION_OIDC_GITHUB_ENABLED/CLIENT_ID in the configmap; the
+      # matching client secret comes from the iterion-auth SealedSecret.
+      oidc:
+        github:
+          enabled: true
