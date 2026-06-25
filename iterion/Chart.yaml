@@ -5,13 +5,11 @@ description: Iterion cloud (workflow engine) — server + runner + bundled Mongo
 dependencies:
   - name: iterion
     repository: oci://ghcr.io/socialgouv/charts
-    # 0.21.0: adds config.marketplace.enabled → ITERION_CLOUD_MARKETPLACE (the
-    # public bot marketplace toggle) + checksum/config pod-reload annotations on
-    # the server+runner deployments (so OIDC/marketplace config changes roll the
-    # pods without a manual restart). 0.17.2 had completed the FULL k8s sandbox
-    # on the runner (runner.sandbox.enabled → ITERION_POD_IP + sandbox RBAC +
-    # per-run Secrets RBAC for `as: file` secrets / proxy TLS CA).
-    version: 0.21.0
+    # 0.22.0: adds config.auth.oidc.github.ungrantedPolicy →
+    # ITERION_OIDC_GITHUB_UNGRANTED_POLICY (GitHub tiered access). 0.21.0 had
+    # added config.marketplace.enabled → ITERION_CLOUD_MARKETPLACE + the
+    # checksum/config pod-reload annotations on the server+runner deployments.
+    version: 0.22.0
   # --- ovh-prod community datastores (replace the iterion subchart's deprecated
   # Bitnami mongodb+minio). Their values live at top-level `mongodb:` / `minio:`
   # (distinct from `iterion.mongodb` / `iterion.minio` which gate the bundled
