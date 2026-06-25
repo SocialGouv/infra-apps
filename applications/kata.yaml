@@ -1,0 +1,54 @@
+# Kata Containers on the prod-build nodepool — the runtime behind VM-isolated untrusted buildkit forks.
+# The upstream kata-deploy chart (v3.32.0) is VENDORED under ../kata (it ships its node-feature-discovery
+# dependency pre-packaged, so it renders fully offline — no repo-server egress needed), with the ≥4-vCPU
+# nested-virt guest-floor DaemonSet added as one extra template. Single source, releaseName kata-deploy
+# so it adopts the live hand-installed release cleanly.
+#
+# NOTE (adoption): kata is installed by hand on ovh-prod today; the first sync adopts it and re-runs the
+# installer, which restarts containerd per node — sync it deliberately in a window.
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: kata
+spec:
+  goTemplate: true
+  generators:
+    - list:
+        elements:
+          - name: kata-prod
+            cluster: ovh-prod
+  template:
+    metadata:
+      name: "{{ .name }}"
+      annotations:
+        argocd.argoproj.io/manifest-generate-paths: .
+        notifications.argoproj.io/subscribe.mattermost: moojipgstjgsixs6mgycxpe5ua
+    spec:
+      project: default
+      destination:
+        name: "{{ .cluster }}"
+        namespace: kube-system
+      source:
+        repoURL: https://github.com/SocialGouv/infra-apps.git
+        targetRevision: master
+        path: kata
+        helm:
+          releaseName: kata-deploy
+          valuesObject:
+            # The whole pool is virt-capable; pin Kata to it and tolerate the pool taint. NFD is off
+            # (chart default) — no per-node feature detection needed.
+            node-feature-discovery:
+              enabled: false
+            nodeSelector:
+              nodepool: prod-build
+            tolerations:
+              - key: pool
+                operator: Equal
+                value: ci
+                effect: NoSchedule
+      syncPolicy:
+        # No `automated`: a sync re-runs the kata-deploy installer (restarts containerd per node).
+        # Adopt the live install with a deliberate manual sync, then enable `automated: {}`.
+        retry:
+          limit: 5
+          backoff: { duration: 5s, factor: 2, maxDuration: 3m }
