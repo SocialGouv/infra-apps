@@ -1,0 +1,90 @@
+# buildkit-operator — the distributed-BuildKit control plane (one hot daemon per project+arch), with
+# VM-isolated untrusted forks (Kata/clh) and off-cluster exposure. Coexists with the incumbent
+# buildkit-service on the prod-build nodepool. Pair with applications/kata.yaml (the runtime).
+#
+# Single source: the Helm chart stays canonical in the operator repo (pulled directly at a commit whose
+# images were published by the `images` workflow); the ovh-prod values are inline below.
+#
+# NOTE (adoption): the operator is deployed by hand on ovh-prod today. `automated` is intentionally
+# OMITTED so the first sync only ADOPTS the live release after you review the diff; flip it on once clean.
+# NOTE (prereqs before first sync): mTLS/auth/S3 Secrets already exist out-of-band. Do not store or
+# inspect their cleartext here; only their names are referenced below. The buildkit-builds namespace is
+# already excluded from add-custom-mas-securitycontext for rootless BuildKit.
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: buildkit-operator
+spec:
+  goTemplate: true
+  generators:
+    - list:
+        elements:
+          - name: buildkit-operator-prod
+            namespace: buildkit-operator
+            cluster: ovh-prod
+  template:
+    metadata:
+      name: "{{ .name }}"
+      annotations:
+        notifications.argoproj.io/subscribe.mattermost: moojipgstjgsixs6mgycxpe5ua
+    spec:
+      project: default
+      destination:
+        name: "{{ .cluster }}"
+        namespace: "{{ .namespace }}"
+      source:
+        repoURL: https://github.com/socialgouv/buildkit-operator
+        targetRevision: 031f29e48296c40119d210b8284480ee2f87193f
+        path: deploy/helm/buildkit-operator
+        helm:
+          releaseName: buildkit-operator
+          valuesObject:
+            namespaces:
+              operator: buildkit-operator
+              builds: buildkit-builds
+            # Namespace is provisioned by the platform/Rancher, not owned by this Helm release.
+            createNamespaces: false
+            # Images built and signed by github.com/SocialGouv/buildkit-operator/.github/workflows/images.yml
+            # for targetRevision 031f29e.
+            image: { tag: sha-031f29e }
+            # Off-cluster exposure: /route API LB (bearer auth) + SNI gateway LB (e2e mTLS). The chart
+            # default raises the OpenStack LB idle timeout so cold-start /route isn't cut.
+            service: { type: LoadBalancer }
+            # gateway.host is only an SNI label here: clients map <daemon>.<host> -> the gateway LB IP via
+            # the Action's `gateway-ip` input (no wildcard DNS for this L4 gateway). Swap in real DNS later.
+            gateway:
+              host: gw.bko.ovh
+              image: { tag: sha-031f29e }
+              service: { type: LoadBalancer }
+            auth:
+              tokenSecret: buildkit-operator-auth
+            snapshotClassName: csi-cinder-snapclass-in-use-v1
+            # Pin daemons to prod-build, mirroring buildkit-service: pool toleration + soft node-affinity.
+            daemonScheduling:
+              tolerations:
+                - { key: pool, operator: Equal, value: ci, effect: NoSchedule }
+              affinity:
+                nodeAffinity:
+                  preferredDuringSchedulingIgnoredDuringExecution:
+                    - weight: 100
+                      preference:
+                        matchExpressions:
+                          - { key: nodepool, operator: In, values: [prod-build] }
+            # Untrusted fork daemons run as non-rootless privileged buildkit inside a kata-clh microVM.
+            sandbox:
+              runtimeClass: kata-clh
+            s3:
+              bucket: buildkit-cold-cache
+              region: gra
+              endpoint: https://s3.gra.io.cloud.ovh.net
+              credsSecret: buildkit-operator-s3
+            # Product-prefixed Secret names: avoid collision with the incumbent buildkit-service Secrets.
+            certs:
+              daemonSecretName: buildkit-operator-daemon-certs
+              clientSecretName: buildkit-operator-client-certs
+      syncPolicy:
+        syncOptions:
+          - CreateNamespace=false
+        retry:
+          limit: 5
+          backoff: { duration: 5s, factor: 2, maxDuration: 3m }
