@@ -77,17 +77,17 @@ spec:
                 - pic.sg.social.gouv.fr/socialgouv/*
                 - pic.sg.social.gouv.fr/studio-tech/architecture/*
             # Shared SNI gateway, fronted on 443 (PIC egress proxy reaches it) for two domains. external-dns
-            # publishes the wildcard *.bko.fabrique.social.gouv.fr at the gateway LB (--source=service).
+            # publishes the wildcard *.bkod.fabrique.social.gouv.fr at the gateway LB (--source=service).
             # NOTE: these gateway settings (externalPort/extraDomains/external-dns annotation) were
             # live-patched onto the hand-deployed release and are captured here so the GitOps matches live.
             gateway:
               host: gw.bko.ovh
               externalPort: 443
-              extraDomains: [bko.fabrique.social.gouv.fr]
+              extraDomains: [bkod.fabrique.social.gouv.fr]
               image: { tag: sha-b346209 }
               service:
                 annotations:
-                  external-dns.alpha.kubernetes.io/hostname: "*.bko.fabrique.social.gouv.fr"
+                  external-dns.alpha.kubernetes.io/hostname: "*.bkod.fabrique.social.gouv.fr"
               # Cap pre-auth connections on the public SNI gateway (defence against an unauthenticated flood).
               maxConns: 1024
             auth:
