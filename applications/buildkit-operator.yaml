@@ -34,7 +34,7 @@ spec:
         namespace: "{{ .namespace }}"
       source:
         repoURL: https://github.com/socialgouv/buildkit-operator
-        targetRevision: 031f29e48296c40119d210b8284480ee2f87193f
+        targetRevision: f072517ca5cadf96fea71c70dcd948bc3d2b9c34
         path: deploy/helm/buildkit-operator
         helm:
           releaseName: buildkit-operator
@@ -45,32 +45,54 @@ spec:
             # Namespace is provisioned by the platform/Rancher, not owned by this Helm release.
             createNamespaces: false
             # Images built and signed by github.com/SocialGouv/buildkit-operator/.github/workflows/images.yml
-            # for targetRevision 031f29e.
-            image: { tag: sha-031f29e }
-            # Off-cluster exposure: /route API LB (bearer auth) + SNI gateway LB (e2e mTLS). The chart
-            # default raises the OpenStack LB idle timeout so cold-start /route isn't cut.
-            service: { type: LoadBalancer }
+            # for targetRevision f072517.
+            image: { tag: sha-f072517 }
+            # buildd /route is reached off-cluster through the TLS Ingress below (NOT a plain-HTTP LB):
+            # the L4 LB served the bearer token in cleartext, so the chart now refuses it without an IP
+            # allowlist. ClusterIP + nginx Ingress terminates TLS on 443 (reachable by the PIC egress
+            # proxy). The SNI gateway keeps its own LB (mTLS stays end-to-end, no TLS to terminate there).
+            service: { type: ClusterIP }
+            ingress:
+              enabled: true
+              className: nginx
+              host: buildd.bko.fabrique.social.gouv.fr
+              annotations:
+                cert-manager.io/cluster-issuer: letsencrypt-prod
+                # /route blocks on a cold daemon (PVC provision + image pull) — raise above the 60s default.
+                nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+              tls:
+                enabled: true
+                secretName: buildd-bko-fabrique-tls
+            # OIDC identity verification is DEPLOYED in this image but intentionally NOT enabled yet
+            # (oidc.providers empty => /route still uses the legacy bearer token below). Enabling it forces
+            # EVERY caller to present a forge-signed OIDC token, so it is flipped on in a follow-up once the
+            # PIC GitLab project bumps the build component (to mint the id_token) and the GitLab issuer is
+            # wired here. Until then this ships the infra hardening with zero auth disruption.
             # gateway.host is only an SNI label here: clients map <daemon>.<host> -> the gateway LB IP via
             # the Action's `gateway-ip` input (no wildcard DNS for this L4 gateway). Swap in real DNS later.
             gateway:
               host: gw.bko.ovh
-              image: { tag: sha-031f29e }
+              image: { tag: sha-f072517 }
               service: { type: LoadBalancer }
+              # Cap pre-auth connections on the public SNI gateway (defence against an unauthenticated flood).
+              maxConns: 1024
             auth:
               tokenSecret: buildkit-operator-auth
             snapshotClassName: csi-cinder-snapclass-in-use-v1
-            # Pin daemons to prod-build, mirroring buildkit-service: pool toleration + soft node-affinity.
+            # HARD-pin daemons to the prod-build nodepool (was a soft preference): they run rootless
+            # buildkit with seccomp/AppArmor Unconfined + the S3 creds and execute untrusted RUN code, so
+            # they must NEVER spill onto app / control-plane nodes. nodeSelector makes prod-build a
+            # requirement; the toleration matches that pool's taint.
             daemonScheduling:
+              nodeSelector: { nodepool: prod-build }
               tolerations:
                 - { key: pool, operator: Equal, value: ci, effect: NoSchedule }
-              affinity:
-                nodeAffinity:
-                  preferredDuringSchedulingIgnoredDuringExecution:
-                    - weight: 100
-                      preference:
-                        matchExpressions:
-                          - { key: nodepool, operator: In, values: [prod-build] }
-            # Untrusted fork daemons run as non-rootless privileged buildkit inside a kata-clh microVM.
+            # Untrusted fork daemons run as non-rootless privileged buildkit inside a kata-clh microVM —
+            # the VM is their isolation boundary. forkEgressStrict is therefore left OFF: strict egress
+            # would force every fork's base image through a single pull-through mirror (breaking FROMs on
+            # ghcr.io/quay.io/etc), and Kata already contains the untrusted build.
+            networkPolicy:
+              forkEgressStrict: false
             sandbox:
               runtimeClass: kata-clh
             s3:
