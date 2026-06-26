@@ -34,7 +34,7 @@ spec:
         namespace: "{{ .namespace }}"
       source:
         repoURL: https://github.com/socialgouv/buildkit-operator
-        targetRevision: f072517ca5cadf96fea71c70dcd948bc3d2b9c34
+        targetRevision: b3462098a1eccde1a37a126e3fcfa7d66460c121
         path: deploy/helm/buildkit-operator
         helm:
           releaseName: buildkit-operator
@@ -45,8 +45,8 @@ spec:
             # Namespace is provisioned by the platform/Rancher, not owned by this Helm release.
             createNamespaces: false
             # Images built and signed by github.com/SocialGouv/buildkit-operator/.github/workflows/images.yml
-            # for targetRevision f072517.
-            image: { tag: sha-f072517 }
+            # for targetRevision b346209.
+            image: { tag: sha-b346209 }
             # buildd /route is reached off-cluster through the TLS Ingress below (NOT a plain-HTTP LB):
             # the L4 LB served the bearer token in cleartext, so the chart now refuses it without an IP
             # allowlist. ClusterIP + nginx Ingress terminates TLS on 443 (reachable by the PIC egress
@@ -63,16 +63,24 @@ spec:
               tls:
                 enabled: true
                 secretName: buildd-bko-fabrique-tls
-            # OIDC identity verification is DEPLOYED in this image but intentionally NOT enabled yet
-            # (oidc.providers empty => /route still uses the legacy bearer token below). Enabling it forces
-            # EVERY caller to present a forge-signed OIDC token, so it is flipped on in a follow-up once the
-            # PIC GitLab project bumps the build component (to mint the id_token) and the GitLab issuer is
-            # wired here. Until then this ships the infra hardening with zero auth disruption.
+            # OIDC identity verification ON: /route binds each build to a forge-signed repo claim (no
+            # self-declared repo), killing cross-project cache poisoning. The legacy bearer (auth below) is
+            # KEPT as a transition fallback, so callers migrate to token-minting with zero downtime — drop
+            # auth.tokenSecret once every consumer mints tokens to enforce OIDC strictly.
+            oidc:
+              providers:
+                - { type: github, issuer: https://token.actions.githubusercontent.com, audience: buildkit-operator }
+                - { type: gitlab, issuer: https://pic.sg.social.gouv.fr, audience: buildkit-operator }
+              # Hard org gate (verified-but-unlisted repo => 403). Extend as new consumers onboard.
+              repoAllowlist:
+                - github.com/socialgouv/*
+                - pic.sg.social.gouv.fr/socialgouv/*
+                - pic.sg.social.gouv.fr/studio-tech/architecture/*
             # gateway.host is only an SNI label here: clients map <daemon>.<host> -> the gateway LB IP via
             # the Action's `gateway-ip` input (no wildcard DNS for this L4 gateway). Swap in real DNS later.
             gateway:
               host: gw.bko.ovh
-              image: { tag: sha-f072517 }
+              image: { tag: sha-b346209 }
               service: { type: LoadBalancer }
               # Cap pre-auth connections on the public SNI gateway (defence against an unauthenticated flood).
               maxConns: 1024
