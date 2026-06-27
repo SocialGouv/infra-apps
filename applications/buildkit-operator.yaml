@@ -34,7 +34,7 @@ spec:
         namespace: "{{ .namespace }}"
       source:
         repoURL: https://github.com/socialgouv/buildkit-operator
-        targetRevision: b3462098a1eccde1a37a126e3fcfa7d66460c121
+        targetRevision: 5e31673c7af31941998cdc83393beb1857a890bd
         path: deploy/helm/buildkit-operator
         helm:
           releaseName: buildkit-operator
@@ -45,8 +45,8 @@ spec:
             # Namespace is provisioned by the platform/Rancher, not owned by this Helm release.
             createNamespaces: false
             # Images built and signed by github.com/SocialGouv/buildkit-operator/.github/workflows/images.yml
-            # for targetRevision b346209.
-            image: { tag: sha-b346209 }
+            # for the v0.9.0 release (commit 5e31673).
+            image: { tag: 0.9.0 }
             # buildd /route is reached off-cluster through the TLS Ingress below (NOT a plain-HTTP LB):
             # the L4 LB served the bearer token in cleartext, so the chart now refuses it without an IP
             # allowlist. ClusterIP + nginx Ingress terminates TLS on 443 (reachable by the PIC egress
@@ -88,7 +88,7 @@ spec:
               host: gw.bko.ovh
               externalPort: 443
               extraDomains: [bkod.fabrique.social.gouv.fr]
-              image: { tag: sha-b346209 }
+              image: { tag: 0.9.0 }
               service:
                 annotations:
                   external-dns.alpha.kubernetes.io/hostname: "*.bkod.fabrique.social.gouv.fr"
