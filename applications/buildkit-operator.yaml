@@ -71,11 +71,15 @@ spec:
               providers:
                 - { type: github, issuer: https://token.actions.githubusercontent.com, audience: buildkit-operator }
                 - { type: gitlab, issuer: https://pic.sg.social.gouv.fr, audience: buildkit-operator }
+                # Forgejo Actions: the token issuer is the /api/actions subpath (NOT the instance root, which
+                # is the login IdP). Consumers opt in with `enable-openid-connect: true` + forgejo-runner >v12.5.
+                - { type: forgejo, issuer: https://git.devthefuture.org/api/actions, audience: buildkit-operator }
               # Hard org gate (verified-but-unlisted repo => 403). Extend as new consumers onboard.
               repoAllowlist:
                 - github.com/socialgouv/*
                 - pic.sg.social.gouv.fr/socialgouv/*
                 - pic.sg.social.gouv.fr/studio-tech/architecture/*
+                - git.devthefuture.org/devthejo/*
             # Shared SNI gateway, fronted on 443 (PIC egress proxy reaches it) for two domains. external-dns
             # publishes the wildcard *.bkod.fabrique.social.gouv.fr at the gateway LB (--source=service).
             # NOTE: these gateway settings (externalPort/extraDomains/external-dns annotation) were
