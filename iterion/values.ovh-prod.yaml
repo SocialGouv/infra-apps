@@ -50,14 +50,13 @@ cluster: ovh-prod
 
 iterion:
   image:
-    # Pinned tagged release (immutable, reproducible). ovh-dev/preprod tracks
-    # main via :edge; ovh-prod runs the cut release. Bump on each release after
-    # validating on preprod. v0.23.2 fixes the forge connect form (hides the
-    # GitHub-App mode when no app is configured) + the LLM-credentials panel
-    # 401 (detect now rides the shared token-refresh path), plus the merged
-    # security hardening since v0.23.1 (SSRF/RCE/CSRF) and unbreaks the image
-    # build. Forward of v0.23.0 (v0.23.1's image never built — broken CI).
-    tag: v0.23.2
+    # TEMPORARY: prod tracks main via the moving :edge tag for the ADR-048
+    # test→fix campaign (single operator-user on prod). Each main push rebuilds
+    # :edge; a `kubectl rollout restart deploy/iterion deploy/iterion-runner`
+    # pulls it fresh (pullPolicy: Always). Re-pin an immutable vX.Y.Z release
+    # once the org/team tenancy rework is validated and stable.
+    tag: edge
+    pullPolicy: Always
 
   server:
     replicas: 3
