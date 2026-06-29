@@ -9,6 +9,14 @@
 cluster: ovh-dev
 
 iterion:
+  # Preprod is SUSPENDED during the long prod-iteration spike (2026-06-29):
+  # app scaled to 0 to free resources. Datastores (mongo/minio/nats) stay up so
+  # the env resumes instantly — revert this block to bring preprod back when we
+  # reach a stable mode. HPA is off in values.yaml, so 0 sticks.
+  server:
+    replicas: 0
+  runner:
+    replicas: 0
   config:
     auth:
       # GitHub SSO login provider — OAuth App "iterion preprod" on the
