@@ -6,10 +6,17 @@
 # makes the agent responsive enough and the VM stable. Kata reads its config PER-SANDBOX, so no
 # containerd restart is needed; the next pod just picks up the new value.
 #
-# This DaemonSet keeps `default_vcpus`/`default_memory` patched on every kata node (idempotent, and
-# re-applied periodically so a kata-deploy upgrade that rewrites the defaults gets corrected). It is
-# scoped to nodes kata-deploy has finished installing on (label katacontainers.io/kata-runtime=true),
-# runs in kube-system (Kyverno-exempt for the hostPath), and only edits the kata-clh config files.
+# ALSO enables virtiofsd xattr support (`--xattr` in virtio_fs_extra_args): without it every xattr
+# syscall on the guest's virtiofs-backed mounts (the PVC-backed buildkit snapshots of the UNTRUSTED
+# fork daemons) returns ENOTSUP — buildkit's content hashing llistxattr's every file, so any real
+# build (COPY of a directory) fails with "failed to create hash for <path>: operation not supported".
+# Like the vCPU floor, the config is read per-sandbox: the next VM picks it up, no restart needed.
+#
+# This DaemonSet keeps `default_vcpus`/`default_memory`/`virtio_fs_extra_args` patched on every kata
+# node (idempotent, and re-applied periodically so a kata-deploy upgrade that rewrites the defaults
+# gets corrected). It is scoped to nodes kata-deploy has finished installing on (label
+# katacontainers.io/kata-runtime=true), runs privileged for the hostPath, and only edits the
+# kata-clh config files.
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
@@ -44,7 +51,11 @@ spec:
                          /host/opt/kata/share/defaults/kata-containers/configuration-clh.toml; do
                   [ -f "$C" ] || continue
                   sed -i 's/^default_vcpus = 1$/default_vcpus = 4/; s/^default_memory = 2048$/default_memory = 4096/' "$C"
-                  echo "$(date -u +%FT%TZ) tuned $C -> $(grep -hE '^default_vcpus|^default_memory' "$C" | tr '\n' ' ')"
+                  # virtiofsd xattr: buildkit hashes every file with llistxattr; without --xattr
+                  # the guest fs answers ENOTSUP and every untrusted (Kata) build fails.
+                  sed -i '/^virtio_fs_extra_args = \[\]/ s/\[\]/["--xattr"]/' "$C"
+                  sed -i '/^virtio_fs_extra_args = /{ /--xattr/! s/\]$/, "--xattr"]/ }' "$C"
+                  echo "$(date -u +%FT%TZ) tuned $C -> $(grep -hE '^default_vcpus|^default_memory|^virtio_fs_extra_args' "$C" | tr '\n' ' ')"
                 done
                 sleep 600
               done
