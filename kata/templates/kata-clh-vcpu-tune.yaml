@@ -21,7 +21,7 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: kata-clh-vcpu-tune
-  namespace: kube-system
+  namespace: buildkit-system
   labels: { app: kata-clh-vcpu-tune }
 spec:
   selector:

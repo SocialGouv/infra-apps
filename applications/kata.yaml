@@ -27,7 +27,9 @@ spec:
       project: default
       destination:
         name: "{{ .cluster }}"
-        namespace: kube-system
+        # buildkit-system: node tooling for the build pool lives in its own namespace — nothing of
+        # ours deploys into kube-system (house rule; the hand-deployed install already did this).
+        namespace: buildkit-system
       source:
         repoURL: https://github.com/SocialGouv/infra-apps.git
         targetRevision: master
