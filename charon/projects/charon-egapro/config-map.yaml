@@ -22,7 +22,9 @@ data:
   CHARON_CLIENT_4_WILDCARDS: |
     http://localhost:3000,
     https://egapro-*.ovh.fabrique.social.gouv.fr,
-    https://egapro-preprod.env-01kvfaqhty48zhd7fjy1bbknx7.dev.atlas-prod.public-cloud.social.gouv.fr
+    https://egapro-preprod.env-01kvfaqhty48zhd7fjy1bbknx7.dev.atlas-prod.public-cloud.social.gouv.fr,
+    https://egapro-review-alpha.env-01kwy7yxhj1b2zweshz3drn9js.dev.atlas-prod.public-cloud.social.gouv.fr,
+    https://egapro-review-staging.env-01kwy84nzm3qpjwa8tsgtxw6b8.dev.atlas-prod.public-cloud.social.gouv.fr
   CHARON_CLIENT_4_PROVIDER: proconnecttest
   CHARON_CLIENT_5_WILDCARDS: |
     http://localhost:3000,
