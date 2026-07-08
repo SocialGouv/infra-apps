@@ -5,12 +5,13 @@ description: Iterion cloud (workflow engine) — server + runner + bundled Mongo
 dependencies:
   - name: iterion
     repository: oci://ghcr.io/socialgouv/charts
-    # 0.32.0: per-runner image/securityContext overrides (runner.image +
-    # runner.podSecurityContext) — enables the devbox-first-class runner, see
-    # values.ovh-prod.yaml. 0.23.0 added config.redis → ITERION_REDIS_*
-    # (distributed ephemeral state via Valkey, so the x3 server replicas share
-    # forge OAuth/CSRF state + board-MCP tokens + auth rate-limit).
-    version: 0.32.0
+    # 0.33.0: ITERION_SANDBOX_OVERRIDE=none auto-set when runner.sandbox.enabled
+    # is false — a bot's inline `sandbox:` block executes directly in the runner
+    # pod (the isolation boundary) instead of hard-erroring the kubernetes
+    # driver. 0.32.0 added the per-runner image/securityContext overrides
+    # (runner.image + runner.podSecurityContext) — the devbox-first-class
+    # runner, see values.ovh-prod.yaml.
+    version: 0.33.0
   # Valkey HA (Sentinel) — distributed ephemeral state for the multi-replica
   # server. cloudpirates/valkey (architecture: replication + sentinel), the
   # same chart no-package-malware runs in prod. ovh-prod opts in via
