@@ -93,6 +93,17 @@ iterion:
       enabled: false # KEDA not installed on ovh-prod; static replicas V1
     sandbox:
       enabled: false
+    # Devbox-first-class runner: bots `devbox run` the target repo's own
+    # toolchain (cross-language/version via its devbox.json — e.g. Billy
+    # building Go). Image = jetpackio/devbox base + runner toolset + iterion
+    # binary, tracks :edge like the shared image. Runs as uid 1000 (the Nix
+    # store is owned by `devbox`), hence the pod securityContext override.
+    # Rollback: remove `image` → runner falls back to the shared lean image.
+    image: ghcr.io/socialgouv/iterion-runner-devbox:edge
+    podSecurityContext:
+      runAsUser: 1000
+      runAsGroup: 1000
+      fsGroup: 1000
     resources:
       requests:
         cpu: 500m
