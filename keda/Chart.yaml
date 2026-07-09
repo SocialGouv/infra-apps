@@ -1,0 +1,8 @@
+apiVersion: v2
+name: keda
+version: 0.0.0
+description: KEDA event-based autoscaler — scales the iterion runner pool on NATS JetStream queue depth.
+dependencies:
+  - name: keda
+    version: 2.20.1
+    repository: https://kedacore.github.io/charts

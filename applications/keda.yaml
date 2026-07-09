@@ -1,0 +1,46 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: keda
+spec:
+  generators:
+    - list:
+        elements:
+          - name: keda-ovh-dev
+            cluster: ovh-dev
+            namespace: keda
+          - name: keda-ovh-prod
+            cluster: ovh-prod
+            namespace: keda
+  goTemplate: true
+  template:
+    metadata:
+      name: "{{ .name }}"
+      annotations:
+        argocd.argoproj.io/manifest-generate-paths: .
+    spec:
+      destination:
+        name: "{{ .cluster }}"
+        namespace: "{{ .namespace }}"
+      project: default
+      source:
+        repoURL: https://github.com/SocialGouv/infra-apps.git
+        targetRevision: master
+        path: "keda"
+        helm:
+          valueFiles:
+            - values.yaml
+            - "values.{{ .cluster }}.yaml"
+      syncPolicy:
+        # KEDA ships large CRDs (ScaledObject/ScaledJob/…) — ServerSideApply
+        # avoids the client-side "metadata.annotations too long" apply error,
+        # and CreateNamespace provisions the `keda` namespace.
+        syncOptions:
+          - ServerSideApply=true
+          - CreateNamespace=true
+        retry:
+          limit: 5
+          backoff:
+            duration: 5s
+            factor: 2
+            maxDuration: 3m

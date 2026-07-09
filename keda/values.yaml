@@ -1,0 +1,9 @@
+# Base values shared by all clusters. KEDA is a cluster-wide operator
+# (installs the ScaledObject/ScaledJob/TriggerAuthentication CRDs + the
+# metrics-apiserver). iterion's runner ScaledObject (charts/iterion
+# templates/runner-keda-scaledobject.yaml) is gated on iterion.runner.keda.enabled
+# and references this operator by the JetStream scaler.
+keda:
+  # The operator watches all namespaces by default; iterion runs in `iterion`.
+  # Leave watchNamespace empty (cluster-wide) so a single KEDA serves every app.
+  watchNamespace: ""
