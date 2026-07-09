@@ -90,7 +90,13 @@ iterion:
     enabled: true
     replicas: 3
     keda:
-      enabled: false # KEDA not installed on ovh-prod; static replicas V1
+      # KEDA operator installed (applications/keda.yaml). Autoscale the runner
+      # pool on JetStream consumer lag: idle floor of 2 (warm pods, no cold
+      # start on the first run of a burst), bursting to maxReplicas on queue
+      # depth. Replaces the static replicas:3 above (the ScaledObject owns the
+      # replica count once enabled).
+      enabled: true
+      minReplicas: 2
     sandbox:
       enabled: false
     # Devbox-first-class runner: bots `devbox run` the target repo's own
@@ -152,6 +158,13 @@ iterion:
       database: iterion
     nats:
       url: nats://iterion-nats:4222
+      # KEDA JetStream lag scaler scrapes the NATS HTTP monitoring port
+      # (/jsz on 8222). The bundled nats sub-chart exposes 8222 ONLY on the
+      # headless service (the ClusterIP `iterion-nats` publishes 4222 only),
+      # so pin the endpoint explicitly — the helper's default `iterion-nats:8222`
+      # would point at a port the ClusterIP doesn't expose and the scaler would
+      # silently read zero lag (runners pinned at minReplicas).
+      monitoringEndpoint: iterion-nats-headless:8222
     s3:
       endpoint: http://iterion-minio:9000
       region: us-east-1
