@@ -117,6 +117,18 @@ iterion:
       limits:
         cpu: "2"
         memory: 4Gi
+    # Shared RWX build-cache PVC (GOMODCACHE + GOCACHE) so fresh/scaled-up
+    # runner pods reuse downloaded modules + compiled objects instead of
+    # recompiling from cold every run (the ~44s sqlite-compile cost seen live).
+    # openebs-nfs-hspeed is the cluster's ReadWriteMany NFS class. The Nix
+    # store is NOT cached here (corruption blast radius) — ADR-066.
+    cache:
+      enabled: true
+      storageClass: openebs-nfs-hspeed
+      accessModes:
+        - ReadWriteMany
+      size: 20Gi
+      mountPath: /cache
 
   ingress:
     enabled: true

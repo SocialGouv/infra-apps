@@ -5,11 +5,13 @@ description: Iterion cloud (workflow engine) — server + runner + bundled Mongo
 dependencies:
   - name: iterion
     repository: oci://ghcr.io/socialgouv/charts
+    # 0.37.2: opt-in `runner.cache` shared RWX build-cache PVC (GOMODCACHE +
+    # GOCACHE) so runner pods don't recompile from cold every run (ADR-066).
     # 0.35.0: KEDA runner ScaledObject supplies the required JetStream `account`
     # ($G) — without it the scaler was Ready=False and no HPA metric. 0.34.0:
     # Memory-backed emptyDir on /run/iterion for in-pod `as: file` secrets.
     # 0.33.0: ITERION_SANDBOX_OVERRIDE=none. 0.32.0: per-runner image overrides.
-    version: 0.35.0
+    version: 0.37.2
   # Valkey HA (Sentinel) — distributed ephemeral state for the multi-replica
   # server. cloudpirates/valkey (architecture: replication + sentinel), the
   # same chart no-package-malware runs in prod. ovh-prod opts in via
