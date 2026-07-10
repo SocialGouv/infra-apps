@@ -154,6 +154,10 @@ iterion:
           - iterion.fabrique.social.gouv.fr
 
   config:
+    # Operator timezone: log-line timestamps (server + runner) render in
+    # Paris time instead of UTC (the binary embeds tzdata, chart >= 0.37.4).
+    extraEnv:
+      TZ: Europe/Paris
     log:
       format: json
       level: info # prod: info, not debug
