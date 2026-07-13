@@ -121,18 +121,15 @@ iterion:
         # 4Gi gets OOMKilled mid-verify, losing the run's banked commits
         # with the pod filesystem.
         memory: 8Gi
-    # Shared RWX build-cache PVC (GOMODCACHE + GOCACHE) so fresh/scaled-up
-    # runner pods reuse downloaded modules + compiled objects instead of
-    # recompiling from cold every run (the ~44s sqlite-compile cost seen live).
-    # openebs-nfs-hspeed is the cluster's ReadWriteMany NFS class. The Nix
-    # store is NOT cached here (corruption blast radius) — ADR-066.
+    # Runner Go build-cache. DISABLED: the RWX shared PVC (ADR-066 Phase 1)
+    # required openebs-nfs — the ONE non-cloud-native piece — and its NFS mount
+    # started FailedMount-ing, wedging runner rollouts. Reliability > cache-hit:
+    # runners recompile from cold (bounded — KEDA keeps warm pods, and the image
+    # bakes the go toolchain). Durable cloud-native shared cache (GOPROXY +
+    # GOCACHEPROG on the already-deployed MinIO, no NFS) is the ADR-066-bis
+    # follow-up. See docs/adr/066-runner-build-cache-architecture.md.
     cache:
-      enabled: true
-      storageClass: openebs-nfs-hspeed
-      accessModes:
-        - ReadWriteMany
-      size: 20Gi
-      mountPath: /cache
+      enabled: false
 
   ingress:
     enabled: true
