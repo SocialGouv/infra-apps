@@ -169,12 +169,6 @@ iterion:
       # plugins.yaml). See top-level `firecrawl:` + templates/firecrawl.yaml.
       ITERION_PLUGINS_ENABLE: firecrawl
       ITERION_PLUGIN_FIRECRAWL_API_URL: http://iterion-firecrawl:3002
-    runner:
-      # Per-runner-pod run concurrency (default 1). Raised to 2 so a runner
-      # can process a second (typically lighter) run alongside a long-running
-      # one instead of serialising the whole queue behind heavy bots. Mind
-      # RAM: two heavy builds on one 8Gi pod can OOM — tune with runner limits.
-      concurrency: 2
     log:
       format: json
       level: info # prod: info, not debug
