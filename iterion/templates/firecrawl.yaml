@@ -1,0 +1,224 @@
+{{- /*
+Firecrawl web-scrape/crawl/extract (tier 3) for iterion. Gated by
+`.Values.firecrawl.enabled`. Its own `search` delegates to the in-cluster
+SearXNG (SEARXNG_ENDPOINT) so one instance serves tiers 2 + 3.
+
+The runtime reaches it through the `firecrawl` MCP plugin, enabled+configured
+via env on the runtime (see iterion.config.extraEnv in values.<cluster>.yaml:
+ITERION_PLUGINS_ENABLE=firecrawl + ITERION_PLUGIN_FIRECRAWL_API_URL).
+
+All five services run ROOTLESS (uid 10000, runAsNonRoot, seccomp, caps drop
+ALL); the upstream images default to root but run fine as an arbitrary uid
+with writable state (validated). Cluster-internal only (ClusterIP).
+See github.com/SocialGouv/iterion docs/web-search.md.
+*/ -}}
+{{- if .Values.firecrawl.enabled }}
+{{- $fc := .Values.firecrawl }}
+{{- $nonroot := dict "runAsNonRoot" true "runAsUser" 10000 "runAsGroup" 10000 "fsGroup" 10000 "seccompProfile" (dict "type" "RuntimeDefault") }}
+{{- $ctr := dict "allowPrivilegeEscalation" false "capabilities" (dict "drop" (list "ALL")) }}
+# ---- Redis (cache / rate-limit) -------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: iterion-firecrawl-redis
+  labels: { app.kubernetes.io/name: iterion-firecrawl-redis, app.kubernetes.io/component: web-scrape }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app.kubernetes.io/name: iterion-firecrawl-redis } }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: iterion-firecrawl-redis, app.kubernetes.io/component: web-scrape }
+    spec:
+      securityContext: {{- toYaml $nonroot | nindent 8 }}
+      containers:
+        - name: redis
+          image: {{ $fc.redisImage | default "redis:alpine" | quote }}
+          args: ["redis-server", "--bind", "0.0.0.0", "--save", ""]
+          ports: [{ name: redis, containerPort: 6379 }]
+          securityContext: {{- toYaml $ctr | nindent 12 }}
+          resources: { requests: { cpu: 25m, memory: 64Mi }, limits: { cpu: 500m, memory: 256Mi } }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: iterion-firecrawl-redis
+  labels: { app.kubernetes.io/name: iterion-firecrawl-redis }
+spec:
+  selector: { app.kubernetes.io/name: iterion-firecrawl-redis }
+  ports: [{ name: redis, port: 6379, targetPort: redis }]
+---
+# ---- RabbitMQ (nuq queue broker; ephemeral state) -------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: iterion-firecrawl-rabbitmq
+  labels: { app.kubernetes.io/name: iterion-firecrawl-rabbitmq, app.kubernetes.io/component: web-scrape }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app.kubernetes.io/name: iterion-firecrawl-rabbitmq } }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: iterion-firecrawl-rabbitmq, app.kubernetes.io/component: web-scrape }
+    spec:
+      securityContext: {{- toYaml $nonroot | nindent 8 }}
+      containers:
+        - name: rabbitmq
+          image: {{ $fc.rabbitmqImage | default "rabbitmq:3-management" | quote }}
+          env:
+            - { name: HOME, value: /var/lib/rabbitmq }
+          ports: [{ name: amqp, containerPort: 5672 }]
+          volumeMounts:
+            - { name: data, mountPath: /var/lib/rabbitmq }
+          securityContext: {{- toYaml $ctr | nindent 12 }}
+          resources: { requests: { cpu: 100m, memory: 256Mi }, limits: { cpu: "1", memory: 1Gi } }
+      volumes:
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: iterion-firecrawl-rabbitmq
+  labels: { app.kubernetes.io/name: iterion-firecrawl-rabbitmq }
+spec:
+  selector: { app.kubernetes.io/name: iterion-firecrawl-rabbitmq }
+  ports: [{ name: amqp, port: 5672, targetPort: amqp }]
+---
+# ---- Postgres (nuq job state; persistent) ---------------------------------
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: iterion-firecrawl-postgres
+  labels: { app.kubernetes.io/name: iterion-firecrawl-postgres }
+spec:
+  accessModes: ["ReadWriteOnce"]
+  {{- with $fc.postgres.storageClass }}
+  storageClassName: {{ . | quote }}
+  {{- end }}
+  resources: { requests: { storage: {{ $fc.postgres.size | default "5Gi" | quote }} } }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: iterion-firecrawl-postgres
+  labels: { app.kubernetes.io/name: iterion-firecrawl-postgres, app.kubernetes.io/component: web-scrape }
+spec:
+  replicas: 1
+  strategy: { type: Recreate }
+  selector: { matchLabels: { app.kubernetes.io/name: iterion-firecrawl-postgres } }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: iterion-firecrawl-postgres, app.kubernetes.io/component: web-scrape }
+    spec:
+      securityContext: {{- toYaml $nonroot | nindent 8 }}
+      containers:
+        - name: postgres
+          image: {{ $fc.postgres.image | default "ghcr.io/firecrawl/nuq-postgres:latest" | quote }}
+          env:
+            - { name: POSTGRES_USER, value: postgres }
+            - { name: POSTGRES_DB, value: postgres }
+            # Subdir so initdb doesn't trip over the volume's lost+found.
+            - { name: PGDATA, value: /var/lib/postgresql/data/pgdata }
+            - name: POSTGRES_PASSWORD
+              valueFrom: { secretKeyRef: { name: iterion-firecrawl, key: POSTGRES_PASSWORD } }
+          ports: [{ name: postgres, containerPort: 5432 }]
+          volumeMounts:
+            - { name: data, mountPath: /var/lib/postgresql/data }
+          securityContext: {{- toYaml $ctr | nindent 12 }}
+          resources: { requests: { cpu: 100m, memory: 256Mi }, limits: { cpu: "1", memory: 1Gi } }
+      volumes:
+        - name: data
+          persistentVolumeClaim: { claimName: iterion-firecrawl-postgres }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: iterion-firecrawl-postgres
+  labels: { app.kubernetes.io/name: iterion-firecrawl-postgres }
+spec:
+  selector: { app.kubernetes.io/name: iterion-firecrawl-postgres }
+  ports: [{ name: postgres, port: 5432, targetPort: postgres }]
+---
+# ---- Playwright (headless chromium render) --------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: iterion-firecrawl-playwright
+  labels: { app.kubernetes.io/name: iterion-firecrawl-playwright, app.kubernetes.io/component: web-scrape }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app.kubernetes.io/name: iterion-firecrawl-playwright } }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: iterion-firecrawl-playwright, app.kubernetes.io/component: web-scrape }
+    spec:
+      securityContext: {{- toYaml $nonroot | nindent 8 }}
+      containers:
+        - name: playwright
+          image: {{ $fc.playwrightImage | default "ghcr.io/firecrawl/playwright-service:latest" | quote }}
+          env:
+            - { name: PORT, value: "3000" }
+          ports: [{ name: http, containerPort: 3000 }]
+          securityContext: {{- toYaml $ctr | nindent 12 }}
+          resources: { requests: { cpu: 250m, memory: 512Mi }, limits: { cpu: "2", memory: 2Gi } }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: iterion-firecrawl-playwright
+  labels: { app.kubernetes.io/name: iterion-firecrawl-playwright }
+spec:
+  selector: { app.kubernetes.io/name: iterion-firecrawl-playwright }
+  ports: [{ name: http, port: 3000, targetPort: http }]
+---
+# ---- Firecrawl API + workers ----------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: iterion-firecrawl
+  labels: { app.kubernetes.io/name: iterion-firecrawl, app.kubernetes.io/component: web-scrape }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app.kubernetes.io/name: iterion-firecrawl } }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: iterion-firecrawl, app.kubernetes.io/component: web-scrape }
+    spec:
+      securityContext: {{- toYaml $nonroot | nindent 8 }}
+      containers:
+        - name: firecrawl
+          image: {{ $fc.image | default "ghcr.io/firecrawl/firecrawl:latest" | quote }}
+          env:
+            - { name: HOST, value: "0.0.0.0" }
+            - { name: PORT, value: "3002" }
+            - { name: REDIS_URL, value: "redis://iterion-firecrawl-redis:6379" }
+            - { name: REDIS_RATE_LIMIT_URL, value: "redis://iterion-firecrawl-redis:6379" }
+            - { name: PLAYWRIGHT_MICROSERVICE_URL, value: "http://iterion-firecrawl-playwright:3000/scrape" }
+            - { name: NUQ_RABBITMQ_URL, value: "amqp://iterion-firecrawl-rabbitmq:5672" }
+            - { name: POSTGRES_HOST, value: "iterion-firecrawl-postgres" }
+            - { name: POSTGRES_PORT, value: "5432" }
+            - { name: POSTGRES_USER, value: postgres }
+            - { name: POSTGRES_DB, value: postgres }
+            - name: POSTGRES_PASSWORD
+              valueFrom: { secretKeyRef: { name: iterion-firecrawl, key: POSTGRES_PASSWORD } }
+            - { name: USE_DB_AUTHENTICATION, value: "false" }
+            # Sovereign search: Firecrawl's own /search goes through SearXNG.
+            - { name: SEARXNG_ENDPOINT, value: "http://iterion-searxng:8080" }
+            - { name: ENV, value: local }
+          ports: [{ name: http, containerPort: 3002 }]
+          readinessProbe:
+            httpGet: { path: /, port: http }
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          securityContext: {{- toYaml $ctr | nindent 12 }}
+          resources: { requests: { cpu: 250m, memory: 512Mi }, limits: { cpu: "2", memory: 2Gi } }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: iterion-firecrawl
+  labels: { app.kubernetes.io/name: iterion-firecrawl }
+spec:
+  selector: { app.kubernetes.io/name: iterion-firecrawl }
+  ports: [{ name: http, port: 3002, targetPort: http }]
+{{- end }}

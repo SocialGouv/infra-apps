@@ -207,3 +207,14 @@ searxng:
   enabled: false
   # image: searxng/searxng:latest
   # replicas: 1
+
+# Firecrawl — web scrape/crawl/extract (tier 3), rendered by
+# templates/firecrawl.yaml (5 rootless services + a Postgres PVC). Off by
+# default; ovh-prod opts in. Reached via the `firecrawl` MCP plugin, enabled
+# on the runtime through iterion.config.extraEnv (ITERION_PLUGINS_ENABLE +
+# ITERION_PLUGIN_FIRECRAWL_API_URL). Needs the iterion-firecrawl SealedSecret.
+firecrawl:
+  enabled: false
+  postgres:
+    size: 5Gi
+    storageClass: "" # "" → cluster default (csi-cinder-high-speed on ovh-prod)

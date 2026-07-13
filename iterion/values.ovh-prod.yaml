@@ -164,6 +164,11 @@ iterion:
       # `searxng:` below and templates/searxng.yaml.
       SEARXNG_URL: http://iterion-searxng:8080
       ITERION_WEB_SEARCH: auto
+      # Firecrawl (tier 3) — enable the MCP plugin on server+runner and point
+      # it at the in-cluster Firecrawl. Env-based enablement (no per-pod
+      # plugins.yaml). See top-level `firecrawl:` + templates/firecrawl.yaml.
+      ITERION_PLUGINS_ENABLE: firecrawl
+      ITERION_PLUGIN_FIRECRAWL_API_URL: http://iterion-firecrawl:3002
     log:
       format: json
       level: info # prod: info, not debug
@@ -471,3 +476,14 @@ valkeyha:
 # web_search tool). Requires the iterion-searxng SealedSecret (SEARXNG_SECRET).
 searxng:
   enabled: true
+
+# --- Firecrawl — web scrape/crawl/extract (tier 3, ovh-prod) ----------------
+# 5 rootless services + Postgres PVC (templates/firecrawl.yaml). Firecrawl's
+# own search delegates to the SearXNG above (SEARXNG_ENDPOINT). The runtime
+# reaches it via the firecrawl MCP plugin (enabled in config.extraEnv above).
+# Requires the iterion-firecrawl SealedSecret (POSTGRES_PASSWORD).
+firecrawl:
+  enabled: true
+  postgres:
+    size: 5Gi
+    storageClass: csi-cinder-high-speed
