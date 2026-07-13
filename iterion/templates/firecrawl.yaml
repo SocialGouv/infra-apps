@@ -205,13 +205,19 @@ spec:
             # Sovereign search: Firecrawl's own /search goes through SearXNG.
             - { name: SEARXNG_ENDPOINT, value: "http://iterion-searxng:8080" }
             - { name: ENV, value: local }
+            # The harness runs api + extract + N nuq-workers in ONE container;
+            # keep the worker fan-out modest so it fits the memory limit.
+            - { name: NUM_WORKERS_PER_QUEUE, value: {{ $fc.numWorkers | default 2 | quote }} }
+            - { name: MAX_CONCURRENT_JOBS, value: {{ $fc.maxConcurrentJobs | default 3 | quote }} }
           ports: [{ name: http, containerPort: 3002 }]
           readinessProbe:
             httpGet: { path: /, port: http }
-            initialDelaySeconds: 10
+            initialDelaySeconds: 20
             periodSeconds: 15
           securityContext: {{- toYaml $ctr | nindent 12 }}
-          resources: { requests: { cpu: 250m, memory: 512Mi }, limits: { cpu: "2", memory: 2Gi } }
+          resources:
+            requests: { cpu: 500m, memory: {{ $fc.memoryRequest | default "1Gi" | quote }} }
+            limits: { cpu: "2", memory: {{ $fc.memoryLimit | default "4Gi" | quote }} }
 ---
 apiVersion: v1
 kind: Service
