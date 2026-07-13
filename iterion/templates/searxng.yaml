@@ -1,0 +1,154 @@
+{{- /*
+Sovereign web-search backend (tier 2) for iterion's `web_search` tool.
+Gated by `.Values.searxng.enabled`. When on, the runtime is pointed at it via
+`iterion.config.extraEnv.SEARXNG_URL` (set in values.<cluster>.yaml), which
+also auto-enables web_search under ITERION_WEB_SEARCH=auto. Cluster-internal
+only (ClusterIP) — SearXNG is unauthenticated by design.
+
+Rootless: the upstream searxng/searxng image would run its entrypoint as root
+(to chown + generate a secret), but it SKIPS both when settings.yml already
+exists and it runs non-root (chown → non-fatal warning). So an initContainer
+renders settings.yml (secret injected from the SealedSecret) into a writable
+emptyDir, and the main container runs as the image's `searxng` user (977),
+reading that file. No root anywhere.
+See github.com/SocialGouv/iterion docs/web-search.md.
+*/ -}}
+{{- if .Values.searxng.enabled }}
+{{- $img := .Values.searxng.image | default "searxng/searxng:latest" }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: iterion-searxng-settings
+  labels:
+    app.kubernetes.io/name: iterion-searxng
+    app.kubernetes.io/component: web-search
+data:
+  settings.yml: |
+    # Inherit SearXNG defaults; override only what iterion needs.
+    # `ultrasecretkey` is replaced with $SEARXNG_SECRET by the initContainer.
+    use_default_settings: true
+    server:
+      secret_key: "ultrasecretkey"
+      # Bot-detection blocks programmatic clients; off for a private,
+      # cluster-internal instance behind the namespace boundary.
+      limiter: false
+      public_instance: false
+      image_proxy: false
+    search:
+      # REQUIRED by iterion: expose the JSON API (else /search?format=json → 403).
+      formats:
+        - html
+        - json
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: iterion-searxng
+  labels:
+    app.kubernetes.io/name: iterion-searxng
+    app.kubernetes.io/component: web-search
+spec:
+  replicas: {{ .Values.searxng.replicas | default 1 }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: iterion-searxng
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: iterion-searxng
+        app.kubernetes.io/component: web-search
+      annotations:
+        checksum/settings: {{ .Values.searxng | toYaml | sha256sum }}
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 977
+        runAsGroup: 977
+        fsGroup: 977
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        # Render settings.yml with the real secret into the writable emptyDir.
+        - name: render-settings
+          image: {{ $img | quote }}
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - 'sed "s|ultrasecretkey|${SEARXNG_SECRET}|g" /tmp/src/settings.yml > /etc/searxng/settings.yml'
+          env:
+            - name: SEARXNG_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: iterion-searxng
+                  key: SEARXNG_SECRET
+          volumeMounts:
+            - name: settings-src
+              mountPath: /tmp/src
+              readOnly: true
+            - name: config
+              mountPath: /etc/searxng
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+      containers:
+        - name: searxng
+          image: {{ $img | quote }}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: SEARXNG_BASE_URL
+              value: "http://iterion-searxng:8080/"
+          volumeMounts:
+            - name: config
+              mountPath: /etc/searxng
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+      volumes:
+        - name: settings-src
+          configMap:
+            name: iterion-searxng-settings
+        - name: config
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: iterion-searxng
+  labels:
+    app.kubernetes.io/name: iterion-searxng
+    app.kubernetes.io/component: web-search
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: iterion-searxng
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+{{- end }}

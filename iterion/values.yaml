@@ -197,3 +197,13 @@ minio:
 # runs a single server replica, so its in-memory stores are fine.
 valkeyha:
   enabled: false
+
+# SearXNG — sovereign web-search backend (tier 2) for iterion's `web_search`
+# tool (see github.com/SocialGouv/iterion docs/web-search.md). Rendered by
+# templates/searxng.yaml. Off by default; each env opts in and wires the
+# runtime via `iterion.config.extraEnv.SEARXNG_URL`. Needs the
+# `iterion-searxng` SealedSecret (SEARXNG_SECRET) in that env's namespace.
+searxng:
+  enabled: false
+  # image: searxng/searxng:latest
+  # replicas: 1

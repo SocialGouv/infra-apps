@@ -158,6 +158,12 @@ iterion:
     # Paris time instead of UTC (the binary embeds tzdata, chart >= 0.37.4).
     extraEnv:
       TZ: Europe/Paris
+      # Sovereign web search (tier 2). SEARXNG_URL both selects the SearXNG
+      # backend for the `web_search` tool AND, under the default auto mode,
+      # enables the tool (reaches server + runner pods). See top-level
+      # `searxng:` below and templates/searxng.yaml.
+      SEARXNG_URL: http://iterion-searxng:8080
+      ITERION_WEB_SEARCH: auto
     log:
       format: json
       level: info # prod: info, not debug
@@ -458,3 +464,10 @@ valkeyha:
     limits:
       memory: "512Mi"
       cpu: "500m"
+
+# --- SearXNG — sovereign web-search backend (tier 2, ovh-prod) --------------
+# Rendered by templates/searxng.yaml, rootless. The runtime is pointed at it
+# via iterion.config.extraEnv.SEARXNG_URL above (which also auto-enables the
+# web_search tool). Requires the iterion-searxng SealedSecret (SEARXNG_SECRET).
+searxng:
+  enabled: true
