@@ -169,6 +169,10 @@ iterion:
       # plugins.yaml). See top-level `firecrawl:` + templates/firecrawl.yaml.
       ITERION_PLUGINS_ENABLE: firecrawl
       ITERION_PLUGIN_FIRECRAWL_API_URL: http://iterion-firecrawl:3002
+      # Force OpenAI via the connected ChatGPT-forfait (codex OAuth) instead of
+      # the metered OPENAI_API_KEY (the platform key is quota-exhausted → 429).
+      # Single-dev prod: OpenAI claw runs bill the operator's ChatGPT sub.
+      ITERION_OPENAI_USE_OAUTH: "1"
     log:
       format: json
       level: info # prod: info, not debug
