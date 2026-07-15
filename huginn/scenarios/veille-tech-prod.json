@@ -41,7 +41,7 @@
       "guid": "prod-cyber-dedup",
       "options": {
         "property": "{{url}}",
-        "lookback": 200,
+        "lookback": 2000,
         "expected_update_period_in_days": "3"
       },
       "keep_events_for": 604800,
@@ -141,6 +141,7 @@
         "clean": "true",
         "remembered_id_count": "5000",
         "max_events_per_run": "30",
+        "events_order": [["{{date_published}}", "time", "true"]],
         "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36",
         "url": [
           "https://hnrss.org/newest?q=Anthropic&points=100",
@@ -164,7 +165,7 @@
       "guid": "prod-ia-dedup",
       "options": {
         "property": "{{url}}",
-        "lookback": 200,
+        "lookback": 2000,
         "expected_update_period_in_days": "3"
       },
       "keep_events_for": 604800,
@@ -285,7 +286,7 @@
       "guid": "prod-tsjs-dedup",
       "options": {
         "property": "{{url}}",
-        "lookback": 200,
+        "lookback": 2000,
         "expected_update_period_in_days": "7"
       },
       "keep_events_for": 1209600,
@@ -407,7 +408,7 @@
       "guid": "prod-gopyrust-dedup",
       "options": {
         "property": "{{url}}",
-        "lookback": 200,
+        "lookback": 2000,
         "expected_update_period_in_days": "7"
       },
       "keep_events_for": 1209600,
@@ -526,7 +527,7 @@
       "guid": "prod-java-dedup",
       "options": {
         "property": "{{url}}",
-        "lookback": 200,
+        "lookback": 2000,
         "expected_update_period_in_days": "7"
       },
       "keep_events_for": 1209600,
