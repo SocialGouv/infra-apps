@@ -2,8 +2,13 @@ metabase:
   enabled: true
   fullnameOverride: metabase
   cnpg-cluster:
+    annotations:
+      # 1 CPU request (oblik ratio 2 => 2 CPU limit): below this the instance
+      # manager gets CPU-throttled during WAL-replay/recovery load and fails
+      # its liveness probe, putting the instance in a restart loop
+      oblik.socialgouv.io/min-request-cpu: "1"
     persistence:
-      size: 16Gi
+      size: 32Gi
     backup:
       enabled: true
       barmanObjectStore:
