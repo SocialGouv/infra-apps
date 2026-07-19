@@ -234,6 +234,12 @@ iterion:
     llm:
       create: false
       existingSecret: iterion-llm
+    # Claude Code OAuth forfait — secret managed by hand in k8s (kubectl),
+    # mounted OPTIONAL on the runner so claude_code runs on the subscription
+    # instead of a metered API key. Absent secret = no-op (optional: true).
+    forfait:
+      enabled: true
+      existingSecret: iterion-forfait
     storage:
       # Out-of-band SealedSecret carrying ITERION_S3_ACCESS_KEY_ID +
       # ITERION_S3_SECRET_ACCESS_KEY. Must MATCH the rootUser / rootPassword in

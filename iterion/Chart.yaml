@@ -12,7 +12,7 @@ dependencies:
     # ($G) — without it the scaler was Ready=False and no HPA metric. 0.34.0:
     # Memory-backed emptyDir on /run/iterion for in-pod `as: file` secrets.
     # 0.33.0: ITERION_SANDBOX_OVERRIDE=none. 0.32.0: per-runner image overrides.
-    version: 0.37.4
+    version: 0.50.0
   # Valkey HA (Sentinel) — distributed ephemeral state for the multi-replica
   # server. cloudpirates/valkey (architecture: replication + sentinel), the
   # same chart no-package-malware runs in prod. ovh-prod opts in via
