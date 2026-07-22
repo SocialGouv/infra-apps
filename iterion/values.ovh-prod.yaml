@@ -98,7 +98,12 @@ iterion:
       enabled: true
       minReplicas: 2
     sandbox:
-      enabled: false
+      # ADR-082 Phase 3 cutover: per-run sibling sandbox pods on the k8s
+      # driver (RBAC + ITERION_POD_IP + host_state=none), replacing the
+      # ITERION_SANDBOX_OVERRIDE=none runner-is-the-boundary model. With
+      # the engine's sandbox-by-default, every cloud run now executes in
+      # its own sandbox pod unless the bot explicitly opts out.
+      enabled: true
     # Devbox-first-class runner: bots `devbox run` the target repo's own
     # toolchain (cross-language/version via its devbox.json — e.g. Billy
     # building Go). Image = jetpackio/devbox base + runner toolset + iterion
@@ -155,6 +160,11 @@ iterion:
     # Paris time instead of UTC (the binary embeds tzdata, chart >= 0.37.4).
     extraEnv:
       TZ: Europe/Paris
+      # ADR-082 Phase 3: generic default sandbox image for `sandbox: auto`
+      # without a devcontainer — -full ships git+gh+glab+python3+Go+claude,
+      # covering the realigned fleet (bots no longer pin images; devbox.json
+      # tops up per-bot tools).
+      ITERION_SANDBOX_DEFAULT_IMAGE: ghcr.io/socialgouv/iterion-sandbox-full:edge
       # Sovereign web search (tier 2). SEARXNG_URL both selects the SearXNG
       # backend for the `web_search` tool AND, under the default auto mode,
       # enables the tool (reaches server + runner pods). See top-level
