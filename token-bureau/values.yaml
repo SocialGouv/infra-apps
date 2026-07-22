@@ -2,11 +2,10 @@ token-bureau:
   image:
     # tag: latest
     # pullPolicy: Always
-    # NOTE: before merging, bump to the token-bureau release that includes
-    # SocialGouv/token-bureau#6 (adds `organization_projects` support). The
-    # `permissions` override below fails validatePermissions() on any older
-    # image (e.g. v0.0.7), which would break token-bureau org-wide.
-    tag: v0.0.7
+    # v0.0.8 is the first release including SocialGouv/token-bureau#6, which
+    # adds `organization_projects` to VALID_PERMISSIONS — required by the
+    # `permissions` override below (older images throw at config load).
+    tag: v0.0.8
     pullPolicy: IfNotPresent
   replicaCount: 2
   existingSecret: token-bureau
