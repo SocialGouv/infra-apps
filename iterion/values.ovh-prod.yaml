@@ -170,6 +170,13 @@ iterion:
       # runtime.ResolveGlobalSandboxDefault — engine-side follow-up); without
       # it, lifting the override left cloud runs unsandboxed.
       ITERION_SANDBOX_DEFAULT: auto
+      # Claude-forfait-only workaround: OpenAI quota is exhausted on this
+      # account, so the cross-family second reviewer (review-pr
+      # reviewer_gpt) runs on claude_code + sonnet — cross-MODEL diversity
+      # (opus reviewer 1, sonnet reviewer 2) until the OpenAI quota is
+      # restored, then remove these two lines to restore cross-vendor.
+      ITERION_VIBE_BACKEND_GPT: claude_code
+      ITERION_VIBE_MODEL_GPT: claude-sonnet-4-6
       # Sovereign web search (tier 2). SEARXNG_URL both selects the SearXNG
       # backend for the `web_search` tool AND, under the default auto mode,
       # enables the tool (reaches server + runner pods). See top-level
