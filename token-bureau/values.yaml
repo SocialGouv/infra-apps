@@ -2,10 +2,9 @@ token-bureau:
   image:
     # tag: latest
     # pullPolicy: Always
-    # v0.0.8 is the first release including SocialGouv/token-bureau#6, which
-    # adds `organization_projects` to VALID_PERMISSIONS — required by the
-    # `permissions` override below (older images throw at config load).
-    tag: v0.0.8
+    # The `permissions` block below needs >= v0.0.8 (`organization_projects`
+    # in VALID_PERMISSIONS) and >= v0.0.9 (config read from the mounted path).
+    tag: v0.0.9
     pullPolicy: IfNotPresent
   replicaCount: 2
   existingSecret: token-bureau
