@@ -34,7 +34,8 @@ spec:
         namespace: "{{ .namespace }}"
       source:
         repoURL: https://github.com/socialgouv/buildkit-operator
-        targetRevision: 33b6b49a585b14757fe415d4496bc8ba3ce4471e
+        # v0.12.0 chart + the S3 bucket-lifecycle hook Job (a8bd579); images unchanged (0.12.0).
+        targetRevision: a8bd5790b49b469a0c5fbc23c82fe077255e05c9
         path: deploy/helm/buildkit-operator
         helm:
           releaseName: buildkit-operator
@@ -119,6 +120,13 @@ spec:
               region: gra
               endpoint: https://s3.gra.io.cloud.ovh.net
               credsSecret: buildkit-operator-s3
+              # Bucket GC (the s3 exporter never deletes): a PostSync hook Job applies the bucket
+              # lifecycle — expire objects after 60d, abort incomplete multipart uploads after 7d.
+              # The PUT is idempotent; the live bucket already carries this exact configuration.
+              lifecycle:
+                enabled: true
+                expireDays: 60
+                abortMultipartDays: 7
             # Product-prefixed Secret names: avoid collision with the incumbent buildkit-service Secrets.
             certs:
               daemonSecretName: buildkit-operator-daemon-certs
