@@ -34,11 +34,11 @@ spec:
         namespace: "{{ .namespace }}"
       source:
         repoURL: https://github.com/socialgouv/buildkit-operator
-        # v0.14.2: adaptive keep-warm + declarative projectDefaults + bounded cache-volume
-        # auto-grow, hardened by adversarial review (fork sizing from the live canonical spec,
-        # no compound growth mid-expansion, gated resize bounce). Skip v0.14.1 (tag cut before
-        # the review fixes landed).
-        targetRevision: 704cbb20c5b0d1d12dde802ba04176420eb07309
+        # v0.15.0: S3 cold-cache policy (import always, export on cadence — spec.s3CachePolicy
+        # cadence|always|never, wire cache.skipExport, CAS'd grant window) + stale inflight
+        # counter reset, both hardened by adversarial review. On top of v0.14.2's adaptive
+        # keep-warm + projectDefaults + bounded auto-grow.
+        targetRevision: d6b16a86427cea030553e655c85fd6bb9610ea25
         path: deploy/helm/buildkit-operator
         helm:
           releaseName: buildkit-operator
@@ -49,9 +49,9 @@ spec:
             # Namespace is provisioned by the platform/Rancher, not owned by this Helm release.
             createNamespaces: false
             # Images built and signed by github.com/SocialGouv/buildkit-operator/.github/workflows/images.yml
-            # for the v0.14.2 release: adaptive keep-warm, per-project defaults, bounded auto-grow
-            # (post-adversarial-review hardening included).
-            image: { tag: 0.14.2 }
+            # for the v0.15.0 release: S3 cache cadence policy + the v0.14 line (adaptive
+            # keep-warm, per-project defaults, bounded auto-grow), adversarial-review hardened.
+            image: { tag: 0.15.0 }
             # buildd /route is reached off-cluster through the TLS Ingress below (NOT a plain-HTTP LB):
             # the L4 LB served the bearer token in cleartext, so the chart now refuses it without an IP
             # allowlist. ClusterIP + nginx Ingress terminates TLS on 443 (reachable by the PIC egress
@@ -93,7 +93,7 @@ spec:
               host: gw.bko.ovh
               externalPort: 443
               extraDomains: [bkod.fabrique.social.gouv.fr]
-              image: { tag: 0.14.2 }
+              image: { tag: 0.15.0 }
               service:
                 annotations:
                   external-dns.alpha.kubernetes.io/hostname: "*.bkod.fabrique.social.gouv.fr"
@@ -108,7 +108,14 @@ spec:
             # what adaptivity can't infer, at BuildProject creation (create-only; existing CRs keep
             # their spec — the live iterion daemons predate this and were tuned by hand, see git log
             # of startups/sre/raw/clusters/ovh-prod/buildkit-operator/).
+            # FIRST MATCH WINS — specific rules before glob rules.
             projectDefaults:
+              # The finalize daemon builds are a couple of COPY layers whose inputs (bases +
+              # iterion binary) live in GHCR — the S3 cold cache rehydrates nothing for them,
+              # while its per-build export cost 42s and contended with the GHCR layer push.
+              - repo: github.com/socialgouv/iterion
+                name: iterion-sandbox-finalize
+                s3Cache: never
               # iterion's four sandbox tool bases share one daemon; the four-variant layer chain
               # needs headroom under buildkitd's 85%-of-volume GC ceiling.
               - repo: github.com/socialgouv/iterion
