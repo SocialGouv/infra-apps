@@ -165,6 +165,11 @@ iterion:
       # covering the realigned fleet (bots no longer pin images; devbox.json
       # tops up per-bot tools).
       ITERION_SANDBOX_DEFAULT_IMAGE: ghcr.io/socialgouv/iterion-sandbox-full:edge
+      # Sandbox-by-default for the RUNNER entry point: the runner reads its
+      # global default from this env (it does not yet call
+      # runtime.ResolveGlobalSandboxDefault — engine-side follow-up); without
+      # it, lifting the override left cloud runs unsandboxed.
+      ITERION_SANDBOX_DEFAULT: auto
       # Sovereign web search (tier 2). SEARXNG_URL both selects the SearXNG
       # backend for the `web_search` tool AND, under the default auto mode,
       # enables the tool (reaches server + runner pods). See top-level
