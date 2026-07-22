@@ -34,8 +34,9 @@ spec:
         namespace: "{{ .namespace }}"
       source:
         repoURL: https://github.com/socialgouv/buildkit-operator
-        # v0.12.0 chart + the S3 bucket-lifecycle hook Job (a8bd579); images unchanged (0.12.0).
-        targetRevision: a8bd5790b49b469a0c5fbc23c82fe077255e05c9
+        # v0.13.0: adaptive keep-warm (idle window scales with build cadence, 6h cap) +
+        # declarative per-project defaults (projectDefaults below) + the S3 lifecycle hook Job.
+        targetRevision: bd1dc37fca96613d5d9bc81dcf754be50d7be2b4
         path: deploy/helm/buildkit-operator
         helm:
           releaseName: buildkit-operator
@@ -46,9 +47,9 @@ spec:
             # Namespace is provisioned by the platform/Rancher, not owned by this Helm release.
             createNamespaces: false
             # Images built and signed by github.com/SocialGouv/buildkit-operator/.github/workflows/images.yml
-            # for the v0.12.0 release (commit 33b6b49): GitLab same-project refs trusted by default
-            # (strictUnprotectedRefs opt-in) + S3 cache export best-effort + build-secrets passthrough.
-            image: { tag: 0.12.0 }
+            # for the v0.13.0 release: adaptive keep-warm + per-project defaults (plus the v0.12.0
+            # baseline: GitLab same-project refs trusted by default, S3 export best-effort, build secrets).
+            image: { tag: 0.13.0 }
             # buildd /route is reached off-cluster through the TLS Ingress below (NOT a plain-HTTP LB):
             # the L4 LB served the bearer token in cleartext, so the chart now refuses it without an IP
             # allowlist. ClusterIP + nginx Ingress terminates TLS on 443 (reachable by the PIC egress
@@ -90,7 +91,7 @@ spec:
               host: gw.bko.ovh
               externalPort: 443
               extraDomains: [bkod.fabrique.social.gouv.fr]
-              image: { tag: 0.12.0 }
+              image: { tag: 0.13.0 }
               service:
                 annotations:
                   external-dns.alpha.kubernetes.io/hostname: "*.bkod.fabrique.social.gouv.fr"
@@ -99,6 +100,19 @@ spec:
             auth:
               tokenSecret: buildkit-operator-auth
             snapshotClassName: csi-cinder-snapclass-in-use-v1
+            # Per-project daemon policy. The adaptive keep-warm (chart default: idle scales with the
+            # trailing-24h build cadence, capped at 6h) covers "frequent builders stay warm" for every
+            # repo with zero per-repo config — no tier=hot pinning needed. projectDefaults only seeds
+            # what adaptivity can't infer, at BuildProject creation (create-only; existing CRs keep
+            # their spec — the live iterion daemons predate this and were tuned by hand, see git log
+            # of startups/sre/raw/clusters/ovh-prod/buildkit-operator/).
+            projectDefaults:
+              # iterion's four sandbox tool bases share one daemon; the four-variant layer chain
+              # needs headroom under buildkitd's 85%-of-volume GC ceiling.
+              - repo: github.com/socialgouv/iterion
+                name: iterion-sandbox-base
+                idleTimeoutSec: 3600
+                cacheVolumeGi: 120
             # HARD-pin daemons to the prod-build nodepool (was a soft preference): they run rootless
             # buildkit with seccomp/AppArmor Unconfined + the S3 creds and execute untrusted RUN code, so
             # they must NEVER spill onto app / control-plane nodes. nodeSelector makes prod-build a
