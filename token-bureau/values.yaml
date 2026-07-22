@@ -2,10 +2,24 @@ token-bureau:
   image:
     # tag: latest
     # pullPolicy: Always
-    tag: v0.0.7
+    # v0.0.8 is the first release including SocialGouv/token-bureau#6, which
+    # adds `organization_projects` to VALID_PERMISSIONS — required by the
+    # `permissions` override below (older images throw at config load).
+    tag: v0.0.8
     pullPolicy: IfNotPresent
   replicaCount: 2
   existingSecret: token-bureau
+
+  # Grant SocialGouv/egapro's CI the org-level Projects V2 write scope (merged
+  # over the chart-default whitelist), needed by egapro's ticket-end-date
+  # workflow to stamp Start/End date on the EGAPRO V2 board. Other repos keep
+  # the default whitelist. Prerequisite: the token-bureau GitHub App must hold
+  # "Organization projects: Read and write".
+  permissions:
+    repositories:
+      "SocialGouv/egapro":
+        permissions:
+          organization_projects: write
 
   labels:
     oblik.socialgouv.io/enabled: "true"
