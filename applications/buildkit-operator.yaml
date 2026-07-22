@@ -34,9 +34,11 @@ spec:
         namespace: "{{ .namespace }}"
       source:
         repoURL: https://github.com/socialgouv/buildkit-operator
-        # v0.13.0: adaptive keep-warm (idle window scales with build cadence, 6h cap) +
-        # declarative per-project defaults (projectDefaults below) + the S3 lifecycle hook Job.
-        targetRevision: bd1dc37fca96613d5d9bc81dcf754be50d7be2b4
+        # v0.14.2: adaptive keep-warm + declarative projectDefaults + bounded cache-volume
+        # auto-grow, hardened by adversarial review (fork sizing from the live canonical spec,
+        # no compound growth mid-expansion, gated resize bounce). Skip v0.14.1 (tag cut before
+        # the review fixes landed).
+        targetRevision: 704cbb20c5b0d1d12dde802ba04176420eb07309
         path: deploy/helm/buildkit-operator
         helm:
           releaseName: buildkit-operator
@@ -47,9 +49,9 @@ spec:
             # Namespace is provisioned by the platform/Rancher, not owned by this Helm release.
             createNamespaces: false
             # Images built and signed by github.com/SocialGouv/buildkit-operator/.github/workflows/images.yml
-            # for the v0.13.0 release: adaptive keep-warm + per-project defaults (plus the v0.12.0
-            # baseline: GitLab same-project refs trusted by default, S3 export best-effort, build secrets).
-            image: { tag: 0.13.0 }
+            # for the v0.14.2 release: adaptive keep-warm, per-project defaults, bounded auto-grow
+            # (post-adversarial-review hardening included).
+            image: { tag: 0.14.2 }
             # buildd /route is reached off-cluster through the TLS Ingress below (NOT a plain-HTTP LB):
             # the L4 LB served the bearer token in cleartext, so the chart now refuses it without an IP
             # allowlist. ClusterIP + nginx Ingress terminates TLS on 443 (reachable by the PIC egress
@@ -91,7 +93,7 @@ spec:
               host: gw.bko.ovh
               externalPort: 443
               extraDomains: [bkod.fabrique.social.gouv.fr]
-              image: { tag: 0.13.0 }
+              image: { tag: 0.14.2 }
               service:
                 annotations:
                   external-dns.alpha.kubernetes.io/hostname: "*.bkod.fabrique.social.gouv.fr"
