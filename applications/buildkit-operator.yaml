@@ -34,11 +34,12 @@ spec:
         namespace: "{{ .namespace }}"
       source:
         repoURL: https://github.com/socialgouv/buildkit-operator
-        # v0.18.0: upgrading no longer kills builds — /route stops advertising a daemon whose pod is
-        # being replaced, and a daemon serving builds withholds its pending template (every build gets
-        # at least an hour). Both rest on v0.17.0's per-build in-flight entries. On top of v0.16.0's
-        # cloud-agnostic chart defaults — the OVH storage classes and LB annotations are in the values.
-        targetRevision: 5f16bfedd06627e214ae95d1aa6d3ed77875c0b4
+        # v0.19.0: closes the rest of the ways a daemon vanishes under a build — a PodDisruptionBudget
+        # while it serves (node drains), fresh reads before reaping forks or fan-out clones, a gateway
+        # that drains open builds for an hour. /complete is now authorized against the caller's own
+        # OIDC-verified repo. On top of v0.18.0 (no advertising a daemon mid-roll, drain before roll)
+        # and v0.16.0's cloud-agnostic defaults — the OVH classes and LB annotations are in the values.
+        targetRevision: fb5fa0e75f71eb042f3a59b94c979e7d28ca9226
         path: deploy/helm/buildkit-operator
         helm:
           releaseName: buildkit-operator
@@ -49,9 +50,9 @@ spec:
             # Namespace is provisioned by the platform/Rancher, not owned by this Helm release.
             createNamespaces: false
             # Images built and signed by github.com/SocialGouv/buildkit-operator/.github/workflows/images.yml
-            # for the v0.18.0 release. Multi-arch (amd64 + arm64); the daemons stay amd64 here because
+            # for the v0.19.0 release. Multi-arch (amd64 + arm64); the daemons stay amd64 here because
             # prod-build is, and daemonScheduling.pinArch is left off.
-            image: { tag: 0.18.0 }
+            image: { tag: 0.19.0 }
             # buildd /route is reached off-cluster through the TLS Ingress below (NOT a plain-HTTP LB):
             # the L4 LB served the bearer token in cleartext, so the chart now refuses it without an IP
             # allowlist. ClusterIP + nginx Ingress terminates TLS on 443 (reachable by the PIC egress
@@ -93,7 +94,7 @@ spec:
               host: gw.bko.ovh
               externalPort: 443
               extraDomains: [bkod.fabrique.social.gouv.fr]
-              image: { tag: 0.18.0 }
+              image: { tag: 0.19.0 }
               service:
                 annotations:
                   external-dns.alpha.kubernetes.io/hostname: "*.bkod.fabrique.social.gouv.fr"
