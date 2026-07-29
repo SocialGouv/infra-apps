@@ -106,9 +106,9 @@ spec:
                   loadbalancer.openstack.org/timeout-client-data: "600000"
               # Cap pre-auth connections on the public SNI gateway (defence against an unauthenticated flood).
               maxConns: 1024
-            # No shared bearer. Authentication is OIDC only (providers above); the Secret
-            # buildkit-operator-auth is left in the cluster for a quick rollback and can be deleted once
-            # this has ridden a full CI cycle.
+            # No shared bearer: authentication is OIDC only (providers above), and the Secret it used to
+            # read was deleted from the cluster. A caller that gets 401 needs to mint an OIDC token
+            # (permissions.id-token: write + the oidc-audience input), not a token to be handed one.
             auth:
               tokenSecret: ""
             # OVH storage classes. The chart defaults are cloud-neutral (empty = the cluster's default

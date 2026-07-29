@@ -16,14 +16,19 @@ The runtime (Kata) is a separate app: [`applications/kata.yaml`](../applications
 These Secrets/namespaces are live on ovh-prod outside this chart. The Application references only their
 names; do not commit or inspect cleartext Secret data here.
 
-1. **mTLS + auth Secrets**:
+1. **mTLS Secrets**:
    - `buildkit-operator-daemon-certs` — daemon mTLS cert/key/CA (SAN covers `*.<gateway.host>`).
    - `buildkit-operator-client-certs` — client mTLS material (distributed to CI).
-   - `buildkit-operator-auth` — key `token`, the `/route` bearer token.
    - `buildkit-operator-s3` in namespace `buildkit-builds` — S3 cold-cache credentials.
 
    The S3 Secret is managed as a SealedSecret under `startups/sre/raw/clusters/ovh-prod/buildkit-operator/`.
-   The mTLS/auth material is intentionally referenced by name only.
+   The mTLS material is intentionally referenced by name only.
+
+   There is **no `/route` bearer token**. Callers authenticate with a forge-signed OIDC token
+   (`oidc.providers`), which binds each build to a repo it can prove; a shared bearer authenticated the
+   caller but not the project, letting any holder build as — and poison the cache of — any project. Do
+   not reintroduce `auth.tokenSecret`: a caller that gets 401 needs `permissions: id-token: write` and
+   the `oidc-audience` input, not a token.
 
 2. **Kyverno exclusion.** The platform's `add-custom-mas-securitycontext` ClusterPolicy (managed
    outside this repo) mutates pods to `allowPrivilegeEscalation: false`, which crashes the **rootless**
