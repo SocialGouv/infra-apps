@@ -34,12 +34,11 @@ spec:
         namespace: "{{ .namespace }}"
       source:
         repoURL: https://github.com/socialgouv/buildkit-operator
-        # v0.20.0: /complete accepts the per-build token as proof, so a release is no longer rejected
-        # because the forge's OIDC token expired mid-build — which was rejecting EVERY build longer
-        # than ~2min and leaking an in-flight entry each time (daemon pinned warm, roll held, drains
-        # blocked). Clients keep OIDC ahead of any shared bearer. On top of v0.19.0's disruption
-        # budgets and gateway drain, and v0.16.0's cloud-agnostic defaults (OVH values are below).
-        targetRevision: 3d57ad7940bdedb4a6a9ca71731189bfc43c7503
+        # v0.21.0: drops the plaintext-token compatibility (only the hash of a minted build token is
+        # accepted now) and lets oidc.providers authenticate /route on its own, which is what makes
+        # removing the shared bearer below possible. On top of v0.20.0's per-build release token,
+        # v0.19.0's disruption budgets and gateway drain, and v0.16.0's cloud-agnostic defaults.
+        targetRevision: 42071022f7c68070aeba92e8c30e95d8564eeb53
         path: deploy/helm/buildkit-operator
         helm:
           releaseName: buildkit-operator
@@ -50,9 +49,9 @@ spec:
             # Namespace is provisioned by the platform/Rancher, not owned by this Helm release.
             createNamespaces: false
             # Images built and signed by github.com/SocialGouv/buildkit-operator/.github/workflows/images.yml
-            # for the v0.20.0 release. Multi-arch (amd64 + arm64); the daemons stay amd64 here because
+            # for the v0.21.0 release. Multi-arch (amd64 + arm64); the daemons stay amd64 here because
             # prod-build is, and daemonScheduling.pinArch is left off.
-            image: { tag: 0.20.0 }
+            image: { tag: 0.21.0 }
             # buildd /route is reached off-cluster through the TLS Ingress below (NOT a plain-HTTP LB):
             # the L4 LB served the bearer token in cleartext, so the chart now refuses it without an IP
             # allowlist. ClusterIP + nginx Ingress terminates TLS on 443 (reachable by the PIC egress
@@ -69,10 +68,11 @@ spec:
               tls:
                 enabled: true
                 secretName: buildd-bko-fabrique-tls
-            # OIDC identity verification ON: /route binds each build to a forge-signed repo claim (no
-            # self-declared repo), killing cross-project cache poisoning. The legacy bearer (auth below) is
-            # KEPT as a transition fallback, so callers migrate to token-minting with zero downtime — drop
-            # auth.tokenSecret once every consumer mints tokens to enforce OIDC strictly.
+            # OIDC identity verification is now the ONLY way in: /route binds each build to a
+            # forge-signed repo claim, so a build can no longer claim a repo it cannot prove. The legacy
+            # shared bearer was removed here (see the auth block further down) — it authenticated the
+            # caller but not the project, so any holder could build as, and poison the cache of, any
+            # project. A caller that still sends it now gets 401 and must mint an OIDC token.
             oidc:
               providers:
                 - { type: github, issuer: https://token.actions.githubusercontent.com, audience: buildkit-operator }
@@ -94,7 +94,7 @@ spec:
               host: gw.bko.ovh
               externalPort: 443
               extraDomains: [bkod.fabrique.social.gouv.fr]
-              image: { tag: 0.20.0 }
+              image: { tag: 0.21.0 }
               service:
                 annotations:
                   external-dns.alpha.kubernetes.io/hostname: "*.bkod.fabrique.social.gouv.fr"
@@ -106,8 +106,11 @@ spec:
                   loadbalancer.openstack.org/timeout-client-data: "600000"
               # Cap pre-auth connections on the public SNI gateway (defence against an unauthenticated flood).
               maxConns: 1024
+            # No shared bearer. Authentication is OIDC only (providers above); the Secret
+            # buildkit-operator-auth is left in the cluster for a quick rollback and can be deleted once
+            # this has ridden a full CI cycle.
             auth:
-              tokenSecret: buildkit-operator-auth
+              tokenSecret: ""
             # OVH storage classes. The chart defaults are cloud-neutral (empty = the cluster's default
             # StorageClass / snapshots disabled), so gen2 high-speed — whose throughput scales with volume
             # size, which the warm cache depends on — is declared here. defaultStorageClass is stamped onto
