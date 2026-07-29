@@ -34,11 +34,11 @@ spec:
         namespace: "{{ .namespace }}"
       source:
         repoURL: https://github.com/socialgouv/buildkit-operator
-        # v0.16.0: cloud-agnostic chart defaults (the OVH storage classes and LB annotations are
-        # declared in the values below, they are no longer defaults) + opt-in per-arch daemon
-        # pinning. On top of v0.15.0's S3 cold-cache policy and v0.14's adaptive keep-warm,
-        # projectDefaults and bounded auto-grow.
-        targetRevision: 5f3380eae228959fabac060297e12cc70e583f42
+        # v0.17.0: in-flight builds are a set of timestamped entries instead of a counter, so a build
+        # whose /complete never arrives stops pinning its daemon on its own clock (the counter could
+        # never be reclaimed on a project that kept building). On top of v0.16.0's cloud-agnostic chart
+        # defaults — the OVH storage classes and LB annotations are declared in the values below.
+        targetRevision: ee7012372aa4f092b23c17ecf80677c4f13455ed
         path: deploy/helm/buildkit-operator
         helm:
           releaseName: buildkit-operator
@@ -49,9 +49,9 @@ spec:
             # Namespace is provisioned by the platform/Rancher, not owned by this Helm release.
             createNamespaces: false
             # Images built and signed by github.com/SocialGouv/buildkit-operator/.github/workflows/images.yml
-            # for the v0.16.0 release. Multi-arch (amd64 + arm64) since that release; the daemons stay
-            # amd64 here because prod-build is, and daemonScheduling.pinArch is left off.
-            image: { tag: 0.16.0 }
+            # for the v0.17.0 release. Multi-arch (amd64 + arm64); the daemons stay amd64 here because
+            # prod-build is, and daemonScheduling.pinArch is left off.
+            image: { tag: 0.17.0 }
             # buildd /route is reached off-cluster through the TLS Ingress below (NOT a plain-HTTP LB):
             # the L4 LB served the bearer token in cleartext, so the chart now refuses it without an IP
             # allowlist. ClusterIP + nginx Ingress terminates TLS on 443 (reachable by the PIC egress
@@ -93,7 +93,7 @@ spec:
               host: gw.bko.ovh
               externalPort: 443
               extraDomains: [bkod.fabrique.social.gouv.fr]
-              image: { tag: 0.16.0 }
+              image: { tag: 0.17.0 }
               service:
                 annotations:
                   external-dns.alpha.kubernetes.io/hostname: "*.bkod.fabrique.social.gouv.fr"
