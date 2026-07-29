@@ -97,10 +97,21 @@ spec:
               service:
                 annotations:
                   external-dns.alpha.kubernetes.io/hostname: "*.bkod.fabrique.social.gouv.fr"
+                  # A build holds ONE long-lived mTLS stream through this LB. The OpenStack CCM's default
+                  # member-data idle timeout (50s) cuts a build that goes quiet (a long RUN with no output),
+                  # so raise it well past the longest expected build. Keys are OVH/OpenStack-specific and
+                  # the chart defaults are cloud-neutral — they only apply because they are declared here.
+                  loadbalancer.openstack.org/timeout-member-data: "600000"
+                  loadbalancer.openstack.org/timeout-client-data: "600000"
               # Cap pre-auth connections on the public SNI gateway (defence against an unauthenticated flood).
               maxConns: 1024
             auth:
               tokenSecret: buildkit-operator-auth
+            # OVH storage classes. The chart defaults are cloud-neutral (empty = the cluster's default
+            # StorageClass / snapshots disabled), so gen2 high-speed — whose throughput scales with volume
+            # size, which the warm cache depends on — is declared here. defaultStorageClass is stamped onto
+            # every BuildProject buildd creates; existing CRs keep the class already on their spec.
+            defaultStorageClass: csi-cinder-high-speed-gen2
             snapshotClassName: csi-cinder-snapclass-in-use-v1
             # Per-project daemon policy. The adaptive keep-warm (chart default: idle scales with the
             # trailing-24h build cadence, capped at 6h) covers "frequent builders stay warm" for every
