@@ -192,6 +192,14 @@ iterion:
       # the metered OPENAI_API_KEY (the platform key is quota-exhausted → 429).
       # Single-dev prod: OpenAI claw runs bill the operator's ChatGPT sub.
       ITERION_OPENAI_USE_OAUTH: "1"
+      # Refuse to spend the ANTHROPIC subscription's extra-usage balance from
+      # claw/pi (ADR-085 made that a warn-by-default instead of a refusal).
+      # Anthropic accepts the subscription token from a third-party client and
+      # bills it against extra usage rather than the plan — so on a SHARED
+      # instance the default would spend one operator's balance on behalf of
+      # everyone launching a run. claude_code still uses the forfait normally
+      # (that path IS Claude Code); this only closes the third-party SDKs.
+      ITERION_FORBID_SUBSCRIPTION_OAUTH: "1"
     log:
       format: json
       level: info # prod: info, not debug
