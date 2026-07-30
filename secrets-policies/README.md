@@ -2,17 +2,6 @@
 
 ## cluster policies
 
-### common to ci namespace
-
-policy: **sync-secrets-common-to-ci-ns**
-
-
-```mermaid
-graph LR
-    sre-secrets -->|eg: buildkit-client-certs| ci-fabrique
-    sre-secrets -->|eg: buildkit-client-certs| ci-carnets
-```
-
 ### internal shared sre secrets
 
 policy: **sync-sre-secrets**

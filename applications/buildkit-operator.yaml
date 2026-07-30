@@ -1,6 +1,6 @@
 # buildkit-operator — the distributed-BuildKit control plane (one hot daemon per project+arch), with
-# VM-isolated untrusted forks (Kata/clh) and off-cluster exposure. Coexists with the incumbent
-# buildkit-service on the prod-build nodepool. Pair with applications/kata.yaml (the runtime).
+# VM-isolated untrusted forks (Kata/clh) and off-cluster exposure. Sole image-build backend of the
+# fabrique CI, on the prod-build nodepool. Pair with applications/kata.yaml (the runtime).
 #
 # Single source: the Helm chart stays canonical in the operator repo (pulled directly at a commit whose
 # images were published by the `images` workflow); the ovh-prod values are inline below.
@@ -165,7 +165,7 @@ spec:
                 enabled: true
                 expireDays: 60
                 abortMultipartDays: 7
-            # Product-prefixed Secret names: avoid collision with the incumbent buildkit-service Secrets.
+            # Product-prefixed Secret names.
             certs:
               daemonSecretName: buildkit-operator-daemon-certs
               clientSecretName: buildkit-operator-client-certs

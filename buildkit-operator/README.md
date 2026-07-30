@@ -2,7 +2,7 @@
 
 Distributed-BuildKit **control plane**: one hot vanilla `buildkitd` per `(project, arch)`, routed to by
 a `/route` API, with **VM-isolated untrusted forks** (Kata/cloud-hypervisor) and off-cluster exposure.
-Coexists with the incumbent [buildkit-service](../buildkit-service) on the `prod-build` nodepool.
+Sole image-build backend of the fabrique CI, on the `prod-build` nodepool.
 
 Deployed by [`applications/buildkit-operator.yaml`](../applications/buildkit-operator.yaml) (ArgoCD
 ApplicationSet, cluster `ovh-prod`). The Helm chart is **not vendored** here — it stays canonical in the
