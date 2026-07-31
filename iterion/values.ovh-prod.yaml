@@ -192,14 +192,19 @@ iterion:
       # the metered OPENAI_API_KEY (the platform key is quota-exhausted → 429).
       # Single-dev prod: OpenAI claw runs bill the operator's ChatGPT sub.
       ITERION_OPENAI_USE_OAUTH: "1"
-      # Refuse to spend the ANTHROPIC subscription's extra-usage balance from
-      # claw/pi (ADR-085 made that a warn-by-default instead of a refusal).
-      # Anthropic accepts the subscription token from a third-party client and
-      # bills it against extra usage rather than the plan — so on a SHARED
-      # instance the default would spend one operator's balance on behalf of
-      # everyone launching a run. claude_code still uses the forfait normally
-      # (that path IS Claude Code); this only closes the third-party SDKs.
-      ITERION_FORBID_SUBSCRIPTION_OAUTH: "1"
+      # Allow the third-party SDKs (claw/pi) to use a subscription OAuth
+      # credential. Set to "0" deliberately, not by omission: this is a
+      # single-operator prod, and ITERION_OPENAI_USE_OAUTH above already routes
+      # OpenAI through the ChatGPT forfait because the metered key is
+      # quota-exhausted. At "1" that intent stopped at claw — pi's openai-codex
+      # bridge was refused, leaving pi with no usable credential at all.
+      #
+      # What it re-opens: Anthropic accepts a subscription token from a
+      # third-party client and bills it against EXTRA USAGE rather than the
+      # plan. Back to "1" the day this instance serves more than one operator —
+      # a shared instance would spend one person's balance for everyone.
+      # (claude_code is unaffected either way; that path IS Claude Code.)
+      ITERION_FORBID_SUBSCRIPTION_OAUTH: "0"
     log:
       format: json
       level: info # prod: info, not debug
