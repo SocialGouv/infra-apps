@@ -16,7 +16,6 @@ data:
   MB_APPLICATION_LOGO_URL: "https://socialgouv.github.io/support/_media/marianne.jpeg"
   MB_EMAIL_FROM_ADDRESS: "contact@fabrique.social.gouv.fr"
   MB_EMAIL_FROM_NAME: "Fabrique numérique des ministères sociaux"
-  MB_ENABLE_EMBEDDING: "true"
   MB_ENABLE_PUBLIC_SHARING: "true"
   MB_SITE_LOCALE: "fr"
   MB_START_OF_WEEK: "monday"
