@@ -107,3 +107,18 @@ helm template <release> . -f envs/<env>/values.yaml \
 # Server-side dry-run
 helm template ... | kubectl --context <cluster> apply --dry-run=server -f -
 ```
+
+## Shared charts need a hard refresh
+
+Apps pull the shared charts through symlinks (`startups/<startup>/apps/<app>/charts/<chart> -> ../../../../../charts/<chart>`). ArgoCD caches generated manifests per app and does not notice an edit made on the other side of that symlink: a plain sync re-applies the cached render, silently without the change.
+
+⚠️ After editing anything under `charts/`, hard refresh before syncing:
+
+```bash
+argocd app get <app> --hard-refresh
+argocd app sync <app>
+```
+
+`argocd app manifests <app> --revision <sha>` renders fresh and is the quickest way to confirm a shared-chart edit really reaches an app.
+
+Editing a file *inside* the app path invalidates that cache, which is why a change also lands when the app's own `charts/*.tgz` happen to be rebuilt in the same commit.
