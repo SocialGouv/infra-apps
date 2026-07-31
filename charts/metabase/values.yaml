@@ -1,5 +1,10 @@
 replicas: 1
 
+# metabase migrates its application database at boot: two versions must never
+# run against it at once, so no surge on rollout
+strategy:
+  type: Recreate
+
 dbhost:
   secretName:
   secretKey: host
