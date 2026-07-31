@@ -10,6 +10,9 @@ data:
   MB_DB_TYPE: "postgres"
   MB_ADMIN_EMAIL: "admin@fabrique.social.gouv.fr"
   MB_ANON_TRACKING_ENABLED: "false"
+  # no LLM provider is configured: left on, Metabot's background jobs retry and
+  # log an error for every generated prompt
+  MB_AI_FEATURES_ENABLED: "false"
   MB_APPLICATION_LOGO_URL: "https://socialgouv.github.io/support/_media/marianne.jpeg"
   MB_EMAIL_FROM_ADDRESS: "contact@fabrique.social.gouv.fr"
   MB_EMAIL_FROM_NAME: "Fabrique numérique des ministères sociaux"
