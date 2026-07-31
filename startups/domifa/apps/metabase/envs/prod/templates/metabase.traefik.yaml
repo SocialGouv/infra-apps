@@ -16,7 +16,10 @@ spec:
           port: 80
           serversTransport: metabase-timeout
   tls:
-    secretName: metabase-crt
+    # issued by cert-manager through the oauth2-proxy Ingress, which carries the
+    # ACME annotations for this host — must stay in sync with it, otherwise
+    # Traefik holds two certs for the same SNI and serves them at random
+    secretName: oauth2-proxy-crt
 ---
 apiVersion: traefik.io/v1alpha1
 kind: Middleware
