@@ -1,1 +1,4 @@
 repos/
+
+# subcharts packaged from in-repo charts/ — Helm and Argo read the symlinked source
+*-0.0.0.tgz

@@ -121,4 +121,6 @@ argocd app sync <app>
 
 `argocd app manifests <app> --revision <sha>` renders fresh and is the quickest way to confirm a shared-chart edit really reaches an app.
 
-Editing a file *inside* the app path invalidates that cache, which is why a change also lands when the app's own `charts/*.tgz` happen to be rebuilt in the same commit.
+Editing a file *inside* the app path invalidates that cache — that is the only reason a change sometimes lands without a hard refresh.
+
+Helm and ArgoCD both read the symlinked source, so in-repo subcharts are never vendored: `helm dependency update` rebuilds `charts/<name>-0.0.0.tgz` locally, and `.gitignore` keeps those out of the repo. Versioned archives (`cnpg-cluster-1.30.6.tgz`, `keda-2.20.1.tgz`, …) are genuine remote dependencies and *are* tracked — don't delete those.
