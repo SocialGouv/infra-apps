@@ -52,8 +52,8 @@ labels:
 
 image:
   name: metabase/metabase
-  # renovate: datasource=docker depName=metabase/metabase versioning=v0.47.7
-  tag: v0.58.7.2
+  # renovate: datasource=docker depName=metabase/metabase
+  tag: v0.63.2
 
 resources: {}
 

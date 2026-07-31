@@ -1,0 +1,24 @@
+dependencies:
+- name: final-appset
+  repository: file://./charts/final-appset
+  version: 0.0.0
+- name: metabase
+  repository: file://./charts/metabase
+  version: 0.0.0
+- name: metabase-matomo-sync
+  repository: file://./charts/metabase-matomo-sync
+  version: 0.0.0
+- name: metabase-matomo-sync
+  repository: file://./charts/metabase-matomo-sync
+  version: 0.0.0
+- name: metabase-matomo-sync
+  repository: file://./charts/metabase-matomo-sync
+  version: 0.0.0
+- name: metabase-matomo-sync
+  repository: file://./charts/metabase-matomo-sync
+  version: 0.0.0
+- name: pastek-mirror
+  repository: file://./charts/pastek-mirror
+  version: 0.0.0
+digest: sha256:f6915738352305ccba35075820edeb351b204910920e8a33ff4eb9e70467ab33
+generated: "2026-07-31T11:40:58.736001777+02:00"

@@ -1,0 +1,9 @@
+dependencies:
+- name: final-appset
+  repository: file://./charts/final-appset
+  version: 0.0.0
+- name: metabase
+  repository: file://./charts/metabase
+  version: 0.0.0
+digest: sha256:fe9521b4f878e3d7e10fc2c2d0d1a281607181874426c19e9c22e4453975e667
+generated: "2026-07-31T11:40:19.199953341+02:00"

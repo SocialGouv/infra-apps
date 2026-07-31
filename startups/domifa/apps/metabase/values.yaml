@@ -1,8 +1,5 @@
 metabase:
   enabled: true
-  image:
-    # renovate: datasource=docker depName=metabase/metabase
-    tag: v0.63.2
 
   fullnameOverride: metabase
   cnpg-cluster:
