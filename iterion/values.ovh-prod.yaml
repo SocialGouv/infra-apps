@@ -89,6 +89,21 @@ iterion:
   runner:
     enabled: true
     replicas: 3
+    # Lame-duck drain window. The chart's own default is 8h ("never interrupt
+    # anything"); 2h is deliberate here. A run that outlives the ceiling is
+    # not lost — it is capped, checkpointed and auto-resumed on another pod —
+    # so the ceiling only trades "never interrupted" against what a long
+    # window costs on a SHARED cluster: a terminating pod holds its node slot
+    # and requests for the whole window, `kubectl drain` and node autoscaling
+    # block that long per runner pod, and two runner generations talk to one
+    # Mongo/NATS meanwhile. The longest runs seen here are ~40 min, so 2h is
+    # 3x margin; raise it if a genuinely multi-hour bot lands.
+    # Keep this >= config.runner.drainTimeout + checkpoint margin.
+    terminationGracePeriodSeconds: 7500 # 2h5m
+    # Above the grace period (a lame-duck rollout stays Progressing until the
+    # last old pod drains) but not far above it: this is also how long a
+    # genuinely broken rollout goes unflagged.
+    progressDeadlineSeconds: 9000 # 2h30m
     keda:
       # KEDA operator installed (applications/keda.yaml). Autoscale the runner
       # pool on JetStream consumer lag: idle floor of 2 (warm pods, no cold
@@ -156,6 +171,12 @@ iterion:
           - iterion.fabrique.social.gouv.fr
 
   config:
+    runner:
+      # Lame-duck: SIGTERM stops intake, the in-flight run finishes. See the
+      # rationale on runner.terminationGracePeriodSeconds above for why the
+      # ceiling is 2h rather than the chart's 8h default.
+      drainMode: complete
+      drainTimeout: 2h
     # Operator timezone: log-line timestamps (server + runner) render in
     # Paris time instead of UTC (the binary embeds tzdata, chart >= 0.37.4).
     extraEnv:
