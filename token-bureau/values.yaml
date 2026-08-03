@@ -3,8 +3,9 @@ token-bureau:
     # tag: latest
     # pullPolicy: Always
     # The `permissions` block below needs >= v0.0.8 (`organization_projects`
-    # in VALID_PERMISSIONS) and >= v0.0.9 (config read from the mounted path).
-    tag: v0.0.9
+    # in VALID_PERMISSIONS), >= v0.0.9 (config read from the mounted path) and
+    # >= v0.0.10 (per-repository overrides actually applied).
+    tag: v0.0.10
     pullPolicy: IfNotPresent
   replicaCount: 2
   existingSecret: token-bureau
