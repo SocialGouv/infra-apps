@@ -31,9 +31,13 @@ spec:
         syncOptions:
           - CreateNamespace=true
           #- Replace=true
-        # automated: 
-        #   prune: false # Specifies if resources should be pruned during auto-syncing ( false by default ).
-        #   selfHeal: false # Specifies if partial app sync should be executed when resources are changed only in target Kubernetes cluster and no git change detected ( false by default ).
+        # Without this, a change to token-bureau/values.yaml stays in git until
+        # someone syncs by hand — which is how the egapro Projects V2 grant sat
+        # undeployed for two weeks. prune/selfHeal stay off: this only makes a
+        # git change reach the cluster.
+        automated:
+          prune: false # Specifies if resources should be pruned during auto-syncing ( false by default ).
+          selfHeal: false # Specifies if partial app sync should be executed when resources are changed only in target Kubernetes cluster and no git change detected ( false by default ).
         retry:
           limit: 5
           backoff:
