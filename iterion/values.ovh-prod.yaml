@@ -226,6 +226,20 @@ iterion:
       # a shared instance would spend one person's balance for everyone.
       # (claude_code is unaffected either way; that path IS Claude Code.)
       ITERION_FORBID_SUBSCRIPTION_OAUTH: "0"
+      # Usage caps (docs/usage-caps.md). The Claude forfait this instance runs
+      # on is the OPERATOR's own, and it pays for their interactive work too —
+      # on 2026-08-17 the bots took the weekly window to 100% at 03:57 UTC,
+      # which is a dead week for the human as much as for the fleet. These
+      # stop iterion below the provider's wall, leaving the last quarter of
+      # the week to whoever is at the keyboard.
+      #
+      # The 5h window is SOFT by default (work in flight finishes, nothing new
+      # starts — it refills too soon to be worth killing a half-done run); the
+      # weekly one is HARD (a week that runs out on a Tuesday is worth more
+      # than the run that would have eaten it). A capped run parks with a
+      # durable retry for the window's reopening: it waits, it is not lost.
+      ITERION_USAGE_CAP_5H_PCT: "85"
+      ITERION_USAGE_CAP_WEEK_PCT: "75"
     log:
       format: json
       level: info # prod: info, not debug
