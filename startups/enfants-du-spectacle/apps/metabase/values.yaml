@@ -31,4 +31,7 @@ oauth2-proxy:
         name: oauth2-proxy-sealed-secret
   additionalArgs:
     - --skip-auth-route
-    - ^/public/.*,^/app/dist/.*,^/api/public/.*,^/api/session/.*,^/app/assets/.*
+    # only /api/session/properties is needed unauthenticated (public dashboards
+    # read settings from it); the rest of /api/session — login, forgot_password,
+    # reset_password — stays behind OAuth
+    - ^/public/.*,^/app/dist/.*,^/api/public/.*,^/api/session/properties$,^/app/assets/.*
