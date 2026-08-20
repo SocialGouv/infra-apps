@@ -246,6 +246,11 @@ iterion:
       # deployments already envFrom it); this tag separates prod events from
       # the operators' local ones (environment=local).
       SENTRY_ENVIRONMENT: production
+      # Tracing (iterion >= v3.51.1, needs the #464 hub-isolation fix):
+      # one transaction per API request (route-named) + one per in-process
+      # LLM call. 0.1 = every 10th sampled — the runbook's prod guidance;
+      # dial up for a debugging session, remove to switch tracing off.
+      SENTRY_TRACES_SAMPLE_RATE: "0.1"
     log:
       format: json
       level: info # prod: info, not debug
