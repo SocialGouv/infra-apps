@@ -240,6 +240,12 @@ iterion:
       # durable retry for the window's reopening: it waits, it is not lost.
       ITERION_USAGE_CAP_5H_PCT: "85"
       ITERION_USAGE_CAP_WEEK_PCT: "75"
+      # Error tracking (pkg/errtrack, iterion >= v3.50): events land in the
+      # sentry2.fabrique `iterion` project (org incubateur, team #iterion).
+      # The DSN itself is a key ADDED to the iterion-llm SealedSecret (both
+      # deployments already envFrom it); this tag separates prod events from
+      # the operators' local ones (environment=local).
+      SENTRY_ENVIRONMENT: production
     log:
       format: json
       level: info # prod: info, not debug
