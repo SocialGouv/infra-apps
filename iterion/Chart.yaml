@@ -5,6 +5,28 @@ description: Iterion cloud (workflow engine) — server + runner + bundled Mongo
 dependencies:
   - name: iterion
     repository: oci://ghcr.io/socialgouv/charts
+    # 3.53.0: the graceful-shutdown/probe pass. On SIGTERM the server now
+    # answers 503 on /readyz for ITERION_SHUTDOWN_DELAY (5s) while its
+    # listener still accepts, so the endpoints controller pulls the pod
+    # BEFORE the socket closes — without it every rolling deploy and every
+    # HPA scale-down refused connections that were still routed there (a 502
+    # in the studio, a dropped forge webhook). Hence also
+    # server.terminationGracePeriodSeconds: 60, which must cover
+    # delay + ITERION_SHUTDOWN_TEARDOWN (30s); prod ran on the k8s default of
+    # 30s, i.e. exactly the teardown budget with zero margin. Plus a
+    # startupProbe on both pods (a cloud boot connects NATS + S3 + Mongo and
+    # ensures ~28 collections BEFORE binding, which could outlast the
+    # liveness budget and CrashLoop a merely-slow pod), and REAL probes on
+    # the runner: its tcpSocket on the metrics port proved a socket was
+    # listening and nothing about the consume loop, so a runner whose
+    # consumer had died stayed Ready forever, consuming nothing.
+    # Rides along: the bundled NATS subchart 1.2.11 → 2.14.5 (server
+    # 2.10.26 → 2.14.5, config-reloader 0.16.1 → 0.23.0). Taken deliberately
+    # on 2026-08-21 in the safest window available — 3 NATS replicas so the
+    # rolling upgrade keeps quorum, ITERION_RUNS and KV_iterion-run-locks
+    # both empty, zero runs in flight — and 3.53.0 itself makes NATS
+    # non-critical for server readiness, so a broker blip no longer takes
+    # every replica out of the Service at once.
     # 3.21.0: the chart tracks appVersion now, so 0.50.0 → 3.21.0 is a
     # RENUMBERING and not three majors of drift — only `secret-auth.yaml`
     # differed between the two, additively, for the webpush VAPID keys. What
@@ -22,7 +44,7 @@ dependencies:
     # ($G) — without it the scaler was Ready=False and no HPA metric. 0.34.0:
     # Memory-backed emptyDir on /run/iterion for in-pod `as: file` secrets.
     # 0.33.0: ITERION_SANDBOX_OVERRIDE=none. 0.32.0: per-runner image overrides.
-    version: 3.21.0
+    version: 3.53.0
   # Valkey HA (Sentinel) — distributed ephemeral state for the multi-replica
   # server. cloudpirates/valkey (architecture: replication + sentinel), the
   # same chart no-package-malware runs in prod. ovh-prod opts in via
