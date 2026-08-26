@@ -21,7 +21,16 @@ metadata:
   name: iterion-minio-mkbucket
   namespace: iterion
   annotations:
-    argocd.argoproj.io/sync-options: Replace=true
+    # Replace ALONE cannot recreate this Job: ttlSecondsAfterFinished deletes
+    # it an hour after it succeeds, and `kubectl replace` on a Job that is no
+    # longer there is validated as a full update — which demands the
+    # spec.selector the API server normally generates at CREATE time. The sync
+    # then fails forever on "spec.selector: Required value" (prod and dev were
+    # stuck OutOfSync from 2026-08-21 to 2026-08-26 on exactly that, blocking
+    # every other change to the app). Force makes it a delete + create, which
+    # is correct whether the Job is absent (the usual case, post-TTL) or
+    # present with an immutable diff (the case Replace was added for).
+    argocd.argoproj.io/sync-options: Replace=true,Force=true
 spec:
   backoffLimit: 60 # retry while the distributed MinIO finishes coming up
   ttlSecondsAfterFinished: 3600
