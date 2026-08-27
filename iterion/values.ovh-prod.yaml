@@ -221,6 +221,14 @@ iterion:
       # codex-cli version; iterion ≥ the ITERION_CODEX_VERSION sandbox
       # forwarding fix, PR #553).
       ITERION_CODEX_VERSION: "0.144.6"
+      # Codex CLI's PUBLIC OAuth client id (the `aud` of its id_token) —
+      # required by the server's OAuth refresh worker and the manual
+      # /oauth/codex/refresh endpoint. Without it every uploaded ChatGPT
+      # auth.json rots when its ~1h access token expires and the team's
+      # codex forfait 401s, which silently degrades the cross-model plan
+      # peer fleet-wide (plan_review_policy skip). Also gates the worker's
+      # startup: at least one client id must be set for it to run at all.
+      ITERION_OAUTH_FORFAIT_CODEX_CLIENT_ID: "app_EMoamEEZ73f0CkXaXp7hrann"
       # Allow the third-party SDKs (claw/pi) to use a subscription OAuth
       # credential. Set to "0" deliberately, not by omission: this is a
       # single-operator prod, and ITERION_OPENAI_USE_OAUTH above already routes
