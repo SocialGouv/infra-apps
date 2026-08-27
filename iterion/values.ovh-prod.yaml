@@ -213,6 +213,14 @@ iterion:
       # the metered OPENAI_API_KEY (the platform key is quota-exhausted → 429).
       # Single-dev prod: OpenAI claw runs bill the operator's ChatGPT sub.
       ITERION_OPENAI_USE_OAUTH: "1"
+      # The ChatGPT-forfait wire gates model availability on the codex-cli
+      # `version:` header, and neither the runner image nor the sandbox image
+      # ships a codex binary to probe — without this override claw falls back
+      # to its baked-in version and newer models 400 ("gpt-5.6-sol requires a
+      # newer codex-cli"). Bump when a model demands it (value = a released
+      # codex-cli version; iterion ≥ the ITERION_CODEX_VERSION sandbox
+      # forwarding fix, PR #553).
+      ITERION_CODEX_VERSION: "0.144.6"
       # Allow the third-party SDKs (claw/pi) to use a subscription OAuth
       # credential. Set to "0" deliberately, not by omission: this is a
       # single-operator prod, and ITERION_OPENAI_USE_OAUTH above already routes
