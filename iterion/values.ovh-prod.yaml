@@ -107,13 +107,20 @@ iterion:
     # genuinely broken rollout goes unflagged.
     progressDeadlineSeconds: 9000 # 2h30m
     keda:
-      # KEDA operator installed (applications/keda.yaml). Autoscale the runner
-      # pool on JetStream consumer lag: idle floor of 2 (warm pods, no cold
-      # start on the first run of a burst), bursting to maxReplicas on queue
-      # depth. Replaces the static replicas:3 above (the ScaledObject owns the
-      # replica count once enabled).
+      # KEDA operator installed (applications/keda.yaml); the ScaledObject owns
+      # the replica count (replaces the static replicas:3 above).
+      # Pool FROZEN at 5/5: scale-in picks its victim without knowing which
+      # runner holds a MULTI-HOUR run — measured 2026-08-31, a lag-driven
+      # scale-in (6→5) interrupted a campaign run 3h49 into its work. The
+      # lame-duck drain cannot cover hours of remaining work, and the
+      # checkpoint auto-resume escape hatch is additionally blocked while
+      # image.tag is a moving :edge (the engine's workflow source hash
+      # refuses the resume). Re-enable elasticity (minReplicas back to 2)
+      # once the engine spares busy runners on scale-in
+      # (pod-deletion-cost / busy-aware drain).
       enabled: true
-      minReplicas: 2
+      minReplicas: 5
+      maxReplicas: 5
     sandbox:
       # ADR-082 Phase 3 cutover: per-run sibling sandbox pods on the k8s
       # driver (RBAC + ITERION_POD_IP + host_state=none), replacing the
