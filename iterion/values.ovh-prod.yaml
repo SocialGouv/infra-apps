@@ -42,8 +42,10 @@
 # CHANGEME — remaining V1 hardening before real traffic:
 #   - pin image.tag to a digest (currently :edge),
 #   - enable iterion.networkPolicy + subchart networkPolicies,
-#   - JetStream stream replication R3 (iterion-side) for data-HA, not just
-#     connection-HA,
+#   - JetStream stream replication R3: `config.nats.streamReplicas: 3` is set
+#     below; it takes effect with the chart release that maps it to
+#     ITERION_NATS_STREAM_REPLICAS (engine branch fix/jetstream-stream-replicas
+#     — CreateOrUpdateStream migrates the live streams R1→R3 at server boot),
 #   - enable metrics.podMonitor / prometheusRule once the Prometheus operator
 #     CRDs are confirmed present on ovh-prod.
 cluster: ovh-prod
@@ -296,6 +298,13 @@ iterion:
       #     only resolves inside `iterion` (the scaler logged
       #     "lookup iterion-nats-headless: no such host").
       monitoringEndpoint: iterion-nats-headless.iterion.svc.cluster.local:8222
+      # Data-HA for the engine's JetStream assets (runs stream, DLQ, locks KV)
+      # on the 3-node cluster: without stream replication, one NATS pod restart
+      # silences the queue ("no response from stream") even though the cluster
+      # itself stays up — measured in prod on 2026-08-31 (~10 min outage, every
+      # in-flight run interrupted). No-op on chart versions that predate the
+      # ITERION_NATS_STREAM_REPLICAS mapping.
+      streamReplicas: 3
     s3:
       endpoint: http://iterion-minio:9000
       region: us-east-1
