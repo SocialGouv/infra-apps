@@ -131,10 +131,16 @@ iterion:
     # Devbox-first-class runner: bots `devbox run` the target repo's own
     # toolchain (cross-language/version via its devbox.json — e.g. Billy
     # building Go). Image = jetpackio/devbox base + runner toolset + iterion
-    # binary, tracks :edge like the shared image. Runs as uid 1000 (the Nix
-    # store is owned by `devbox`), hence the pod securityContext override.
+    # binary. Runs as uid 1000 (the Nix store is owned by `devbox`), hence
+    # the pod securityContext override.
     # Rollback: remove `image` → runner falls back to the shared lean image.
-    image: ghcr.io/socialgouv/iterion-runner-devbox:edge
+    # PINNED to a digest: a moving :edge + pullPolicy Always meant every
+    # merge on main rolled the deployment and killed every runner mid-run
+    # (multi-hour runs get only the 125-min lame-duck drain; the checkpoint
+    # auto-resume is additionally refused by the engine's workflow
+    # source-hash guard once the image moved). Deploying a new engine build
+    # is now an EXPLICIT digest bump of this line.
+    image: ghcr.io/socialgouv/iterion-runner-devbox@sha256:e50c0caae740ecfec463e8d163b4d4fd3ab46de432d9adf4c748db64810c72e8
     podSecurityContext:
       runAsUser: 1000
       runAsGroup: 1000
