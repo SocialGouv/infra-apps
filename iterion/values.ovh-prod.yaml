@@ -109,18 +109,25 @@ iterion:
     keda:
       # KEDA operator installed (applications/keda.yaml); the ScaledObject owns
       # the replica count (replaces the static replicas:3 above).
-      # Pool FROZEN at 5/5: scale-in picks its victim without knowing which
-      # runner holds a MULTI-HOUR run — measured 2026-08-31, a lag-driven
-      # scale-in (6→5) interrupted a campaign run 3h49 into its work. The
-      # lame-duck drain cannot cover hours of remaining work, and the
-      # checkpoint auto-resume escape hatch is additionally blocked while
-      # image.tag is a moving :edge (the engine's workflow source hash
-      # refuses the resume). Re-enable elasticity (minReplicas back to 2)
-      # once the engine spares busy runners on scale-in
-      # (pod-deletion-cost / busy-aware drain).
+      # Pool FROZEN (min == max): scale-in picks its victim without knowing
+      # which runner holds a MULTI-HOUR run — measured 2026-08-31, a
+      # lag-driven scale-in (6→5) interrupted a campaign run 3h49 into its
+      # work. The lame-duck drain cannot cover hours of remaining work.
+      # Re-enable elasticity (minReplicas back to 2) once the engine spares
+      # busy runners on scale-in (pod-deletion-cost / busy-aware drain).
+      #
+      # Sized 8, not 5: a frozen pool is a HARD capacity ceiling, and long
+      # campaign runs hold their pod for their whole budget. At 5 with five
+      # multi-hour runs in flight, every short run — the PR reviews the
+      # merge gate waits on — stayed queued until the orphan sweeper
+      # declared it dead, was relaunched, and died again (measured
+      # 2026-09-01: a queued review orphaned at 12:48Z, six pull requests
+      # red on "review died without a verdict"). The headroom is what keeps
+      # the instance's own CI alive while a campaign fills the pool; the
+      # cluster runs at 8-25% CPU, and a runner requests 500m/1Gi.
       enabled: true
-      minReplicas: 5
-      maxReplicas: 5
+      minReplicas: 8
+      maxReplicas: 8
     sandbox:
       # ADR-082 Phase 3 cutover: per-run sibling sandbox pods on the k8s
       # driver (RBAC + ITERION_POD_IP + host_state=none), replacing the
