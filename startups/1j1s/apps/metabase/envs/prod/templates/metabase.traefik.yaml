@@ -16,10 +16,10 @@ spec:
           port: 80
           serversTransport: metabase-timeout
   tls:
-    # still the cert issued for the now-disabled metabase Ingress: it stays
-    # valid and keeps serving while cert-manager issues oauth2-proxy-crt from
-    # the proxy Ingress. Switch to oauth2-proxy-crt once that one is Ready.
-    secretName: metabase-crt
+    # issued by cert-manager through the oauth2-proxy Ingress, which carries the
+    # ACME annotations for this host — must stay in sync with it, otherwise
+    # Traefik holds two certs for the same SNI and serves them at random
+    secretName: oauth2-proxy-crt
 ---
 apiVersion: traefik.io/v1alpha1
 kind: Middleware
