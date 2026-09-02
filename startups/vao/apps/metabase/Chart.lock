@@ -11,5 +11,8 @@ dependencies:
 - name: metabase-matomo-sync
   repository: file://./charts/metabase-matomo-sync
   version: 0.0.0
-digest: sha256:2b9e1807f7f230ddfc2c0250610e028a3bb2b69871c659acd6dc6bd2e9c2c437
-generated: "2026-07-31T11:40:32.648483645+02:00"
+- name: oauth2-proxy
+  repository: file://./charts/oauth2-proxy
+  version: 0.0.0
+digest: sha256:6ba39758719b3e747ad7f90a906580050855832c89652710d8dab63cf1b91ddf
+generated: "2026-09-02T11:42:57.821019378+02:00"

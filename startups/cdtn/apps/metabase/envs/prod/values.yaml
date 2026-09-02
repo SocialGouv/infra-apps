@@ -1,10 +1,15 @@
 metabase:
-  host: metabase-cdtn.fabrique.social.gouv.fr
+  host: &metabaseHost metabase-cdtn.fabrique.social.gouv.fr
+  ingress:
+    enabled: false
+
+oauth2-proxy:
+  host: *metabaseHost
   ingress:
     annotations:
       cert-manager.io: cluster-issuer
       cert-manager.io/cluster-issuer: letsencrypt-prod
-      kubernetes.io/tls-acme: true
+      kubernetes.io/tls-acme: "true"
 
 final-appset:
   importSecretsFromStartup: false

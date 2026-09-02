@@ -49,3 +49,19 @@ metabase-matomo-sync-back:
     secretName: metabase-matomo-sync-app
   cnpg-cluster:
     enabled: false
+
+oauth2-proxy:
+  fullnameOverride: oauth2-proxy
+  enabled: true
+  upstream: http://metabase
+  envFrom:
+    - configMapRef:
+        name: oauth2-proxy-configmap
+    - secretRef:
+        name: oauth2-proxy-sealed-secret
+  additionalArgs:
+    - --skip-auth-route
+    # public dashboards, their assets and signed embeds stay reachable without
+    # GitHub auth; /api/session/properties is anchored so that login,
+    # forgot_password and reset_password stay behind OAuth
+    - ^/public/.*,^/app/dist/.*,^/api/public/.*,^/api/session/properties$,^/app/assets/.*,^/embed/.*,^/api/embed/.*

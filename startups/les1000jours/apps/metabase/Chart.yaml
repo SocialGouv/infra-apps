@@ -32,4 +32,7 @@ dependencies:
     repository: file://./charts/pastek-mirror
     version: 0.0.0
     condition: pastek-mirror.enabled
-
+  - name: oauth2-proxy
+    repository: file://./charts/oauth2-proxy
+    version: 0.0.0
+    condition: oauth2-proxy.enabled

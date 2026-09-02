@@ -20,5 +20,8 @@ dependencies:
 - name: pastek-mirror
   repository: file://./charts/pastek-mirror
   version: 0.0.0
-digest: sha256:f6915738352305ccba35075820edeb351b204910920e8a33ff4eb9e70467ab33
-generated: "2026-07-31T11:40:58.736001777+02:00"
+- name: oauth2-proxy
+  repository: file://./charts/oauth2-proxy
+  version: 0.0.0
+digest: sha256:55393902713001533968a3becfa3cfbaa0a64b7784b074e1bcdf1cdc7c91fa1a
+generated: "2026-09-02T11:42:43.413584053+02:00"
