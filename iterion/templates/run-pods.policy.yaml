@@ -1,0 +1,55 @@
+{{- /*
+Scheduling defaults for the per-run sandbox pods (`iterion-run-<id>`, label
+iterion.io/component=sandbox-run) that the runner creates through the
+kubernetes sandbox driver. The engine emits them WITHOUT `resources` and
+without spread constraints, so the scheduler ranks every worker equal and
+image locality piles the runs onto ONE node — measured 2026-09-04: five run
+pods on a single 8-core worker (89 % CPU, 81 % RAM) while the two other
+workers idled, and the campaign's oracle blew its 300 s boot budget at 459 s.
+
+A namespaced Kyverno mutate policy fills the gap at admission, scoped to the
+run pods only — a LimitRange would also hit the 16 datastore/sidecar
+containers of this namespace that carry no request. It adds a CPU/memory
+REQUEST when absent (no limit: a build must be able to burst) and a soft
+topology spread across nodes. `+(…)` anchors = add only if absent, so a pod
+that declares its own resources keeps them. Interim until the engine emits
+these itself (github.com/SocialGouv/iterion, kubernetes sandbox manifest).
+*/ -}}
+{{- if .Values.runPods.scheduling.enabled }}
+{{- $s := .Values.runPods.scheduling }}
+apiVersion: kyverno.io/v1
+kind: Policy
+metadata:
+  name: iterion-run-pods-scheduling
+  labels:
+    app.kubernetes.io/name: iterion
+    app.kubernetes.io/component: sandbox-run
+spec:
+  background: false
+  rules:
+    - name: default-requests-and-spread
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+              selector:
+                matchLabels:
+                  iterion.io/component: sandbox-run
+      mutate:
+        patchStrategicMerge:
+          spec:
+            +(topologySpreadConstraints):
+              - maxSkew: 1
+                topologyKey: kubernetes.io/hostname
+                whenUnsatisfiable: ScheduleAnyway
+                labelSelector:
+                  matchLabels:
+                    iterion.io/component: sandbox-run
+            containers:
+              - (name): "*"
+                resources:
+                  requests:
+                    +(cpu): {{ $s.requests.cpu | quote }}
+                    +(memory): {{ $s.requests.memory | quote }}
+{{- end }}

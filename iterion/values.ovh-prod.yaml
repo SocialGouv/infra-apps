@@ -621,3 +621,8 @@ firecrawl:
   postgres:
     size: 5Gi
     storageClass: csi-cinder-high-speed
+
+# Per-run sandbox pods: requests + node spread via Kyverno (see values.yaml).
+runPods:
+  scheduling:
+    enabled: true
