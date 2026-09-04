@@ -218,17 +218,3 @@ firecrawl:
   postgres:
     size: 5Gi
     storageClass: "" # "" → cluster default (csi-cinder-high-speed on ovh-prod)
-
-# Scheduling defaults for the per-run sandbox pods (templates/run-pods.policy.yaml):
-# a Kyverno mutate policy adds CPU/memory REQUESTS (no limits) and a soft
-# node spread to `iterion-run-*` pods, which the engine emits without either.
-# Off here; ovh-prod turns it on. Sized for one campaign run = a full app
-# stack (two Spring Boot apps, Postgres, Keycloak, RabbitMQ, MinIO, mocks)
-# plus its Maven/Nx builds: ~4.8 GiB measured per pod, 8-core workers → 3 runs
-# per node.
-runPods:
-  scheduling:
-    enabled: false
-    requests:
-      cpu: "2"
-      memory: "4Gi"
