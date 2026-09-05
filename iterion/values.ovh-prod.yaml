@@ -161,7 +161,7 @@ iterion:
     # auto-resume is additionally refused by the engine's workflow
     # source-hash guard once the image moved). Deploying a new engine build
     # is now an EXPLICIT digest bump of this line.
-    image: ghcr.io/socialgouv/iterion-runner-devbox@sha256:bdc3539092b47341fc18474a4ea3a38cf0e0d21305efbefc6323677c5d1b3879
+    image: ghcr.io/socialgouv/iterion-runner-devbox@sha256:3591820906bc1d10ae311a4cd9c6651611f26e27dd8eeede5ac86782414f03c4
     podSecurityContext:
       runAsUser: 1000
       runAsGroup: 1000
