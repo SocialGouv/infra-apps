@@ -207,6 +207,11 @@ iterion:
           - iterion.fabrique.social.gouv.fr
 
   config:
+    # Generation fence (generation-aware rollout, #617/#628/#643): Release B,
+    # the first non-zero epoch. Increment it on every runner-code rollout and
+    # never lower it (break-glass procedure: docs/cloud-deployment.md).
+    rollout:
+      runnerEpoch: 1
     runner:
       # Lame-duck: SIGTERM stops intake, the in-flight run finishes. See the
       # rationale on runner.terminationGracePeriodSeconds above for why the
