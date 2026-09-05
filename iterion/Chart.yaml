@@ -44,7 +44,13 @@ dependencies:
     # ($G) — without it the scaler was Ready=False and no HPA metric. 0.34.0:
     # Memory-backed emptyDir on /run/iterion for in-pod `as: file` secrets.
     # 0.33.0: ITERION_SANDBOX_OVERRIDE=none. 0.32.0: per-runner image overrides.
-    version: 3.53.0
+    # 3.102.0: run pods carry a CPU/memory request and a soft per-node
+    # spread, rendered as literal runner env from runner.sandbox.scheduling
+    # (five of six run pods had piled on one 8-core worker at 100 % CPU while
+    # two workers idled; a 300 s application boot took 459 s). Chart default
+    # rollout strategy (maxSurge 100 %, maxUnavailable 0) and the runner epoch
+    # env (epoch 0, unchanged) come along; NATS 2.14.5 → 2.14.6.
+    version: 3.102.0
   # Valkey HA (Sentinel) — distributed ephemeral state for the multi-replica
   # server. cloudpirates/valkey (architecture: replication + sentinel), the
   # same chart no-package-malware runs in prod. ovh-prod opts in via

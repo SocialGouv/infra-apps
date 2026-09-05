@@ -91,21 +91,21 @@ iterion:
   runner:
     enabled: true
     replicas: 3
-    # Lame-duck drain window. The chart's own default is 8h ("never interrupt
-    # anything"); 2h is deliberate here. A run that outlives the ceiling is
-    # not lost — it is capped, checkpointed and auto-resumed on another pod —
-    # so the ceiling only trades "never interrupted" against what a long
-    # window costs on a SHARED cluster: a terminating pod holds its node slot
-    # and requests for the whole window, `kubectl drain` and node autoscaling
-    # block that long per runner pod, and two runner generations talk to one
-    # Mongo/NATS meanwhile. The longest runs seen here are ~40 min, so 2h is
-    # 3x margin; raise it if a genuinely multi-hour bot lands.
+    # Lame-duck drain window: the chart's own default, 8h ("never interrupt
+    # anything"). It was 2h while the longest runs seen were ~40 min; campaign
+    # runs now hold their pod for 4-12 h (a golden-master rite at 5 h 20 of
+    # compute when a rollout was due, 2026-09-04), and a run interrupted by an
+    # image change is not auto-resumable (workflow source-hash guard) — it
+    # would be banked and relaunched from scratch. The cost of the long window
+    # on a SHARED cluster (a terminating pod holds its slot and requests,
+    # `kubectl drain` and node autoscaling block that long, two runner
+    # generations talk to one Mongo/NATS) is accepted for this campaign pool.
     # Keep this >= config.runner.drainTimeout + checkpoint margin.
-    terminationGracePeriodSeconds: 7500 # 2h5m
+    terminationGracePeriodSeconds: 29100 # 8h5m
     # Above the grace period (a lame-duck rollout stays Progressing until the
     # last old pod drains) but not far above it: this is also how long a
     # genuinely broken rollout goes unflagged.
-    progressDeadlineSeconds: 9000 # 2h30m
+    progressDeadlineSeconds: 30000 # 8h20m
     keda:
       # KEDA operator installed (applications/keda.yaml); the ScaledObject owns
       # the replica count (replaces the static replicas:3 above).
@@ -136,6 +136,19 @@ iterion:
       # the engine's sandbox-by-default, every cloud run now executes in
       # its own sandbox pod unless the bot explicitly opts out.
       enabled: true
+      # Every run pod carries a CPU/memory REQUEST and a soft per-node spread
+      # (topologySpreadConstraints, ScheduleAnyway). Without a request the
+      # scheduler scored every worker equal and image locality piled five of
+      # six run pods on one 8-core worker (100 % CPU) while two workers sat at
+      # 25 %; a 300 s application boot took 459 s and untouched trees went red
+      # (2026-09-04). 2 CPU / 4 GiB is the floor a campaign run needs to be
+      # co-scheduled sanely; no limit, so builds can burst. Rendered as literal
+      # runner PodTemplate env (ITERION_SANDBOX_K8S_*) — never config.extraEnv.
+      scheduling:
+        requests:
+          cpu: "2"
+          memory: "4Gi"
+        spread: hostname
     # Devbox-first-class runner: bots `devbox run` the target repo's own
     # toolchain (cross-language/version via its devbox.json — e.g. Billy
     # building Go). Image = jetpackio/devbox base + runner toolset + iterion
@@ -148,7 +161,7 @@ iterion:
     # auto-resume is additionally refused by the engine's workflow
     # source-hash guard once the image moved). Deploying a new engine build
     # is now an EXPLICIT digest bump of this line.
-    image: ghcr.io/socialgouv/iterion-runner-devbox@sha256:07c0f041a2ded9f2b0025ff0d1eaab66c9be77b1100a0a76e88de1b0b962b7f8
+    image: ghcr.io/socialgouv/iterion-runner-devbox@sha256:bdc3539092b47341fc18474a4ea3a38cf0e0d21305efbefc6323677c5d1b3879
     podSecurityContext:
       runAsUser: 1000
       runAsGroup: 1000
@@ -197,9 +210,9 @@ iterion:
     runner:
       # Lame-duck: SIGTERM stops intake, the in-flight run finishes. See the
       # rationale on runner.terminationGracePeriodSeconds above for why the
-      # ceiling is 2h rather than the chart's 8h default.
+      # ceiling is the chart's 8h default (campaign runs are multi-hour).
       drainMode: complete
-      drainTimeout: 2h
+      drainTimeout: 8h
     # Operator timezone: log-line timestamps (server + runner) render in
     # Paris time instead of UTC (the binary embeds tzdata, chart >= 0.37.4).
     extraEnv:
