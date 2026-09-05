@@ -148,6 +148,13 @@ iterion:
         requests:
           cpu: "2"
           memory: "4Gi"
+        # Memory is bounded, CPU is not (SocialGouv/iterion#732): a run pod
+        # that outgrows 8 GiB is OOM-killed and its run parks resumable,
+        # whereas a node under memory pressure evicts a runner mid-run; a CPU
+        # burst during a build or a test suite is pure throughput and stays
+        # unlimited. Observed peaks before this bound: 6.2 GiB / 4.4 cores.
+        limits:
+          memory: "8Gi"
         spread: hostname
     # Devbox-first-class runner: bots `devbox run` the target repo's own
     # toolchain (cross-language/version via its devbox.json — e.g. Billy
