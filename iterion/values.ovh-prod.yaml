@@ -383,8 +383,11 @@ iterion:
     # mounted OPTIONAL on the runner so claude_code runs on the subscription
     # instead of a metered API key. Absent secret = no-op (optional: true).
     forfait:
-      enabled: true
-      existingSecret: iterion-forfait
+      # The legacy pod-level Claude forfait is retired: the platform tier
+      # (DB-backed, `iterion remote admin llm oauth`) seals the forfait into each
+      # run's bundle at publish, so no ambient CLAUDE_CODE_OAUTH_TOKEN may shadow
+      # a tenant's own credential on the pod (SocialGouv/iterion#620, #698).
+      enabled: false
     storage:
       # Out-of-band SealedSecret carrying ITERION_S3_ACCESS_KEY_ID +
       # ITERION_S3_SECRET_ACCESS_KEY. Must MATCH the rootUser / rootPassword in
