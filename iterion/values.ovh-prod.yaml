@@ -62,6 +62,11 @@ iterion:
 
   server:
     replicas: 3
+    # Platform pods outrank the run pods they own (SocialGouv/iterion#732):
+    # under node pressure a bursting sandbox is preempted before the server
+    # or a runner, never the other way round. resource-burstable matches
+    # their QoS class (requests below limits); run pods carry no class.
+    priorityClassName: resource-burstable
     hpa:
       enabled: true
       minReplicas: 3
@@ -91,6 +96,9 @@ iterion:
   runner:
     enabled: true
     replicas: 3
+    # Same class as the server, same reason (SocialGouv/iterion#732): the
+    # runner outranks the sandboxed run pods it starts.
+    priorityClassName: resource-burstable
     # Lame-duck drain window: the chart's own default, 8h ("never interrupt
     # anything"). It was 2h while the longest runs seen were ~40 min; campaign
     # runs now hold their pod for 4-12 h (a golden-master rite at 5 h 20 of

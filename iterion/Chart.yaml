@@ -50,7 +50,12 @@ dependencies:
     # two workers idled; a 300 s application boot took 459 s). Chart default
     # rollout strategy (maxSurge 100 %, maxUnavailable 0) and the runner epoch
     # env (epoch 0, unchanged) come along; NATS 2.14.5 → 2.14.6.
-    version: 3.102.0
+    # 3.112.2: `server.priorityClassName` / `runner.priorityClassName`
+    # (SocialGouv/iterion#732 — the platform pods outrank the run pods).
+    # Rides along: `runner.sandbox.scheduling.podReadyTimeout` passthrough
+    # (unset here = the driver's 10 m default). Nothing else changed in the
+    # templates between 3.102.0 and 3.112.2.
+    version: 3.112.2
   # Valkey HA (Sentinel) — distributed ephemeral state for the multi-replica
   # server. cloudpirates/valkey (architecture: replication + sentinel), the
   # same chart no-package-malware runs in prod. ovh-prod opts in via
