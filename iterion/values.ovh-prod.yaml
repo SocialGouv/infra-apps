@@ -40,7 +40,6 @@
 #   iterion-llm           → existing SealedSecret (LLM API keys, unchanged)
 #
 # CHANGEME — remaining V1 hardening before real traffic:
-#   - pin image.tag to a digest (currently :edge),
 #   - enable iterion.networkPolicy + subchart networkPolicies,
 #   - JetStream stream replication R3: `config.nats.streamReplicas: 3` is set
 #     below; it takes effect with the chart release that maps it to
@@ -52,13 +51,29 @@ cluster: ovh-prod
 
 iterion:
   image:
-    # TEMPORARY: prod tracks main via the moving :edge tag for the ADR-048
-    # test→fix campaign (single operator-user on prod). Each main push rebuilds
-    # :edge; a `kubectl rollout restart deploy/iterion deploy/iterion-runner`
-    # pulls it fresh (pullPolicy: Always). Re-pin an immutable vX.Y.Z release
-    # once the org/team tenancy rework is validated and stable.
-    tag: edge
-    pullPolicy: Always
+    # PINNED to a digest, for the reason the runner already is: a moving tag
+    # cannot give a homogeneous fleet, it can only give one by luck.
+    #
+    # Measured on this cluster: three server pods of the SAME ReplicaSet
+    # served two different builds (1x c0fb1db9e, 2x b7649ca6) — no deployment
+    # happened, one pod was simply rescheduled later and pulled what :edge
+    # meant at ITS creation. And because the server resolves and compiles the
+    # bot catalogue AT LAUNCH, two runs started seconds apart could receive
+    # different workflow IR depending on which pod answered.
+    #
+    # Worse for the operator: the pre-rollout check cannot be held with a
+    # moving tag. `:edge` was verified at 20:00Z and the restart at 20:30Z
+    # served a build 30 minutes newer — what was checked was not what was
+    # deployed. The verification is not weak, it is structurally without
+    # value.
+    #
+    # Deploying a new server build is now an EXPLICIT bump of this line, the
+    # same gesture the runner has required since a moving :edge killed every
+    # runner mid-run.
+    digest: sha256:d2aa7503be033c7f9ce0df680251e97e739bf9824a141086bd9bc384007d3d44
+    # A digest is immutable, so re-pulling it on every pod start buys nothing
+    # but a registry round-trip on each restart.
+    pullPolicy: IfNotPresent
 
   server:
     replicas: 3
