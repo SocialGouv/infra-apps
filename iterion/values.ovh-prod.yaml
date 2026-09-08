@@ -276,7 +276,22 @@ iterion:
       # newer codex-cli"). Bump when a model demands it (value = a released
       # codex-cli version; iterion ≥ the ITERION_CODEX_VERSION sandbox
       # forwarding fix, PR #553).
-      ITERION_CODEX_VERSION: "0.144.6"
+      #
+      # The gate is PER MODEL and each model line raises it. Measured
+      # 2026-09-08 against chatgpt.com/backend-api/codex/responses, one
+      # request per cell, body identical and only the `version:` header
+      # varied (the body MUST carry `store: false`, or the endpoint
+      # rejects it on that first and never evaluates the model gate —
+      # a probe without it reports every version as equally acceptable):
+      #
+      #                 0.130.0  0.139.0  0.144.6  0.150.0  0.152.0  0.153.0
+      #   gpt-5.6-sol   refused  refused  served   served   served   served
+      #   gpt-6-astra   refused  refused  refused  refused  refused  served
+      #
+      # 0.144.6 served gpt-5.6-sol and refused gpt-6-astra. Note this
+      # value OVERRIDES claw's baked-in floor, so bumping claw alone
+      # (iterion#976) does not move it — this line is the one that decides.
+      ITERION_CODEX_VERSION: "0.153.4"
       # Codex CLI's PUBLIC OAuth client id (the `aud` of its id_token) —
       # required by the server's OAuth refresh worker and the manual
       # /oauth/codex/refresh endpoint. Without it every uploaded ChatGPT
