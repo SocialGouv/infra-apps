@@ -2,6 +2,26 @@ gha-runner-scale-set:
   githubConfigUrl: "https://github.com/SocialGouv"
   githubConfigSecret: github-token
 
+  # The runner image is upstream's, pinned by version, and staleness here is
+  # fatal rather than merely untidy: ARC runs its runners with --disableupdate
+  # (the image is immutable), so a runner below what the Actions service
+  # accepts exits the moment it connects. ARC reads that as a crash, retries
+  # five times, marks the EphemeralRunner Failed — and the Failed records
+  # still count as capacity, so the service believes the set is provisioned
+  # and assigns nothing. The whole scale set deadlocks silently.
+  #
+  # That is what happened: it pointed at ghcr.io/socialgouv/actions-runner
+  # :latest, whose last release (1.2.14, 2025-06-02) carries runner 2.324.0.
+  # Actions is disabled on that repository — it is not in the organisation's
+  # 54-repository allowlist — so its required check can never report, every
+  # dependency bump stayed unmergeable, no release was cut and the tag froze.
+  # The scale set served nothing for over a year before anyone looked.
+  #
+  # Upstream's image drops the extra tooling the SocialGouv one carried (Go
+  # 1.21, kubectl 1.28, yq), all of which a workflow gets from its own
+  # setup-* steps. Renovate keeps this pin current; do not replace it with a
+  # floating tag, and do not let it go stale.
+
   controllerServiceAccount:
     namespace: arc-systems
     name: arc-systems-gha-rs-controller
@@ -10,7 +30,7 @@ gha-runner-scale-set:
     spec:
       initContainers:
         - name: init-dind-externals
-          image: ghcr.io/socialgouv/actions-runner:latest
+          image: ghcr.io/actions/actions-runner:2.337.0
           imagePullPolicy: Always
           command:
             [
@@ -29,7 +49,7 @@ gha-runner-scale-set:
               memory: 2Gi
       containers:
         - name: runner
-          image: ghcr.io/socialgouv/actions-runner:latest
+          image: ghcr.io/actions/actions-runner:2.337.0
           imagePullPolicy: Always
           command: ["/home/runner/run.sh"]
           resources:
