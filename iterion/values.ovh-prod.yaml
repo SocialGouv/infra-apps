@@ -217,8 +217,18 @@ iterion:
       cert-manager.io/cluster-issuer: letsencrypt-prod
       nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
       nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    # Both hosts serve the same backend, and that is the design rather than a
+    # transition hack: a redirect cannot sit in front of the registered
+    # webhooks. GitLab follows a 301 but turns the POST into a GET, so the
+    # payload is lost and the delivery still looks sent (gitlab-foss#19696);
+    # GitHub wants a 2XX and counts a 301 as a failure. A redirect for humans
+    # only becomes possible once every hook URL has been rewritten.
     hosts:
       - host: iterion.fabrique.social.gouv.fr
+        paths:
+          - path: /
+            pathType: Prefix
+      - host: iterion.cloud
         paths:
           - path: /
             pathType: Prefix
@@ -226,6 +236,11 @@ iterion:
       - secretName: iterion-tls # cert-manager fills this from the letsencrypt-prod issuer
         hosts:
           - iterion.fabrique.social.gouv.fr
+      # A separate secret, not a second SAN on iterion-tls: an ACME failure on
+      # the new domain then cannot touch the certificate the live host serves.
+      - secretName: iterion-cloud-tls
+        hosts:
+          - iterion.cloud
 
   config:
     # Generation fence (generation-aware rollout, #617/#628/#643): Release B,
