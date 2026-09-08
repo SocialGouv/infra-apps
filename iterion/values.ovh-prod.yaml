@@ -243,6 +243,16 @@ iterion:
     # Paris time instead of UTC (the binary embeds tzdata, chart >= 0.37.4).
     extraEnv:
       TZ: Europe/Paris
+      # SMTP: ITERION_SMTP_HOST is what switches the real mailer on — without
+      # it `buildMailer` returns the log fallback, which makes team
+      # invitations and password resets silently inert. Credentials
+      # (ITERION_SMTP_USERNAME / _PASSWORD) come from the iterion-auth
+      # SealedSecret. Infomaniak requires a per-DEVICE password for external
+      # SMTP; the mailbox password is not accepted.
+      ITERION_SMTP_HOST: mail.infomaniak.com
+      ITERION_SMTP_PORT: "587"
+      ITERION_SMTP_STARTTLS: "true"
+      ITERION_SMTP_FROM: contact@iterion.cloud
       # ADR-082 Phase 3: generic default sandbox image for `sandbox: auto`
       # without a devcontainer — -full ships git+gh+glab+python3+Go+claude,
       # covering the realigned fleet (bots no longer pin images; devbox.json
