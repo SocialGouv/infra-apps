@@ -182,7 +182,7 @@ iterion:
     # run's REMAINING work can exceed the grace", because a run the image
     # change does interrupt is not auto-resumable (the workflow source-hash
     # guard refuses it) and is relaunched from scratch.
-    image: ghcr.io/socialgouv/iterion-runner-devbox@sha256:4fc13655b2852c6db805c32167c99c355bd5a685ec3ca8d9e4d9c3c5a65782a5
+    image: ghcr.io/socialgouv/iterion-runner-devbox@sha256:53a4796cbc9059f33cd7745d98d6a93380d9aced8803672ecdd0325335203bad
     podSecurityContext:
       runAsUser: 1000
       runAsGroup: 1000
@@ -243,11 +243,12 @@ iterion:
           - iterion.cloud
 
   config:
-    # Generation fence (generation-aware rollout, #617/#628/#643): Release B,
-    # the first non-zero epoch. Increment it on every runner-code rollout and
-    # never lower it (break-glass procedure: docs/cloud-deployment.md).
+    # Generation fence (generation-aware rollout, #617/#628/#643). Increment
+    # it on every runner-code rollout and never lower it (break-glass
+    # procedure: docs/cloud-deployment.md). The mark is monotonic: a typo
+    # here cannot be undone by a rollback.
     rollout:
-      runnerEpoch: 1
+      runnerEpoch: 2
     runner:
       # Lame-duck: SIGTERM stops intake, the in-flight run finishes. See the
       # rationale on runner.terminationGracePeriodSeconds above for why the
