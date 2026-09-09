@@ -420,7 +420,22 @@ iterion:
       sentinelAddrs: "iterion-valkeyha-sentinel:26379"
       masterName: mymaster
     auth:
-      publicUrl: https://iterion.fabrique.social.gouv.fr
+      # The deployment's canonical name. Both hosts serve, but this one is what
+      # the server builds its OWN URLs from: the OIDC redirect_uri
+      # (Server.oidcRedirectURI) and every hook URL a provision registers
+      # (forge.Orchestrator.inboundURL).
+      #
+      # Moving it does not move the hooks already on a forge — each is
+      # rewritten in place by the next provision of its repo. The GitLab PIC
+      # connections deliberately never follow: they pin
+      # Connection.WebhookBaseURL to the fabrique host, which that forge's
+      # outbound allowlist admits and this one it does not.
+      #
+      # Cookies are host-only (cookieDomain empty), so a login started on the
+      # old host now completes as a session on this one. That is the intended
+      # nudge rather than a defect; existing sessions keep working until they
+      # expire.
+      publicUrl: https://iterion.cloud
       cookieSecure: true
       # Open self-service signup: GitHub SSO (and email/password) provision a
       # new account + personal team on first login. Required for the public
