@@ -182,7 +182,7 @@ iterion:
     # run's REMAINING work can exceed the grace", because a run the image
     # change does interrupt is not auto-resumable (the workflow source-hash
     # guard refuses it) and is relaunched from scratch.
-    image: ghcr.io/socialgouv/iterion-runner-devbox@sha256:9a648c4ece7cd1db0f86227c1a0249c458478d5f4ff013ff98efcbe67da91086
+    image: ghcr.io/socialgouv/iterion-runner-devbox@sha256:169888678f1bf0d486111c8396aa9935cf3f3d75bb178326aa0d144d821c22b6
     podSecurityContext:
       runAsUser: 1000
       runAsGroup: 1000
@@ -248,7 +248,7 @@ iterion:
     # procedure: docs/cloud-deployment.md). The mark is monotonic: a typo
     # here cannot be undone by a rollback.
     rollout:
-      runnerEpoch: 3
+      runnerEpoch: 4
     runner:
       # Lame-duck: SIGTERM stops intake, the in-flight run finishes. See the
       # rationale on runner.terminationGracePeriodSeconds above for why the
