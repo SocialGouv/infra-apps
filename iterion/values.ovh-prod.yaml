@@ -259,6 +259,18 @@ iterion:
     # Paris time instead of UTC (the binary embeds tzdata, chart >= 0.37.4).
     extraEnv:
       TZ: Europe/Paris
+      # ADR-096: the board claim reaper. A leased claim heartbeats; this
+      # enables the periodic cross-host pass that reclaims an EXPIRED lease
+      # by transfer and routes the card through DecideStuckCard, instead of
+      # leaving it `in_progress` behind a dead owner forever.
+      #
+      # Off by default in the chart. The rollout gate (ADR-096 §9 — old
+      # ReplicaSets at desired=0, no pod Terminating, the whole fleet on the
+      # leased-claim release) was measured met on 2026-09-09 13:10Z and is
+      # not to be re-measured. Set back to "off" to disable: the reaper is a
+      # reader plus owner-scoped CAS writes, so disabling it stops reclaiming
+      # and changes nothing else.
+      ITERION_BOARD_CLAIM_REAPER: "on"
       # SMTP: ITERION_SMTP_HOST is what switches the real mailer on — without
       # it `buildMailer` returns the log fallback, which makes team
       # invitations and password resets silently inert. Credentials
