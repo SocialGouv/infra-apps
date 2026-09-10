@@ -259,6 +259,27 @@ iterion:
     # Paris time instead of UTC (the binary embeds tzdata, chart >= 0.37.4).
     extraEnv:
       TZ: Europe/Paris
+      # Cookie migration, second half — the SOAK (SocialGouv/iterion#1076).
+      #
+      # The server writes the refresh cookie under both spellings
+      # (`iterion_refresh` and `__Host-iterion_refresh`) and accepts both. This
+      # stops the legacy WRITE while keeping the READ, which is the one
+      # combination that is instantly reversible: delete this line and older
+      # clients resume harvesting on the next rollout.
+      #
+      # What it is measuring: the refresh cookie has an OUT-OF-PROCESS consumer
+      # — the desktop app, a separately installed binary that updates on its own
+      # schedule and sends no distinguishing User-Agent, so "no old build is
+      # left" cannot be observed, only soaked for. A pre-#1058 desktop against a
+      # server that no longer writes the bare name harvests "", replays its
+      # previous token, and the server correctly reads that as theft: it revokes
+      # EVERY session that user holds, on every device.
+      #
+      # So watch `RevokeUserSessions` in the auth logs and any report of being
+      # signed out everywhere at once. A quiet soak is the evidence the deletion
+      # needs; it does NOT replace the other condition (2026-10-10, one refresh
+      # TTL after the 2026-09-10 deploy), which governs the READ half.
+      ITERION_LEGACY_REFRESH_COOKIE: "0"
       # ADR-096: the board claim reaper. A leased claim heartbeats; this
       # enables the periodic cross-host pass that reclaims an EXPIRED lease
       # by transfer and routes the card through DecideStuckCard, instead of
