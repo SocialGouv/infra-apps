@@ -9,9 +9,6 @@ spec:
           - name: charon-secretariat
             cluster: ovh-dev
             namespace: charon-secretariat
-          - name: charon-carnets
-            cluster: ovh-dev
-            namespace: charon-carnets
           - name: charon-egapro
             cluster: ovh-dev
             namespace: charon-egapro
