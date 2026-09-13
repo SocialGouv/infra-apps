@@ -29,6 +29,60 @@ gha-runner-scale-set:
   template:
     spec:
       initContainers:
+        # inotify instances are shared by all processes with the same real UID
+        # on a node (the runners use UID 1001). The kernel's default 128 can
+        # reject a watcher while ordinary file descriptors remain available.
+        # Run before either runner or dind can accept work, not in a CI job.
+        - name: configure-inotify
+          image: ghcr.io/actions/actions-runner:2.337.0
+          command:
+            - /bin/sh
+            - -ec
+            - |
+              minimum=${ARC_INOTIFY_MIN_USER_INSTANCES:-1024}
+              case "$minimum" in
+                ''|*[!0-9]*) echo "ARC_INOTIFY_MIN_USER_INSTANCES must be a non-negative integer" >&2; exit 1 ;;
+              esac
+              # Normalize decimal input and reject values outside the kernel's
+              # signed-int range before any shell arithmetic or sysctl write.
+              while [ "${minimum#0}" != "$minimum" ]; do minimum=${minimum#0}; done
+              minimum=${minimum:-0}
+              if [ "${#minimum}" -gt 10 ] || [ "$minimum" -gt 2147483647 ]; then
+                echo "ARC_INOTIFY_MIN_USER_INSTANCES exceeds the kernel integer range" >&2
+                exit 1
+              fi
+              if [ "$minimum" -eq 0 ]; then
+                echo "ARC inotify node tuning disabled explicitly"
+                exit 0
+              fi
+              limit_file=/proc/sys/fs/inotify/max_user_instances
+              read -r current < "$limit_file"
+              if [ "$current" -lt "$minimum" ]; then
+                printf '%s\n' "$minimum" > "$limit_file"
+              fi
+              read -r actual < "$limit_file"
+              if [ "$actual" -lt "$minimum" ]; then
+                echo "ARC inotify ceiling is still below the requested floor" >&2
+                exit 1
+              fi
+              echo "ARC node inotify max_user_instances: $current -> $actual (minimum $minimum)"
+          env:
+            - name: ARC_INOTIFY_MIN_USER_INSTANCES
+              value: "1024"
+          securityContext:
+            # This is a NODE sysctl, not a pod namespaced sysctl. The existing
+            # dind container is privileged too; keep this action explicit.
+            privileged: true
+            runAsNonRoot: false
+            runAsUser: 0
+            readOnlyRootFilesystem: true
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              cpu: 100m
+              memory: 32Mi
         - name: init-dind-externals
           image: ghcr.io/actions/actions-runner:2.337.0
           imagePullPolicy: Always
