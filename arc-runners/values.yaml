@@ -101,26 +101,20 @@ gha-runner-scale-set:
             requests:
               cpu: 500m
               memory: 2Gi
-      containers:
-        - name: runner
-          image: ghcr.io/actions/actions-runner:2.337.0
-          imagePullPolicy: Always
-          command: ["/home/runner/run.sh"]
-          resources:
-            requests:
-              cpu: 500m
-              memory: 2Gi
-          env:
-            - name: DOCKER_HOST
-              value: unix:///run/docker/docker.sock
-          volumeMounts:
-            - name: work
-              mountPath: /home/runner/_work
-            - name: dind-sock
-              mountPath: /run/docker
-              readOnly: true
         - name: dind
           image: docker:dind
+          # Native sidecar: kubelet waits for the daemon before starting runner.
+          # A socket file alone is not evidence that the Docker API is ready.
+          restartPolicy: Always
+          startupProbe:
+            exec:
+              command:
+                - docker
+                - --host=unix:///run/docker/docker.sock
+                - info
+            periodSeconds: 5
+            timeoutSeconds: 5
+            failureThreshold: 24
           resources:
             requests:
               cpu: 500m
@@ -143,6 +137,25 @@ gha-runner-scale-set:
               mountPath: /run/docker
             - name: dind-externals
               mountPath: /home/runner/externals
+      containers:
+        - name: runner
+          image: ghcr.io/actions/actions-runner:2.337.0
+          imagePullPolicy: Always
+          command: ["/home/runner/run.sh"]
+          resources:
+            requests:
+              cpu: 500m
+              memory: 2Gi
+          env:
+            - name: DOCKER_HOST
+              value: unix:///run/docker/docker.sock
+          volumeMounts:
+            - name: work
+              mountPath: /home/runner/_work
+            - name: dind-sock
+              mountPath: /run/docker
+              readOnly: true
+
       volumes:
         - name: work
           emptyDir: {}
