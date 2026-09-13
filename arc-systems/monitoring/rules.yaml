@@ -1,0 +1,48 @@
+groups:
+  - name: arc-runner-availability
+    rules:
+      - alert: ARCControllerMetricsUnavailable
+        expr: (max(up{job="{{ .Values.monitoring.scrapeJob }}"}) or vector(0)) == 0
+        for: 5m
+        labels:
+          severity: critical
+          service: arc-runners
+        annotations:
+          summary: ARC controller metrics are unavailable
+          description: The ARC scrape is down or absent; runner availability is unknown. Check monitor selection and controller health before the merge queue times out.
+          runbook_url: https://github.com/SocialGouv/infra-apps/blob/master/arc-systems/README.md
+      - alert: ARCFailedEphemeralRunner
+        expr: max(gha_controller_failed_ephemeral_runners{job="{{ .Values.monitoring.scrapeJob }}", namespace="{{ .Values.monitoring.namespace }}", name="{{ .Values.monitoring.scaleSetName }}"}) > 0
+        for: 5m
+        labels:
+          severity: critical
+          service: arc-runners
+        annotations:
+          summary: ARC runners have remained Failed for five minutes
+          description: Failed EphemeralRunner records can occupy the scale set's capacity and stop required CI jobs from starting. Inspect the runner image and controller logs; use the documented CI_SELF_HOSTED fallback if delivery is blocked.
+          runbook_url: https://github.com/SocialGouv/infra-apps/blob/master/arc-systems/README.md
+      - alert: ARCListenerUnavailable
+        expr: |
+          ((max(gha_controller_running_listeners{job="{{ .Values.monitoring.scrapeJob }}", namespace="{{ .Values.monitoring.namespace }}", name="{{ .Values.monitoring.scaleSetName }}"}) or vector(0)) == 0)
+          and on() (max(up{job="{{ .Values.monitoring.scrapeJob }}"}) == 1)
+        for: 5m
+        labels:
+          severity: critical
+          service: arc-runners
+        annotations:
+          summary: ARC has no running listener
+          description: The controller is scraped but reports no running listener for this scale set. A quiet queue still requires its listener; inspect it and use CI_SELF_HOSTED=off when required jobs cannot start.
+          runbook_url: https://github.com/SocialGouv/infra-apps/blob/master/arc-systems/README.md
+      - alert: ARCRunnersPendingWithoutProgress
+        expr: |
+          (max(gha_controller_pending_ephemeral_runners{job="{{ .Values.monitoring.scrapeJob }}", namespace="{{ .Values.monitoring.namespace }}", name="{{ .Values.monitoring.scaleSetName }}"}) > 0)
+          and on() ((max(gha_controller_running_ephemeral_runners{job="{{ .Values.monitoring.scrapeJob }}", namespace="{{ .Values.monitoring.namespace }}", name="{{ .Values.monitoring.scaleSetName }}"}) or vector(0)) == 0)
+          and on() (max(up{job="{{ .Values.monitoring.scrapeJob }}"}) == 1)
+        for: 10m
+        labels:
+          severity: critical
+          service: arc-runners
+        annotations:
+          summary: ARC runners cannot become Running
+          description: Runners have been Pending with none Running for ten minutes. Inspect scheduling, image pulls and runner registration; the merge queue waits only sixty minutes for required checks.
+          runbook_url: https://github.com/SocialGouv/infra-apps/blob/master/arc-systems/README.md

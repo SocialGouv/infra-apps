@@ -2,7 +2,7 @@ gha-runner-scale-set-controller:
   serviceAccount:
     create: true
     name: arc-systems-gha-rs-controller
-  
+
   flags:
     watchSingleNamespace: arc-runners
 
@@ -13,4 +13,20 @@ gha-runner-scale-set-controller:
     requests:
       cpu: 100m
       memory: 128Mi
-  
+
+# Collect controller metrics only. Keeping listener metrics disabled avoids
+# changing the 0.11.0 listener contract (which also needs listenerMetrics).
+# Controller metrics already expose failed/pending runners and live listeners.
+  metrics:
+    controllerManagerAddr: ":8080"
+    listenerAddr: "0"
+    listenerEndpoint: ""
+
+monitoring:
+  enabled: true
+  # Must match the owning Prometheus's PodMonitor/PrometheusRule selectors.
+  # Empty maps add no release-specific label; verify selection before syncing.
+  labels: {}
+  namespace: arc-runners
+  scaleSetName: arc-runners
+  scrapeJob: arc-controller

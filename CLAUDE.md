@@ -124,3 +124,11 @@ argocd app sync <app>
 Editing a file *inside* the app path invalidates that cache — that is the only reason a change sometimes lands without a hard refresh.
 
 Helm and ArgoCD both read the symlinked source, so in-repo subcharts are never vendored: `helm dependency update` rebuilds `charts/<name>-0.0.0.tgz` locally, and `.gitignore` keeps those out of the repo. Versioned archives (`cnpg-cluster-1.30.6.tgz`, `keda-2.20.1.tgz`, …) are genuine remote dependencies and *are* tracked — don't delete those.
+
+
+## ARC monitoring
+
+See [arc-systems/README.md](arc-systems/README.md) before changing ARC metrics,
+Prometheus selection or runner availability alerts. The local checker renders
+the pinned chart and tests alert timing; live collection and the established
+Alertmanager receiver must be verified before declaring the scale set monitored.

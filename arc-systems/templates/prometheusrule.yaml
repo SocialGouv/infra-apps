@@ -1,0 +1,14 @@
+{{- if .Values.monitoring.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ .Release.Name }}-availability
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/component: controller-monitoring
+    {{- with .Values.monitoring.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  {{- tpl (.Files.Get "monitoring/rules.yaml") . | nindent 2 }}
+{{- end }}
