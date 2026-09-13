@@ -23,7 +23,7 @@ groups:
           runbook_url: https://github.com/SocialGouv/infra-apps/blob/master/arc-systems/README.md
       - alert: ARCListenerUnavailable
         expr: |
-          ((max(gha_controller_running_listeners{job="{{ .Values.monitoring.scrapeJob }}", namespace="{{ .Values.monitoring.namespace }}", name="{{ .Values.monitoring.scaleSetName }}"}) or vector(0)) == 0)
+          ((max(gha_controller_running_listeners{job="{{ .Values.monitoring.scrapeJob }}", namespace="{{ .Release.Namespace }}", name=~"{{ regexQuoteMeta .Values.monitoring.scaleSetName }}-[^-]+-listener"}) or vector(0)) == 0)
           and on() (max(up{job="{{ .Values.monitoring.scrapeJob }}"}) == 1)
         for: 5m
         labels:

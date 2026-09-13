@@ -9,7 +9,11 @@ The existing controller 0.11.0 emits the metrics used here. The chart enables
 only its `:8080/metrics` endpoint. Listener metrics stay disabled (`0`), so this
 change does not activate 0.11.0's additional `listenerMetrics` requirement.
 `PodMonitor` uses the actual rendered `gha-rs-controller` pod label and preserves
-ARC's own `namespace` label (the runner namespace, `arc-runners`).
+ARC's own `namespace` label: `arc-runners` for runner gauges, but
+`arc-systems` for the listener gauge. ARC 0.11 labels a listener with its
+generated `<scale-set>-<namespace-hash>-listener` name. The listener rule
+selects that name pattern in the controller namespace; runner rules select
+the scale-set name and runner namespace.
 
 | Alert | Delay | Meaning |
 |---|---|---|
@@ -48,7 +52,8 @@ Complete the remaining activation checks with the infrastructure owner:
    ```sh
    helm dependency build arc-systems
    helm template arc-systems arc-systems --namespace arc-systems \
-     | kubectl --context ovh-dev apply --server-side --dry-run=server -f -
+     | kubectl --context ovh-dev apply --server-side \
+         --field-manager=argocd-controller --dry-run=server -f -
    ```
 
 3. Plan the controller rollout with the owner. The existing ArgoCD application
@@ -56,9 +61,9 @@ Complete the remaining activation checks with the infrastructure owner:
    enabling monitoring.
 4. After the approved sync, check that `up{job="arc-controller"}` is `1`, that
    the four rules are loaded, and that
-   `gha_controller_running_listeners{namespace="arc-runners",name="arc-runners"}`
-   is `1`. Also inspect the pending/running/failed series, which retain the same
-   scale-set labels. Confirm scrape access if network policies apply.
+   `gha_controller_running_listeners{job="arc-controller",namespace="arc-systems",name=~"arc-runners-[^-]+-listener"}`
+   is `1`. Also inspect the pending/running/failed series, which use
+   `namespace="arc-runners",name="arc-runners"`. Confirm scrape access if network policies apply.
 5. Confirm the existing receiver for `service=arc-runners,severity=critical`.
    With the receiver owner's agreement, use an explicitly labelled synthetic
    alert to verify delivery and resolution. Do not break ARC or shut down its
@@ -118,11 +123,26 @@ python3 arc-systems/monitoring/check.py
 The checker renders the real pinned controller chart, verifies that the monitor
 selects its pod and metrics port, checks listener metrics remain disabled,
 checks optional selection labels and the disable switch, then uses `promtool`
-against the rendered rules. Twelve scenarios cover healthy scale-to-zero,
+against the rendered rules. Thirteen scenarios cover healthy scale-to-zero,
 failure persistence/recovery, missing/zero listener, lost/absent scrape,
-pending startup and other scale sets. `PROMTOOL=/path/to/promtool` overrides the
+pending startup and unrelated runner/listener series. `PROMTOOL=/path/to/promtool` overrides the
 binary. No cluster connection or external notification is made by these tests.
 
 Sources: [GitHub's ARC metrics documentation](https://docs.github.com/en/actions/how-tos/manage-runners/use-actions-runner-controller/deploy-runner-scale-sets#enabling-metrics),
 [the installed 0.11.0 metrics definitions](https://github.com/actions/actions-runner-controller/blob/gha-runner-scale-set-0.11.0/controllers/actions.github.com/metrics/metrics.go),
 and [the 0.11.0 listener change](https://github.com/actions/actions-runner-controller/releases/tag/gha-runner-scale-set-0.11.0).
+
+## Revi run — 2026-09-13
+
+[Run 01a09c4e-a874-77bc-8cdb-133ba39c60b0](https://iterion.cloud/runs/01a09c4e-a874-77bc-8cdb-133ba39c60b0)
+reviewed `fef3804831a2a58c7ee58c40cb3b310f3977f2a5` and published medium
+finding R624b98: listener labels differ from runner labels. Verified against
+ARC 0.11's `publishListenerMetrics` and `scaleSetListenerName`; the initial
+fixtures reproduced the mistaken assumption. With real labels the healthy
+fixtures failed, then passed after the selector correction. An additional
+case proves unrelated listeners cannot mask this listener's absence.
+
+The correction was made directly while Billy's Claude weekly quota was
+blocked (reset 2026-09-15 21:00 UTC); no Billy run was launched for this PR.
+The corrected head is submitted for a new Revi pass. This review does not
+stand in for post-activation scrape and receiver checks.

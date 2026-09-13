@@ -49,4 +49,4 @@ with tempfile.TemporaryDirectory(prefix='arc-monitoring-') as tmp:
     promtool = os.environ.get('PROMTOOL', 'promtool')
     subprocess.run([promtool, 'check', 'rules', 'rules.rendered.yaml'], cwd=tmp, check=True)
     subprocess.run([promtool, 'test', 'rules', 'rules.test.yaml'], cwd=tmp, check=True)
-print('ARC monitor discovery, metrics flags and 12 alert scenarios passed.')
+print('ARC monitor discovery, metrics flags and 13 alert scenarios passed.')

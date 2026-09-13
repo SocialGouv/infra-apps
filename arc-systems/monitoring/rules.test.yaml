@@ -7,7 +7,7 @@ tests:
   input_series:
   - series: up{job="arc-controller"}
     values: 1+0x25
-  - series: gha_controller_running_listeners{job="arc-controller",namespace="arc-runners",name="arc-runners"}
+  - series: gha_controller_running_listeners{job="arc-controller",namespace="arc-systems",name="arc-runners-754b578d-listener"}
     values: 1+0x25
   - series: gha_controller_failed_ephemeral_runners{job="arc-controller",namespace="arc-runners",name="arc-runners"}
     values: 0+0x25
@@ -24,7 +24,7 @@ tests:
   input_series:
   - series: up{job="arc-controller"}
     values: 1+0x25
-  - series: gha_controller_running_listeners{job="arc-controller",namespace="arc-runners",name="arc-runners"}
+  - series: gha_controller_running_listeners{job="arc-controller",namespace="arc-systems",name="arc-runners-754b578d-listener"}
     values: 1+0x25
   - series: gha_controller_failed_ephemeral_runners{job="arc-controller",namespace="arc-runners",name="arc-runners"}
     values: 1+0x25
@@ -46,7 +46,7 @@ tests:
   input_series:
   - series: up{job="arc-controller"}
     values: 1+0x25
-  - series: gha_controller_running_listeners{job="arc-controller",namespace="arc-runners",name="arc-runners"}
+  - series: gha_controller_running_listeners{job="arc-controller",namespace="arc-systems",name="arc-runners-754b578d-listener"}
     values: 1+0x25
   - series: gha_controller_failed_ephemeral_runners{job="arc-controller",namespace="arc-runners",name="arc-runners"}
     values: 1+0x2 0+0x22
@@ -66,7 +66,7 @@ tests:
   input_series:
   - series: up{job="arc-controller"}
     values: 1+0x25
-  - series: gha_controller_running_listeners{job="arc-controller",namespace="arc-runners",name="arc-runners"}
+  - series: gha_controller_running_listeners{job="arc-controller",namespace="arc-systems",name="arc-runners-754b578d-listener"}
     values: 1+0x25
   - series: gha_controller_failed_ephemeral_runners{job="arc-controller",namespace="arc-runners",name="arc-runners"}
     values: 1+0x6 0+0x18
@@ -88,7 +88,7 @@ tests:
   input_series:
   - series: up{job="arc-controller"}
     values: 1+0x25
-  - series: gha_controller_running_listeners{job="arc-controller",namespace="arc-runners",name="arc-runners"}
+  - series: gha_controller_running_listeners{job="arc-controller",namespace="arc-systems",name="arc-runners-754b578d-listener"}
     values: 0+0x25
   - series: gha_controller_failed_ephemeral_runners{job="arc-controller",namespace="arc-runners",name="arc-runners"}
     values: 0+0x25
@@ -156,7 +156,7 @@ tests:
   input_series:
   - series: up{job="arc-controller"}
     values: 1+0x25
-  - series: gha_controller_running_listeners{job="arc-controller",namespace="arc-runners",name="arc-runners"}
+  - series: gha_controller_running_listeners{job="arc-controller",namespace="arc-systems",name="arc-runners-754b578d-listener"}
     values: 1+0x25
   - series: gha_controller_failed_ephemeral_runners{job="arc-controller",namespace="arc-runners",name="arc-runners"}
     values: 0+0x25
@@ -178,7 +178,7 @@ tests:
   input_series:
   - series: up{job="arc-controller"}
     values: 1+0x25
-  - series: gha_controller_running_listeners{job="arc-controller",namespace="arc-runners",name="arc-runners"}
+  - series: gha_controller_running_listeners{job="arc-controller",namespace="arc-systems",name="arc-runners-754b578d-listener"}
     values: 1+0x25
   - series: gha_controller_failed_ephemeral_runners{job="arc-controller",namespace="arc-runners",name="arc-runners"}
     values: 0+0x25
@@ -195,7 +195,7 @@ tests:
   input_series:
   - series: up{job="arc-controller"}
     values: 1+0x25
-  - series: gha_controller_running_listeners{job="arc-controller",namespace="arc-runners",name="arc-runners"}
+  - series: gha_controller_running_listeners{job="arc-controller",namespace="arc-systems",name="arc-runners-754b578d-listener"}
     values: 1+0x25
   - series: gha_controller_failed_ephemeral_runners{job="arc-controller",namespace="arc-runners",name="arc-runners"}
     values: 0+0x25
@@ -215,7 +215,7 @@ tests:
   input_series:
   - series: up{job="arc-controller"}
     values: 1+0x25
-  - series: gha_controller_running_listeners{job="arc-controller",namespace="arc-runners",name="arc-runners"}
+  - series: gha_controller_running_listeners{job="arc-controller",namespace="arc-systems",name="arc-runners-754b578d-listener"}
     values: 1+0x25
   - series: gha_controller_failed_ephemeral_runners{job="arc-controller",namespace="arc-runners",name="arc-runners"}
     values: 0+0x25
@@ -229,3 +229,26 @@ tests:
   - expr: ALERTS{alertstate="firing"}
     eval_time: 15m
     exp_samples: []
+- name: unrelated listeners cannot hide the missing scale set listener
+  interval: 1m
+  input_series:
+  - series: up{job="arc-controller"}
+    values: 1+0x25
+  - series: gha_controller_failed_ephemeral_runners{job="arc-controller",namespace="arc-runners",name="arc-runners"}
+    values: 0+0x25
+  - series: gha_controller_pending_ephemeral_runners{job="arc-controller",namespace="arc-runners",name="arc-runners"}
+    values: 0+0x25
+  - series: gha_controller_running_ephemeral_runners{job="arc-controller",namespace="arc-runners",name="arc-runners"}
+    values: 0+0x25
+  - series: gha_controller_running_listeners{job="arc-controller",namespace="arc-systems",name="other-754b578d-listener"}
+    values: 1+0x25
+  - series: gha_controller_running_listeners{job="other-controller",namespace="arc-systems",name="arc-runners-754b578d-listener"}
+    values: 1+0x25
+  - series: gha_controller_running_listeners{job="arc-controller",namespace="other",name="arc-runners-754b578d-listener"}
+    values: 1+0x25
+  promql_expr_test:
+  - expr: ALERTS{alertstate="firing"}
+    eval_time: 5m
+    exp_samples:
+    - labels: ALERTS{alertname="ARCListenerUnavailable",alertstate="firing",service="arc-runners",severity="critical"}
+      value: 1
