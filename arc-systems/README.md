@@ -26,9 +26,17 @@ Alertmanager route.
 
 ## Before activation
 
-The monitoring configuration is outside this repository. This PR has local
-rendering and rule tests; it is not proof that ovh-dev collects or routes them.
-Complete these checks with the infrastructure owner before syncing:
+Verified read-only on ovh-dev on 2026-09-13: Prometheus
+`prometheus-operator/prom-ovh-dev-prometheus` selects all PodMonitor and rule
+namespaces/resources (all four selectors are `{}`), so `monitoring.labels: {}`
+is correct here. Alertmanager `prom-ovh-dev-alertmanager` uses the existing
+`ovh-dev` Slack receiver by default; these service/severity alerts do not match
+its namespace-specific override. The complete Helm render passed server-side
+dry-run, including both monitoring CRDs. No resources were applied and no
+notification was sent.
+
+These configuration checks do not prove post-deployment collection or delivery.
+Complete the remaining activation checks with the infrastructure owner:
 
 1. Locate the owning Prometheus and Alertmanager. Inspect its
    `podMonitorNamespaceSelector`, `podMonitorSelector`, `ruleNamespaceSelector`
@@ -40,7 +48,7 @@ Complete these checks with the infrastructure owner before syncing:
    ```sh
    helm dependency build arc-systems
    helm template arc-systems arc-systems --namespace arc-systems \
-     | kubectl --context ovh-dev apply --dry-run=server -f -
+     | kubectl --context ovh-dev apply --server-side --dry-run=server -f -
    ```
 
 3. Plan the controller rollout with the owner. The existing ArgoCD application
