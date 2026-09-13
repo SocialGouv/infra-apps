@@ -129,3 +129,9 @@ Helm and ArgoCD both read the symlinked source, so in-repo subcharts are never v
 
 See [arc-runners/README.md](arc-runners/README.md) for the inotify instance
 floor, per-UID reproduction, validation and explicit node-wide rollout/rollback.
+## ARC monitoring
+
+See [arc-systems/README.md](arc-systems/README.md) before changing ARC metrics,
+Prometheus selection or runner availability alerts. The local checker renders
+the pinned chart and tests alert timing; live collection and the established
+Alertmanager receiver must be verified before declaring the scale set monitored.

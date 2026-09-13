@@ -1,0 +1,231 @@
+rule_files:
+- rules.rendered.yaml
+evaluation_interval: 1m
+tests:
+- name: idle scale-to-zero is healthy
+  interval: 1m
+  input_series:
+  - series: up{job="arc-controller"}
+    values: 1+0x25
+  - series: gha_controller_running_listeners{job="arc-controller",namespace="arc-runners",name="arc-runners"}
+    values: 1+0x25
+  - series: gha_controller_failed_ephemeral_runners{job="arc-controller",namespace="arc-runners",name="arc-runners"}
+    values: 0+0x25
+  - series: gha_controller_pending_ephemeral_runners{job="arc-controller",namespace="arc-runners",name="arc-runners"}
+    values: 0+0x25
+  - series: gha_controller_running_ephemeral_runners{job="arc-controller",namespace="arc-runners",name="arc-runners"}
+    values: 0+0x25
+  promql_expr_test:
+  - expr: ALERTS{alertstate="firing"}
+    eval_time: 15m
+    exp_samples: []
+- name: failed records alert before the merge queue deadline
+  interval: 1m
+  input_series:
+  - series: up{job="arc-controller"}
+    values: 1+0x25
+  - series: gha_controller_running_listeners{job="arc-controller",namespace="arc-runners",name="arc-runners"}
+    values: 1+0x25
+  - series: gha_controller_failed_ephemeral_runners{job="arc-controller",namespace="arc-runners",name="arc-runners"}
+    values: 1+0x25
+  - series: gha_controller_pending_ephemeral_runners{job="arc-controller",namespace="arc-runners",name="arc-runners"}
+    values: 0+0x25
+  - series: gha_controller_running_ephemeral_runners{job="arc-controller",namespace="arc-runners",name="arc-runners"}
+    values: 0+0x25
+  promql_expr_test:
+  - expr: ALERTS{alertstate="firing"}
+    eval_time: 4m
+    exp_samples: []
+  - expr: ALERTS{alertstate="firing"}
+    eval_time: 5m
+    exp_samples:
+    - labels: ALERTS{alertname="ARCFailedEphemeralRunner",alertstate="firing",service="arc-runners",severity="critical"}
+      value: 1
+- name: transient failure and recovery do not leave a firing alert
+  interval: 1m
+  input_series:
+  - series: up{job="arc-controller"}
+    values: 1+0x25
+  - series: gha_controller_running_listeners{job="arc-controller",namespace="arc-runners",name="arc-runners"}
+    values: 1+0x25
+  - series: gha_controller_failed_ephemeral_runners{job="arc-controller",namespace="arc-runners",name="arc-runners"}
+    values: 1+0x2 0+0x22
+  - series: gha_controller_pending_ephemeral_runners{job="arc-controller",namespace="arc-runners",name="arc-runners"}
+    values: 0+0x25
+  - series: gha_controller_running_ephemeral_runners{job="arc-controller",namespace="arc-runners",name="arc-runners"}
+    values: 0+0x25
+  promql_expr_test:
+  - expr: ALERTS{alertstate="firing"}
+    eval_time: 2m
+    exp_samples: []
+  - expr: ALERTS{alertstate="firing"}
+    eval_time: 10m
+    exp_samples: []
+- name: failed records clear after repair
+  interval: 1m
+  input_series:
+  - series: up{job="arc-controller"}
+    values: 1+0x25
+  - series: gha_controller_running_listeners{job="arc-controller",namespace="arc-runners",name="arc-runners"}
+    values: 1+0x25
+  - series: gha_controller_failed_ephemeral_runners{job="arc-controller",namespace="arc-runners",name="arc-runners"}
+    values: 1+0x6 0+0x18
+  - series: gha_controller_pending_ephemeral_runners{job="arc-controller",namespace="arc-runners",name="arc-runners"}
+    values: 0+0x25
+  - series: gha_controller_running_ephemeral_runners{job="arc-controller",namespace="arc-runners",name="arc-runners"}
+    values: 0+0x25
+  promql_expr_test:
+  - expr: ALERTS{alertstate="firing"}
+    eval_time: 5m
+    exp_samples:
+    - labels: ALERTS{alertname="ARCFailedEphemeralRunner",alertstate="firing",service="arc-runners",severity="critical"}
+      value: 1
+  - expr: ALERTS{alertstate="firing"}
+    eval_time: 8m
+    exp_samples: []
+- name: listener reports zero
+  interval: 1m
+  input_series:
+  - series: up{job="arc-controller"}
+    values: 1+0x25
+  - series: gha_controller_running_listeners{job="arc-controller",namespace="arc-runners",name="arc-runners"}
+    values: 0+0x25
+  - series: gha_controller_failed_ephemeral_runners{job="arc-controller",namespace="arc-runners",name="arc-runners"}
+    values: 0+0x25
+  - series: gha_controller_pending_ephemeral_runners{job="arc-controller",namespace="arc-runners",name="arc-runners"}
+    values: 0+0x25
+  - series: gha_controller_running_ephemeral_runners{job="arc-controller",namespace="arc-runners",name="arc-runners"}
+    values: 0+0x25
+  promql_expr_test:
+  - expr: ALERTS{alertstate="firing"}
+    eval_time: 4m
+    exp_samples: []
+  - expr: ALERTS{alertstate="firing"}
+    eval_time: 5m
+    exp_samples:
+    - labels: ALERTS{alertname="ARCListenerUnavailable",alertstate="firing",service="arc-runners",severity="critical"}
+      value: 1
+- name: listener series absent while controller is alive
+  interval: 1m
+  input_series:
+  - series: up{job="arc-controller"}
+    values: 1+0x25
+  - series: gha_controller_failed_ephemeral_runners{job="arc-controller",namespace="arc-runners",name="arc-runners"}
+    values: 0+0x25
+  - series: gha_controller_pending_ephemeral_runners{job="arc-controller",namespace="arc-runners",name="arc-runners"}
+    values: 0+0x25
+  - series: gha_controller_running_ephemeral_runners{job="arc-controller",namespace="arc-runners",name="arc-runners"}
+    values: 0+0x25
+  promql_expr_test:
+  - expr: ALERTS{alertstate="firing"}
+    eval_time: 5m
+    exp_samples:
+    - labels: ALERTS{alertname="ARCListenerUnavailable",alertstate="firing",service="arc-runners",severity="critical"}
+      value: 1
+- name: no successful scrape suppresses derivative listener alert
+  interval: 1m
+  input_series:
+  - series: up{job="arc-controller"}
+    values: 0+0x25
+  - series: gha_controller_failed_ephemeral_runners{job="arc-controller",namespace="arc-runners",name="arc-runners"}
+    values: 0+0x25
+  - series: gha_controller_pending_ephemeral_runners{job="arc-controller",namespace="arc-runners",name="arc-runners"}
+    values: 0+0x25
+  - series: gha_controller_running_ephemeral_runners{job="arc-controller",namespace="arc-runners",name="arc-runners"}
+    values: 0+0x25
+  promql_expr_test:
+  - expr: ALERTS{alertstate="firing"}
+    eval_time: 5m
+    exp_samples:
+    - labels: ALERTS{alertname="ARCControllerMetricsUnavailable",alertstate="firing",service="arc-runners",severity="critical"}
+      value: 1
+- name: no scrape target is itself an alert
+  interval: 1m
+  input_series: []
+  promql_expr_test:
+  - expr: ALERTS{alertstate="firing"}
+    eval_time: 4m
+    exp_samples: []
+  - expr: ALERTS{alertstate="firing"}
+    eval_time: 5m
+    exp_samples:
+    - labels: ALERTS{alertname="ARCControllerMetricsUnavailable",alertstate="firing",service="arc-runners",severity="critical"}
+      value: 1
+- name: pending without a running runner is stuck
+  interval: 1m
+  input_series:
+  - series: up{job="arc-controller"}
+    values: 1+0x25
+  - series: gha_controller_running_listeners{job="arc-controller",namespace="arc-runners",name="arc-runners"}
+    values: 1+0x25
+  - series: gha_controller_failed_ephemeral_runners{job="arc-controller",namespace="arc-runners",name="arc-runners"}
+    values: 0+0x25
+  - series: gha_controller_pending_ephemeral_runners{job="arc-controller",namespace="arc-runners",name="arc-runners"}
+    values: 2+0x25
+  - series: gha_controller_running_ephemeral_runners{job="arc-controller",namespace="arc-runners",name="arc-runners"}
+    values: 0+0x25
+  promql_expr_test:
+  - expr: ALERTS{alertstate="firing"}
+    eval_time: 9m
+    exp_samples: []
+  - expr: ALERTS{alertstate="firing"}
+    eval_time: 10m
+    exp_samples:
+    - labels: ALERTS{alertname="ARCRunnersPendingWithoutProgress",alertstate="firing",service="arc-runners",severity="critical"}
+      value: 1
+- name: pending with a missing running gauge is stuck
+  interval: 1m
+  input_series:
+  - series: up{job="arc-controller"}
+    values: 1+0x25
+  - series: gha_controller_running_listeners{job="arc-controller",namespace="arc-runners",name="arc-runners"}
+    values: 1+0x25
+  - series: gha_controller_failed_ephemeral_runners{job="arc-controller",namespace="arc-runners",name="arc-runners"}
+    values: 0+0x25
+  - series: gha_controller_pending_ephemeral_runners{job="arc-controller",namespace="arc-runners",name="arc-runners"}
+    values: 2+0x25
+  promql_expr_test:
+  - expr: ALERTS{alertstate="firing"}
+    eval_time: 10m
+    exp_samples:
+    - labels: ALERTS{alertname="ARCRunnersPendingWithoutProgress",alertstate="firing",service="arc-runners",severity="critical"}
+      value: 1
+- name: a slow but successful startup is not an outage
+  interval: 1m
+  input_series:
+  - series: up{job="arc-controller"}
+    values: 1+0x25
+  - series: gha_controller_running_listeners{job="arc-controller",namespace="arc-runners",name="arc-runners"}
+    values: 1+0x25
+  - series: gha_controller_failed_ephemeral_runners{job="arc-controller",namespace="arc-runners",name="arc-runners"}
+    values: 0+0x25
+  - series: gha_controller_pending_ephemeral_runners{job="arc-controller",namespace="arc-runners",name="arc-runners"}
+    values: 2+0x4 0+0x20
+  - series: gha_controller_running_ephemeral_runners{job="arc-controller",namespace="arc-runners",name="arc-runners"}
+    values: 0+0x4 2+0x20
+  promql_expr_test:
+  - expr: ALERTS{alertstate="firing"}
+    eval_time: 4m
+    exp_samples: []
+  - expr: ALERTS{alertstate="firing"}
+    eval_time: 15m
+    exp_samples: []
+- name: other scale sets cannot hide or trigger this alert
+  interval: 1m
+  input_series:
+  - series: up{job="arc-controller"}
+    values: 1+0x25
+  - series: gha_controller_running_listeners{job="arc-controller",namespace="arc-runners",name="arc-runners"}
+    values: 1+0x25
+  - series: gha_controller_failed_ephemeral_runners{job="arc-controller",namespace="arc-runners",name="arc-runners"}
+    values: 0+0x25
+  - series: gha_controller_pending_ephemeral_runners{job="arc-controller",namespace="arc-runners",name="arc-runners"}
+    values: 0+0x25
+  - series: gha_controller_running_ephemeral_runners{job="arc-controller",namespace="arc-runners",name="arc-runners"}
+    values: 0+0x25
+  - series: gha_controller_failed_ephemeral_runners{job="arc-controller",namespace="other",name="other"}
+    values: 10+0x25
+  promql_expr_test:
+  - expr: ALERTS{alertstate="firing"}
+    eval_time: 15m
+    exp_samples: []
