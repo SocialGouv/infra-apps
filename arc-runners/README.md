@@ -57,14 +57,19 @@ PR #1200.
 
 ## Validation and rollout
 
+Requires Python 3.8+ and Helm 4.1.1. Install the pinned Python dependency
+in an isolated virtual environment using the commands below.
+
 Local tests execute the shipped shell body against a temporary file, never
 against the developer's sysctl. They cover the observed 128→1024 change, an
 already higher value, a custom floor, explicit disable, invalid/overflow values and missing sysctl. They also check
 the effective init order in the rendered runner PodSpec:
 
 ```sh
+python3 -m venv /tmp/arc-test-venv
+/tmp/arc-test-venv/bin/python -m pip install -r arc-runners/tests/requirements.txt
 helm dependency build arc-runners
-python3 arc-runners/tests/inotify_init.py
+/tmp/arc-test-venv/bin/python arc-runners/tests/inotify_init.py
 helm lint arc-runners
 helm template arc-runners arc-runners --namespace arc-runners
 ```
@@ -89,3 +94,19 @@ verify the floor from that pod. Existing pods are not restarted to make a test
 pass. Repeat the representative concurrent CI workload with watcher diagnostics
 present and record its result on #1198 before closing the ticket. The prepared
 configuration alone is not evidence that the node setting has been applied.
+
+## Revi and reproducible checks — 2026-09-13
+
+[Run 01a09c65-6cc3-7604-be22-5c89de14120d](https://iterion.cloud/runs/01a09c65-6cc3-7604-be22-5c89de14120d)
+reviewed `09322f0f0d530ae23246ce22635040ac752ed37d` and reported R1d39ee:
+PyYAML was undeclared and the check had no CI entry point. The correction pins
+PyYAML 6.0.3, documents a clean virtual environment, and adds the
+`ARC runner configuration` workflow with pinned actions and Helm. It needs no
+cluster credential and never writes a real sysctl.
+
+The repository Actions API reported `enabled: false` on 2026-09-13. The workflow
+is prepared, but automatic execution also requires the repository/organization
+owner to enable Actions; do not report a CI pass until that run exists. Local
+validation uses the same pinned dependency in a fresh virtual environment.
+Billy's Claude weekly quota is blocked until 2026-09-15 21:00 UTC, so R1d39ee was
+corrected directly and no Billy run was launched for this PR.
