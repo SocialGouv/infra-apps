@@ -185,7 +185,8 @@ iterion:
     # run's REMAINING work can exceed the grace", because a run the image
     # change does interrupt is not auto-resumable (the workflow source-hash
     # guard refuses it) and is relaunched from scratch.
-    image: ghcr.io/socialgouv/iterion-runner-devbox@sha256:548aac8bb268ffb6734bd2ea136ef814b9dff118e123c8bada905f4a2fc02d27
+    # v3.143.0 (882c76afbb94), verified release index — SocialGouv/iterion#1213.
+    image: ghcr.io/socialgouv/iterion-runner-devbox@sha256:debfdbcdce01336f2f4940ae85a8cdafabdba4374137be85c1bf9d502323b44f
     podSecurityContext:
       runAsUser: 1000
       runAsGroup: 1000
