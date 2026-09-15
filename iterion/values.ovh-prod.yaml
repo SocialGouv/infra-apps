@@ -61,7 +61,7 @@ iterion:
     # public hosts down). `kubectl rollout restart` does NOT repair it: ArgoCD
     # self-heal reverts the annotation onto the unchanged template.
     # Deploying = resolve the release digest and commit it, like runner.image.
-    digest: sha256:191a9c2b3516f185646a06bdd6696287cc7099c91d1ebf3015f8618641a3b4f6 # v3.146.6
+    digest: sha256:334583c981e5c66d7882df0e151072ac4c771fea9beb8a6caca9444160feaf61 # v3.149.1
     pullPolicy: Always
 
   server:
@@ -231,11 +231,14 @@ iterion:
       nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
       nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
     # Both hosts serve the same backend, and that is the design rather than a
-    # transition hack: a redirect cannot sit in front of the registered
+    # transition hack: no redirect may sit HERE, in front of the registered
     # webhooks. GitLab follows a 301 but turns the POST into a GET, so the
     # payload is lost and the delivery still looks sent (gitlab-foss#19696);
-    # GitHub wants a 2XX and counts a 301 as a failure. A redirect for humans
-    # only becomes possible once every hook URL has been rewritten.
+    # GitHub wants a 2XX and counts a 301 as a failure.
+    # Humans are sent to the canonical host one layer up instead, by the
+    # application (config.extraEnv.ITERION_CANONICAL_REDIRECT below), which can
+    # tell a document navigation from a webhook delivery — an ingress rule
+    # cannot.
     hosts:
       - host: iterion.fabrique.social.gouv.fr
         paths:
@@ -272,6 +275,28 @@ iterion:
     # Paris time instead of UTC (the binary embeds tzdata, chart >= 0.37.4).
     extraEnv:
       TZ: Europe/Paris
+      # Canonical redirect for HUMANS only (iterion >= v3.149.1, PR #1258). A
+      # document navigation landing on any host other than config.auth.publicUrl
+      # gets a 302 to the same path on the canonical origin; everything else is
+      # served where it arrives.
+      #
+      # This is what makes a redirect possible at all on a deployment whose two
+      # hosts both carry registered webhooks (see the ingress comment above for
+      # why an ingress-level redirect is not): the middleware refuses to redirect
+      # anything under /api/ — webhook deliveries, forge OAuth and OIDC callbacks
+      # all live there — anything that is not GET/HEAD, and anything whose
+      # Sec-Fetch-Dest (or Accept, for older clients) does not say `document`.
+      #
+      # It DEPENDS on the ingress passing the browser's host through: nginx
+      # preserves Host and sets X-Forwarded-Host, and carries no
+      # `upstream-vhost` annotation that would rewrite it. An ingress that
+      # rewrote the host would make every request look canonical and the
+      # redirect inert.
+      #
+      # 302, not 301: a permanent redirect is cached by the browser for the
+      # whole origin and would survive turning this off. Delete this line to
+      # revert. The runner envFroms the same configmap, where this is inert.
+      ITERION_CANONICAL_REDIRECT: "1"
       # Cookie migration, second half — the SOAK (SocialGouv/iterion#1076).
       #
       # The server writes the refresh cookie under both spellings
