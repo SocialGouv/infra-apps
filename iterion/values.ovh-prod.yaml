@@ -189,6 +189,12 @@ iterion:
     # run's REMAINING work can exceed the grace", because a run the image
     # change does interrupt is not auto-resumable (the workflow source-hash
     # guard refuses it) and is relaunched from scratch.
+    # This image and iterion.image above are COUPLED by the queue schema: the
+    # runner must accept the version the server publishes. Schema 17 landed on
+    # 2026-09-13, and a 2026-09-10 runner accepting only 10–14 parked every
+    # message from a v17 server on the DLQ with "schema version: 17
+    # unsupported" — measured 2026-09-15, two merge-gate runs dead. Moving
+    # either side alone is the defect; check the range, or move both.
     image: ghcr.io/socialgouv/iterion-runner-devbox@sha256:98e7e531f3ce587d5aeb8eb8c0b3c77d633ce6d221c4ae264de0a23446ee28d6
     podSecurityContext:
       runAsUser: 1000
