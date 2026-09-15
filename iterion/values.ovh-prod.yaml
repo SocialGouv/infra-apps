@@ -52,12 +52,17 @@ cluster: ovh-prod
 
 iterion:
   image:
-    # TEMPORARY: prod tracks main via the moving :edge tag for the ADR-048
-    # test→fix campaign (single operator-user on prod). Each main push rebuilds
-    # :edge; a `kubectl rollout restart deploy/iterion deploy/iterion-runner`
-    # pulls it fresh (pullPolicy: Always). Re-pin an immutable vX.Y.Z release
-    # once the org/team tenancy rework is validated and stable.
-    tag: edge
+    # Pinned by DIGEST. A moving tag is resolved per POD at that pod's own
+    # start time, so an HPA scale-up from an existing ReplicaSet pulls whatever
+    # the tag points at then — one ReplicaSet serving several builds, with no
+    # rollout-history entry. The browser then gets index.html from one build and
+    # 404s its content-hashed chunks on another, which the SPA fallback answers
+    # as text/html: the studio dies on a MIME error. Measured on prod twice —
+    # 2026-09-02 (v3.92.0 + v3.93.0) and 2026-09-15 (v3.142.1 + v3.146.5, both
+    # public hosts down). `kubectl rollout restart` does NOT repair it: ArgoCD
+    # self-heal reverts the annotation onto the unchanged template.
+    # Deploying = resolve the release digest and commit it, like runner.image.
+    digest: sha256:191a9c2b3516f185646a06bdd6696287cc7099c91d1ebf3015f8618641a3b4f6 # v3.146.6
     pullPolicy: Always
 
   server:
