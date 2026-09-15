@@ -273,6 +273,12 @@ iterion:
       drainTimeout: 8h
     # Operator timezone: log-line timestamps (server + runner) render in
     # Paris time instead of UTC (the binary embeds tzdata, chart >= 0.37.4).
+    # Everything here lands in the shared configmap, and BOTH deployments carry
+    # a `checksum/config` pod annotation over it — so touching a single key
+    # rolls the server AND the twelve runners, even a server-only setting.
+    # Harmless on an idle fleet; with runs in flight the runner side then holds
+    # its lame-duck window (8h, see runner.terminationGracePeriodSeconds), so
+    # check for in-flight runs before editing, exactly as for an image bump.
     extraEnv:
       TZ: Europe/Paris
       # Canonical redirect for HUMANS only (iterion >= v3.149.1, PR #1258). A
