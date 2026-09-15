@@ -40,7 +40,6 @@
 #   iterion-llm           → existing SealedSecret (LLM API keys, unchanged)
 #
 # CHANGEME — remaining V1 hardening before real traffic:
-#   - pin image.tag to a digest (currently :edge),
 #   - enable iterion.networkPolicy + subchart networkPolicies,
 #   - JetStream stream replication R3: `config.nats.streamReplicas: 3` is set
 #     below; it takes effect with the chart release that maps it to
