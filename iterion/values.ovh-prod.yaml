@@ -195,7 +195,7 @@ iterion:
     # message from a v17 server on the DLQ with "schema version: 17
     # unsupported" — measured 2026-09-15, two merge-gate runs dead. Moving
     # either side alone is the defect; check the range, or move both.
-    image: ghcr.io/socialgouv/iterion-runner-devbox@sha256:7de6e594ba4dea8f8e3d2129c30e00548051529cf714370c275d508a9c2d7c61 # v3.149.1
+    image: ghcr.io/socialgouv/iterion-runner-devbox@sha256:a9ed111f995c0a7cb0dc7ca5a60741317ac9e12d7e059cfc021f0b56d0f2e03c # v3.149.3
     podSecurityContext:
       runAsUser: 1000
       runAsGroup: 1000
@@ -264,7 +264,7 @@ iterion:
     # procedure: docs/cloud-deployment.md). The mark is monotonic: a typo
     # here cannot be undone by a rollback.
     rollout:
-      runnerEpoch: 7
+      runnerEpoch: 8
     runner:
       # Lame-duck: SIGTERM stops intake, the in-flight run finishes. See the
       # rationale on runner.terminationGracePeriodSeconds above for why the
