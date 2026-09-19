@@ -1,0 +1,30 @@
+{{- if .Values.monitoring.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: {{ .Release.Name }}-controller
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/component: controller-monitoring
+    {{- with .Values.monitoring.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  namespaceSelector:
+    matchNames: [{{ .Release.Namespace | quote }}]
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/name: gha-rs-controller
+      app.kubernetes.io/component: controller-manager
+  podMetricsEndpoints:
+    - port: metrics
+      path: /metrics
+      interval: 30s
+      # ARC's namespace label names the RUNNER scale set, not this pod's
+      # arc-systems namespace. Preserve it for the rules below.
+      honorLabels: true
+      relabelings:
+        - targetLabel: job
+          replacement: {{ .Values.monitoring.scrapeJob | quote }}
+{{- end }}
