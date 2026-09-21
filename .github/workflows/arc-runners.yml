@@ -1,0 +1,39 @@
+name: ARC runner configuration
+
+on:
+  pull_request:
+    paths:
+      - 'arc-runners/**'
+      - '.github/workflows/arc-runners.yml'
+  push:
+    branches: [master]
+    paths:
+      - 'arc-runners/**'
+      - '.github/workflows/arc-runners.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4.3.1
+        with:
+          version: v4.1.1
+      - name: Install test dependencies
+        run: |
+          python3 -m venv "$RUNNER_TEMP/arc-test-venv"
+          "$RUNNER_TEMP/arc-test-venv/bin/python" -m pip install -r arc-runners/tests/requirements.txt
+          echo "$RUNNER_TEMP/arc-test-venv/bin" >> "$GITHUB_PATH"
+      - name: Build the pinned Helm dependency
+        run: helm dependency build arc-runners
+      - name: Check chart and initializer behavior
+        run: |
+          helm lint arc-runners
+          python arc-runners/tests/inotify_init.py
