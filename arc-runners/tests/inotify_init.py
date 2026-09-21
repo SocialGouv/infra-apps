@@ -51,6 +51,6 @@ rendered = subprocess.check_output(['helm', 'template', 'arc-runners', str(chart
 ars = next(d for d in yaml.safe_load_all(rendered) if d and d['kind'] == 'AutoscalingRunnerSet')
 spec = ars['spec']['template']['spec']
 assert spec['initContainers'][0] == init
-assert [c['name'] for c in spec['initContainers']] == ['configure-inotify', 'init-dind-externals']
-assert {c['name'] for c in spec['containers']} == {'runner', 'dind'}
+assert [c['name'] for c in spec['initContainers'][:2]] == ['configure-inotify', 'init-dind-externals']
+assert {c['name'] for c in spec['containers']} == {'runner'}
 print('PASS: rendered runner PodSpec keeps the initializer before all work')

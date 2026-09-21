@@ -110,3 +110,35 @@ owner to enable Actions; do not report a CI pass until that run exists. Local
 validation uses the same pinned dependency in a fresh virtual environment.
 Billy's Claude weekly quota is blocked until 2026-09-15 21:00 UTC, so R1d39ee was
 corrected directly and no Billy run was launched for this PR.
+
+## Docker daemon startup gate — SocialGouv/iterion#981
+
+The runner's `Initialize containers` phase happens before any workflow step.
+Waiting inside a CI `run:` step is too late for a job with `services:`. The
+observed service job failed eight seconds after pod startup, while another
+job on the same image could reach Docker after 76 seconds. Group membership
+was not the cause of that incident.
+
+`dind` now runs as a native sidecar in `initContainers`, after the externals
+copy and before the runner. Its `restartPolicy: Always` keeps the daemon alive;
+kubelet starts the runner only after `startupProbe` succeeds. The probe runs
+`docker --host=unix:///run/docker/docker.sock info`, against the same endpoint
+as the runner. Merely seeing a socket is insufficient. Five-second probe
+period/timeout and 24 failures before restart are explicit operator settings
+in values.yaml. A daemon that cannot start keeps the runner in initialization,
+without accepting a GitHub job it cannot serve.
+
+This requires Kubernetes 1.29+ with `SidecarContainers` enabled (on by default
+there); ovh-dev was read-only verified at 1.31.6. See the
+[Kubernetes sidecar startup contract](https://kubernetes.io/docs/concepts/workloads/pods/sidecar-containers/#sidecar-containers-and-pod-lifecycle).
+The runner command, image, Docker GID, socket mounts and privileges retain their
+existing configuration. Native sidecar termination also keeps dind alive until
+the runner has stopped.
+
+Validate with `python arc-runners/tests/dind_startup.py` in the same pinned
+virtual environment as the inotify checks, then server-dry-run the rendered
+AutoscalingRunnerSet and extracted PodSpec. After approved activation, record
+a real ARC job with `services: mongo` passing container initialization before
+moving required jobs. The compiler image for `race` and the unexplained
+`cloud-e2e` failure remain separate parts of #981; this gate alone does not
+justify moving or closing all three jobs.
