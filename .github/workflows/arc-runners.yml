@@ -38,3 +38,4 @@ jobs:
           helm lint arc-runners
           python arc-runners/tests/inotify_init.py
           python arc-runners/tests/dind_startup.py
+          python arc-runners/tests/runner_image.py

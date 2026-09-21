@@ -142,3 +142,36 @@ a real ARC job with `services: mongo` passing container initialization before
 moving required jobs. The compiler image for `race` and the unexplained
 `cloud-e2e` failure remain separate parts of #981; this gate alone does not
 justify moving or closing all three jobs.
+
+## Runner image — SocialGouv/iterion#981
+
+`runner` and `init-dind-externals` run `ghcr.io/socialgouv/iterion-ci-runner`:
+upstream's runner image plus gcc and the libc headers Go's race detector
+needs. SocialGouv/iterion builds it from `ci/arc-runner/Dockerfile` (workflow
+`ARC CI runner image`), proves cgo under `-race` as UID 1001, and publishes
+only validated `main` builds, one immutable version `1.<run>.<attempt>` each —
+never `latest`. The package is public; the pods pull it anonymously, as they
+pull upstream's.
+
+values.yaml pins the version **and** its digest. Resolve the digest
+anonymously from the registry right before writing it, and pin what the tag
+resolves to at that moment:
+
+```sh
+tok=$(curl -fsS "https://ghcr.io/token?scope=repository:socialgouv/iterion-ci-runner:pull" | jq -r .token)
+curl -fsSI -H "Authorization: Bearer $tok" \
+  -H 'Accept: application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.v2+json' \
+  https://ghcr.io/v2/socialgouv/iterion-ci-runner/manifests/<version> | grep -i docker-content-digest
+```
+
+Both containers carry the same image: the init copies `/home/runner/externals`
+out of the distribution the runner then executes. `configure-inotify` runs
+`/bin/sh` only and keeps upstream's image. `python arc-runners/tests/runner_image.py`
+holds the pin and the alignment on the rendered PodSpec. Renovate updates the
+pinned version and digest when iterion publishes a new build (its Dockerfile
+follows upstream's runner through Renovate as well); move `runner` and
+`init-dind-externals` together, always.
+
+Rollback is the previous pin on both containers — or upstream's
+`ghcr.io/actions/actions-runner:<version>` on both, which loses `-race` (cgo)
+on ARC and nothing else.

@@ -2,7 +2,7 @@ gha-runner-scale-set:
   githubConfigUrl: "https://github.com/SocialGouv"
   githubConfigSecret: github-token
 
-  # The runner image is upstream's, pinned by version, and staleness here is
+  # The runner image is pinned by version AND digest, and staleness here is
   # fatal rather than merely untidy: ARC runs its runners with --disableupdate
   # (the image is immutable), so a runner below what the Actions service
   # accepts exits the moment it connects. ARC reads that as a crash, retries
@@ -17,10 +17,21 @@ gha-runner-scale-set:
   # dependency bump stayed unmergeable, no release was cut and the tag froze.
   # The scale set served nothing for over a year before anyone looked.
   #
-  # Upstream's image drops the extra tooling the SocialGouv one carried (Go
-  # 1.21, kubectl 1.28, yq), all of which a workflow gets from its own
-  # setup-* steps. Renovate keeps this pin current; do not replace it with a
+  # ghcr.io/socialgouv/iterion-ci-runner is upstream's image plus gcc and the
+  # libc headers Go's race detector needs (cgo); upstream ships no C compiler
+  # and no other tooling either — a workflow gets Go, Node and kubectl from
+  # its own setup-* steps. SocialGouv/iterion builds it (ci/arc-runner) from a
+  # version-and-digest pin of upstream that Renovate follows, proves cgo under
+  # -race as the runner user, and publishes only validated main builds, one
+  # immutable version 1.<run>.<attempt> each, never a floating tag. Renovate
+  # keeps this pin current from those versions; do not replace it with a
   # floating tag, and do not let it go stale.
+  #
+  # `runner` and `init-dind-externals` carry the SAME image: the init copies
+  # /home/runner/externals out of the distribution the runner then executes.
+  # `configure-inotify` only runs /bin/sh and keeps upstream's image.
+  # tests/runner_image.py holds the pin and the alignment on the rendered
+  # PodSpec.
 
   controllerServiceAccount:
     namespace: arc-systems
@@ -84,7 +95,7 @@ gha-runner-scale-set:
               cpu: 100m
               memory: 32Mi
         - name: init-dind-externals
-          image: ghcr.io/actions/actions-runner:2.337.0
+          image: ghcr.io/socialgouv/iterion-ci-runner:1.5.1@sha256:a01629900c9d7902dce3315b94aea7063fbe97af6f1f08a9652ab073c378f123
           imagePullPolicy: Always
           command:
             [
@@ -139,7 +150,7 @@ gha-runner-scale-set:
               mountPath: /home/runner/externals
       containers:
         - name: runner
-          image: ghcr.io/actions/actions-runner:2.337.0
+          image: ghcr.io/socialgouv/iterion-ci-runner:1.5.1@sha256:a01629900c9d7902dce3315b94aea7063fbe97af6f1f08a9652ab073c378f123
           imagePullPolicy: Always
           command: ["/home/runner/run.sh"]
           resources:
