@@ -385,10 +385,10 @@ iterion:
       # Single-dev prod: OpenAI claw runs bill the operator's ChatGPT sub.
       ITERION_OPENAI_USE_OAUTH: "1"
       # The ChatGPT-forfait wire gates model availability on the codex-cli
-      # `version:` header, and neither the runner image nor the sandbox image
-      # ships a codex binary to probe — without this override claw falls back
-      # to its baked-in version and newer models 400 ("gpt-5.6-sol requires a
-      # newer codex-cli"). Bump when a model demands it (value = a released
+      # `version:` header. Keep this explicit override aligned with the Codex
+      # CLI shipped by the pinned runner image: it wins over both the binary
+      # probe and claw's baked-in version, including inside sandboxes.
+      # Bump when a model demands it (value = a released
       # codex-cli version; iterion ≥ the ITERION_CODEX_VERSION sandbox
       # forwarding fix, PR #553).
       #
@@ -406,7 +406,10 @@ iterion:
       # 0.144.6 served gpt-5.6-sol and refused gpt-6-astra. Note this
       # value OVERRIDES claw's baked-in floor, so bumping claw alone
       # (iterion#976) does not move it — this line is the one that decides.
-      ITERION_CODEX_VERSION: "0.153.4"
+      # v3.199.0 ships Codex 0.156.1. The Revi migration canary served Astra
+      # but rejected Sol while the stale 0.153.4 override was still active.
+      # Verify both Sol and Luna over ChatGPT OAuth after this rollout.
+      ITERION_CODEX_VERSION: "0.156.1"
       # Codex CLI's PUBLIC OAuth client id (the `aud` of its id_token) —
       # required by the server's OAuth refresh worker and the manual
       # /oauth/codex/refresh endpoint. Without it every uploaded ChatGPT
