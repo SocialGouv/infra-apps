@@ -78,3 +78,18 @@ dependencies:
     repository: https://charts.min.io/
     version: 5.4.0
     condition: minio.enabled
+  # SeaweedFS — the S3 object store that replaces MinIO. MinIO stopped
+  # distributing publicly (quay.io/minio/* 401 since 2026-09-24, Docker Hub
+  # repos removed, dl.min.io 410, the GitHub repo archived), so the mkbucket
+  # Job can no longer pull its image and every sync hangs on it, while the
+  # StatefulSet only survives on the nodes' image cache — a rescheduled pod
+  # does not come back.
+  #
+  # Upstream chart, from the project's own GitHub Pages repo. Apache-2.0.
+  # Components used here: 3 masters (raft), 4 volume servers, 2 filers,
+  # 2 S3 gateways. Buckets are NOT created by the chart's own hook (see
+  # templates/seaweedfs-mkbucket.ovh-prod.job.yaml for why).
+  - name: seaweedfs
+    repository: https://seaweedfs.github.io/seaweedfs/helm
+    version: 4.47.0
+    condition: seaweedfs.enabled

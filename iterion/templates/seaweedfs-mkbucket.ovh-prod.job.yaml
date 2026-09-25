@@ -1,0 +1,121 @@
+{{- if and (eq .Values.cluster "ovh-prod") .Values.seaweedfs.enabled }}
+# Non-hook bucket provisioner for SeaweedFS — same reason, same shape as
+# templates/minio-mkbucket.ovh-prod.job.yaml, which this replaces.
+#
+# The SeaweedFS chart provisions buckets from `s3.createBuckets` through
+# templates/shared/post-install-bucket-hook.yaml, annotated
+# `helm.sh/hook: post-install,post-upgrade`. ArgoCD maps that to a PostSync
+# hook, i.e. it runs only after the app is Healthy — but the iterion server
+# gates /readyz on HeadBucket(iterion-artifacts) (pkg/store/blob/s3.go) and
+# never creates the bucket. Server unhealthy -> sync never completes ->
+# PostSync never runs -> deadlock. So `s3.createBuckets` is deliberately NOT
+# set in values.ovh-prod.yaml and this plain resource does the job DURING the
+# sync, retrying until the gateway answers.
+#
+# It talks S3, not `weed shell`: one dependency (the S3 Service) instead of the
+# master and filer gRPC ports, and it uses the very credentials the server will
+# use, so a wrong seal fails HERE instead of silently later at /readyz.
+# `rclone mkdir` on an existing bucket exits 0, so re-runs are free.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: iterion-seaweedfs-mkbucket
+  namespace: iterion
+  annotations:
+    # Replace ALONE cannot recreate this Job: ttlSecondsAfterFinished deletes it
+    # an hour after success, and `kubectl replace` on an absent Job is validated
+    # as a full update, which demands the spec.selector the API server normally
+    # generates at CREATE time — the sync then fails forever on
+    # "spec.selector: Required value". Force makes it delete + create, correct
+    # whether the Job is absent (the usual case, post-TTL) or present with an
+    # immutable diff.
+    argocd.argoproj.io/sync-options: Replace=true,Force=true
+spec:
+  backoffLimit: 60 # retry while masters elect, volumes register and the gateway comes up
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata:
+      labels:
+        app: seaweedfs-job
+        release: iterion
+    spec:
+      restartPolicy: OnFailure
+      securityContext:
+        fsGroup: 1000
+        runAsGroup: 1000
+        runAsUser: 1000
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: mkbucket
+          # rclone, pinned by digest. Public image, MIT, built by the rclone
+          # project's own CI (org.opencontainers.image.source =
+          # github.com/rclone/rclone, revision 1a98c36a7358).
+          image: rclone/rclone@sha256:d5971950c2b370fb04dd3292541b5bda6d9103143fd7e345aeb435a399388afc
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            capabilities:
+              drop:
+                - ALL
+            seccompProfile:
+              type: RuntimeDefault
+          env:
+            - name: RCLONE_CONFIG_DST_TYPE
+              value: s3
+            - name: RCLONE_CONFIG_DST_PROVIDER
+              value: Other
+            - name: RCLONE_CONFIG_DST_ENDPOINT
+              value: http://iterion-seaweedfs-s3:8333
+            - name: RCLONE_CONFIG_DST_REGION
+              value: "{{ .Values.iterion.config.s3.region }}"
+            - name: RCLONE_CONFIG_DST_FORCE_PATH_STYLE
+              value: "true"
+            # The very creds the iterion server authenticates with, so a
+            # mismatch between iterion-storage and iterion-seaweedfs-s3 fails
+            # this Job rather than /readyz.
+            - name: RCLONE_CONFIG_DST_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: iterion-storage
+                  key: ITERION_S3_ACCESS_KEY_ID
+            - name: RCLONE_CONFIG_DST_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: iterion-storage
+                  key: ITERION_S3_SECRET_ACCESS_KEY
+            - name: BUCKET
+              value: "{{ .Values.iterion.config.s3.bucket }}"
+            - name: HOME
+              value: /tmp
+            - name: RCLONE_CONFIG
+              value: /tmp/rclone.conf
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+          command:
+            - /bin/sh
+            - -ec
+            - |
+              # mkdir creates the bucket and is a no-op (exit 0) when it exists.
+              rclone mkdir "dst:${BUCKET}"
+              # Read it back: `rclone size` exits 3 on a bucket that is not
+              # there, so this is a real check and not a hopeful echo.
+              rclone size "dst:${BUCKET}"
+              echo "bucket ${BUCKET} present on the SeaweedFS gateway"
+          resources:
+            requests:
+              cpu: 20m
+              memory: 64Mi
+            limits:
+              memory: 256Mi
+      volumes:
+        - name: tmp
+          emptyDir: {}
+{{- end }}
