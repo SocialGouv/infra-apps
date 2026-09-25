@@ -1,0 +1,149 @@
+{{- if and (eq .Values.cluster "ovh-prod") .Values.seaweedfs.migrate.enabled }}
+# One-shot MinIO -> SeaweedFS bucket copy, run while MinIO is STILL SERVING.
+#
+# Gated behind `seaweedfs.migrate.enabled` (default false) and behind a
+# `runId` that is part of the Job's name: bumping the id is what re-runs it.
+# ArgoCD would otherwise see an immutable Job spec and fight it forever.
+#
+# The Job does copy then VERIFY, and the verify is what decides:
+#   - `rclone copy --checksum` compares ETag/size and only transfers what
+#     differs, so a second pass over an unchanged bucket moves nothing;
+#   - `rclone check --one-way` re-reads BOTH sides and exits non-zero on any
+#     missing or differing object. `rclone size` on an absent bucket exits 3,
+#     so neither side can be silently empty;
+#   - object count and byte total are printed for both sides.
+#
+# It does NOT delete anything on MinIO: retiring MinIO is a separate, later
+# commit, after the app has run on SeaweedFS.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: iterion-seaweedfs-migrate-{{ .Values.seaweedfs.migrate.runId }}
+  namespace: iterion
+  annotations:
+    argocd.argoproj.io/sync-options: Replace=true,Force=true
+    # PostSync: the copy needs the SeaweedFS gateway and its bucket to exist,
+    # and it must not hold up the sync of the app itself.
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels:
+        app: seaweedfs-migrate
+        release: iterion
+    spec:
+      restartPolicy: Never
+      securityContext:
+        fsGroup: 1000
+        runAsGroup: 1000
+        runAsUser: 1000
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: copy
+          image: rclone/rclone@sha256:d5971950c2b370fb04dd3292541b5bda6d9103143fd7e345aeb435a399388afc
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            capabilities:
+              drop:
+                - ALL
+            seccompProfile:
+              type: RuntimeDefault
+          env:
+            # SRC = MinIO, still up. Same creds the server uses today.
+            - name: RCLONE_CONFIG_SRC_TYPE
+              value: s3
+            - name: RCLONE_CONFIG_SRC_PROVIDER
+              value: Minio
+            - name: RCLONE_CONFIG_SRC_ENDPOINT
+              value: http://iterion-minio:9000
+            - name: RCLONE_CONFIG_SRC_REGION
+              value: "{{ .Values.iterion.config.s3.region }}"
+            - name: RCLONE_CONFIG_SRC_FORCE_PATH_STYLE
+              value: "true"
+            - name: RCLONE_CONFIG_SRC_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: iterion-storage
+                  key: ITERION_S3_ACCESS_KEY_ID
+            - name: RCLONE_CONFIG_SRC_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: iterion-storage
+                  key: ITERION_S3_SECRET_ACCESS_KEY
+            # DST = SeaweedFS.
+            - name: RCLONE_CONFIG_DST_TYPE
+              value: s3
+            - name: RCLONE_CONFIG_DST_PROVIDER
+              value: Other
+            - name: RCLONE_CONFIG_DST_ENDPOINT
+              value: http://iterion-seaweedfs-s3:8333
+            - name: RCLONE_CONFIG_DST_REGION
+              value: "{{ .Values.iterion.config.s3.region }}"
+            - name: RCLONE_CONFIG_DST_FORCE_PATH_STYLE
+              value: "true"
+            - name: RCLONE_CONFIG_DST_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: iterion-storage
+                  key: ITERION_S3_ACCESS_KEY_ID
+            - name: RCLONE_CONFIG_DST_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: iterion-storage
+                  key: ITERION_S3_SECRET_ACCESS_KEY
+            - name: BUCKET
+              value: "{{ .Values.iterion.config.s3.bucket }}"
+            - name: HOME
+              value: /tmp
+            - name: RCLONE_CONFIG
+              value: /tmp/rclone.conf
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+          command:
+            - /bin/sh
+            - -ec
+            - |
+              echo "== before: source =="
+              rclone size "src:${BUCKET}"
+              echo "== before: destination =="
+              rclone size "dst:${BUCKET}"
+
+              echo "== copy =="
+              rclone copy "src:${BUCKET}" "dst:${BUCKET}" \
+                --checksum --transfers={{ .Values.seaweedfs.migrate.transfers }} \
+                --checkers={{ .Values.seaweedfs.migrate.checkers }} \
+                --stats=30s --stats-one-line --log-level INFO
+
+              echo "== verify: every source object present and identical =="
+              # --one-way: objects that exist only on the destination (written
+              # there by the app after cutover) are not a failure; a source
+              # object that is missing or differs IS.
+              rclone check "src:${BUCKET}" "dst:${BUCKET}" --one-way --checksum
+
+              echo "== after: source =="
+              rclone size "src:${BUCKET}"
+              echo "== after: destination =="
+              rclone size "dst:${BUCKET}"
+              echo "MIGRATION VERIFIED for bucket ${BUCKET}"
+          resources:
+            requests:
+              cpu: 200m
+              memory: 256Mi
+            limits:
+              memory: 1Gi
+      volumes:
+        - name: tmp
+          emptyDir: {}
+{{- end }}
