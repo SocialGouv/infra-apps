@@ -490,9 +490,18 @@ iterion:
       # ITERION_NATS_STREAM_REPLICAS mapping.
       streamReplicas: 3
     s3:
+      # CUTOVER LINE. Today: MinIO. After the migration Job has printed
+      # "MIGRATION VERIFIED" (templates/seaweedfs-migrate.ovh-prod.job.yaml),
+      # swap the two lines below in their own commit — nothing else changes.
+      # Rolling back is the reverse swap, and it is safe for as long as MinIO
+      # keeps its data: objects written on SeaweedFS after the cutover are the
+      # only ones lost by going back, so the window matters.
       endpoint: http://iterion-minio:9000
+      # endpoint: http://iterion-seaweedfs-s3:8333
       region: us-east-1
       bucket: iterion-artifacts
+      # Both gateways are path-style; SeaweedFS needs it too (virtual-host
+      # style would require s3.domainName and a wildcard DNS entry).
       usePathStyle: true
     # Valkey HA (Sentinel) — shares forge OAuth/CSRF state, board-MCP tokens
     # and auth rate-limit across the x3 server replicas (fixes the GitHub-App
@@ -802,3 +811,219 @@ firecrawl:
   postgres:
     size: 5Gi
     storageClass: csi-cinder-high-speed
+
+# --- SeaweedFS — the S3 object store that replaces MinIO (ovh-prod) ---------
+#
+# WHY: MinIO stopped distributing publicly. `quay.io/minio/*` answers 401 since
+# 2026-09-24, the Docker Hub repos were removed, `dl.min.io` answers 410 and
+# github.com/minio/minio is archived. Measured consequences here: the
+# `iterion-minio-mkbucket` Job can no longer pull `quay.io/minio/mc` so every
+# ArgoCD sync stays Progressing on it, and the `iterion-minio` StatefulSet runs
+# only off the nodes' image cache — a rescheduled pod does not come back. Third
+# party rebuilds of MinIO are out of scope by decision.
+#
+# COMPATIBILITY: measured, not assumed. iterion's whole S3 surface lives in
+# pkg/store/blob/s3.go (aws-sdk-go-v2 s3 v1.107.2, path style): HeadBucket,
+# PutObject, GetObject (incl. Range), HeadObject, DeleteObject, DeleteObjects,
+# paginated ListObjectsV2 with prefixes, PresignGetObject. All of it was driven
+# against SeaweedFS 4.47 in a container, including >1000-key pagination, a full
+# 1000-key delete batch, and presigned URLs that must be served fresh and
+# REFUSED once tampered with or expired.
+#
+# TOPOLOGY: 3 masters (raft quorum, survives one loss), 4 volume servers with
+# 2 copies of every needle, 2 filers, 2 S3 gateways. Same shape as the rest of
+# this namespace (Mongo RS3, NATS R3, Valkey 3): one node may go.
+seaweedfs:
+  enabled: true
+  fullnameOverride: iterion-seaweedfs
+
+  global:
+    seaweedfs:
+      # The chart's own comment (templates/shared/networkpolicy.yaml) says this
+      # ClusterRole "is a leftover from a migration and is not exercised by any
+      # component". No cluster-scoped grant for something nothing reads.
+      createClusterRole: false
+      imagePullPolicy: IfNotPresent
+      # Data-HA for every needle: "001" = one extra copy on another server in
+      # the same rack, i.e. 2 copies, tolerating the loss of one volume server.
+      # "002" (3 copies) buys a second simultaneous loss at 33 % usable instead
+      # of 50 %. MinIO's EC:2 over 4 drives tolerated TWO losses at 50 % usable;
+      # matching that exactly needs SeaweedFS erasure coding, which applies to
+      # sealed volumes via a background task, not to live writes.
+      enableReplication: true
+      replicationPlacement: "001"
+
+  # Every component pinned BY DIGEST. The chart's `image.tag` is concatenated
+  # with ":" (templates/shared/_helpers.tpl, `seaweedfs.image`) so it cannot
+  # carry a digest; `<component>.imageOverride` is printed verbatim and can.
+  # Digest of chrislusf/seaweedfs:4.47, an OCI index over amd64/arm64/arm-v7/386.
+  # Its labels carry org.opencontainers.image.source=github.com/seaweedfs/seaweedfs
+  # and revision c5073360007d28385a33426a42ac3e4ec504c5a3, which is exactly
+  # `git rev-parse 4.47^{commit}` upstream. Apache-2.0.
+  master:
+    imageOverride: &swImage chrislusf/seaweedfs@sha256:ce9e796f1fe6f06968f4c04bdaf8f678dad9c8acdfef3d244133d71bfa6bf882
+    enabled: true
+    replicas: 3
+    # Raft needs its log on disk to rejoin with the state it voted on.
+    resumeState: true
+    volumeSizeLimitMB: 1024
+    # The chart defaults every component to hostPath, which PSA `restricted`
+    # (Kyverno) refuses on this cluster. PVC for anything durable, emptyDir for
+    # logs.
+    data:
+      type: persistentVolumeClaim
+      size: 1Gi
+      storageClass: csi-cinder-high-speed
+    logs:
+      type: emptyDir
+    podSecurityContext: &swPodSec
+      enabled: true
+      fsGroup: 1000
+      fsGroupChangePolicy: OnRootMismatch
+      runAsUser: 1000
+      runAsGroup: 1000
+      runAsNonRoot: true
+      seccompProfile:
+        type: RuntimeDefault
+    containerSecurityContext: &swCtrSec
+      enabled: true
+      allowPrivilegeEscalation: false
+      privileged: false
+      runAsUser: 1000
+      runAsGroup: 1000
+      runAsNonRoot: true
+      # The entrypoint writes /data and the filer/volume write scratch files.
+      readOnlyRootFilesystem: false
+      capabilities:
+        drop:
+          - ALL
+      seccompProfile:
+        type: RuntimeDefault
+    resources:
+      requests:
+        cpu: 50m
+        memory: 256Mi
+      limits:
+        memory: 512Mi
+
+  volume:
+    imageOverride: *swImage
+    enabled: true
+    replicas: 4
+    # 4 x 30 Gi raw = 120 Gi; at 2 copies that is 60 Gi usable, against the
+    # 4 x 20 Gi (80 Gi raw, ~40 Gi usable) MinIO holds today.
+    dataDirs:
+      - name: data1
+        type: persistentVolumeClaim
+        size: 30Gi
+        storageClass: csi-cinder-high-speed
+        maxVolumes: 0
+    logs:
+      type: emptyDir
+    podSecurityContext: *swPodSec
+    containerSecurityContext: *swCtrSec
+    resources:
+      requests:
+        cpu: 100m
+        memory: 512Mi
+      limits:
+        memory: 2Gi
+
+  filer:
+    imageOverride: *swImage
+    enabled: true
+    replicas: 2
+    # Metadata store: the chart default, leveldb2, one copy per filer pod on
+    # its own PVC, reconciled between peers by the filer's metadata log.
+    # Measured on 4.47, both directions: a filer stopped while its peer took
+    # writes serves them after it restarts, and a BRAND-NEW filer with an empty
+    # disk logs "completed full metadata sync from peer" and then serves
+    # objects written before it existed. That removes the reason to put a
+    # database in front of /readyz.
+    #
+    # If concurrent writes to one directory ever diverge (the limitation
+    # upstream documents for this store), the escape hatch is the postgres2
+    # store on a CNPG Cluster — the operator is already installed on this
+    # cluster (applications/cnpg.yaml). That database MUST be created with a
+    # C / C.UTF-8 collation: on an en_US.utf8 database SeaweedFS logs
+    # "filemeta.name collation is not byte-ordered ... falling back to a slower
+    # COLLATE C sort", i.e. every S3 listing loses its index.
+    data:
+      type: persistentVolumeClaim
+      size: 10Gi
+      storageClass: csi-cinder-high-speed
+    logs:
+      type: emptyDir
+    # The S3 gateway runs as its own Deployment below, not inside the filer.
+    s3:
+      enabled: false
+    podSecurityContext: *swPodSec
+    containerSecurityContext: *swCtrSec
+    resources:
+      requests:
+        cpu: 100m
+        memory: 512Mi
+      limits:
+        memory: 2Gi
+
+  s3:
+    imageOverride: *swImage
+    enabled: true
+    replicas: 2
+    port: 8333
+    enableAuth: true
+    # Out-of-band SealedSecret holding ONE key, `seaweedfs_s3_config`, whose
+    # value is the gateway's identities JSON. Its accessKey/secretKey MUST be
+    # the same pair as ITERION_S3_ACCESS_KEY_ID / ITERION_S3_SECRET_ACCESS_KEY
+    # in `iterion-storage` — the same contract `iterion-minio-creds` had with
+    # it. Template and shape: templates/iterion-seaweedfs-s3.ovh-prod.sealedsecret.yaml.
+    #
+    # Naming an existing secret also stops the chart from rendering its own
+    # `*-s3-secret`, which derives credentials through Helm `lookup`
+    # (templates/s3/s3-secret.yaml, getOrGeneratePassword). Under ArgoCD a
+    # lookup returns nothing during diff, so that path re-rolls the keys.
+    existingConfigSecret: iterion-seaweedfs-s3
+    # Buckets are NOT created here: `s3.createBuckets` renders a Job annotated
+    # `helm.sh/hook: post-install,post-upgrade`, which ArgoCD runs PostSync,
+    # i.e. only once the app is Healthy — while the iterion server gates
+    # /readyz on HeadBucket(iterion-artifacts). That is the deadlock
+    # templates/minio-mkbucket.ovh-prod.job.yaml exists to break; the same
+    # hook-free copy is in templates/seaweedfs-mkbucket.ovh-prod.job.yaml.
+    logs:
+      type: emptyDir
+    podSecurityContext: *swPodSec
+    containerSecurityContext: *swCtrSec
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        memory: 1Gi
+
+  # No ServiceMonitor: the Prometheus-operator CRDs are not confirmed present
+  # on ovh-prod (same reason iterion.metrics.podMonitor stays false above).
+  # Each component still serves its metrics on 9327 for a future scrape.
+  admin:
+    enabled: false
+  sftp:
+    enabled: false
+  cosi:
+    enabled: false
+  allInOne:
+    enabled: false
+
+  # One-shot MinIO -> SeaweedFS copy (templates/seaweedfs-migrate.ovh-prod.job.yaml).
+  # OFF by default. Turned on for the copy window while MinIO still serves, then
+  # turned back off. `runId` is part of the Job name: bump it to re-run, because
+  # a Job spec is immutable and ArgoCD would otherwise fight an edited one.
+  migrate:
+    enabled: false
+    runId: "1"
+    transfers: 8
+    checkers: 16
+    # Extra rclone flags for the copy. The POST-cutover sweep, which picks up
+    # the objects MinIO took during the endpoint rollout, MUST run with
+    # `--ignore-existing`: without it `--checksum` would overwrite an object
+    # the app has already written on SeaweedFS with MinIO's older copy of the
+    # same key (PutIRBlob and PutBackendSession do replace bytes).
+    extraFlags: []
