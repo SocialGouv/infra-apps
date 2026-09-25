@@ -61,7 +61,7 @@ iterion:
     # public hosts down). `kubectl rollout restart` does NOT repair it: ArgoCD
     # self-heal reverts the annotation onto the unchanged template.
     # Deploying = resolve the release digest and commit it, like runner.image.
-    digest: sha256:40fab171c22736fb66ca6ce5b3a5550ae7016c7e5848bcb1d96bf1c5404d4763 # v3.199.0
+    digest: sha256:577420ac261798647692bef7021bc45421d1153ffbf47985e54d7179d689b81f # v3.201.0
     pullPolicy: Always
 
   server:
