@@ -61,7 +61,7 @@ iterion:
     # public hosts down). `kubectl rollout restart` does NOT repair it: ArgoCD
     # self-heal reverts the annotation onto the unchanged template.
     # Deploying = resolve the release digest and commit it, like runner.image.
-    digest: sha256:d3fff65233fc8695d7baf4fb3d121ce8cee0712eb02a5ba2c5d5a39fa2920332 # v3.198.0
+    digest: sha256:40fab171c22736fb66ca6ce5b3a5550ae7016c7e5848bcb1d96bf1c5404d4763 # v3.199.0
     pullPolicy: Always
 
   server:
@@ -201,7 +201,7 @@ iterion:
     #   docker buildx imagetools inspect <image>:<tag>        -> index digest
     #   ... --raw, then the linux/amd64 child                 -> per-arch digest
     #   ... --format '{{json .Image.Config.Labels}}'          -> version+revision
-    image: ghcr.io/socialgouv/iterion-runner-devbox@sha256:1540a5c7a0570c6b1e5e216e5116d9949eb052bd43d5450675f431c823c2cbd8 # v3.198.0
+    image: ghcr.io/socialgouv/iterion-runner-devbox@sha256:29d3a8a9364b531a132a4047ed2af7d4fc9112cf76ad5616ccf32cf12480f6da # v3.199.0
     podSecurityContext:
       runAsUser: 1000
       runAsGroup: 1000
@@ -270,7 +270,7 @@ iterion:
     # procedure: docs/cloud-deployment.md). The mark is monotonic: a typo
     # here cannot be undone by a rollback.
     rollout:
-      runnerEpoch: 8
+      runnerEpoch: 9
     runner:
       # Lame-duck: SIGTERM stops intake, the in-flight run finishes. See the
       # rationale on runner.terminationGracePeriodSeconds above for why the
