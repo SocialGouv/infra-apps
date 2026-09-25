@@ -8,6 +8,7 @@ spec:
   podSelector: {}
   ingress:
     - from:
+        - podSelector: {}
         - namespaceSelector:
             matchLabels:
               application: domifa
