@@ -8,9 +8,9 @@
 # The Job does copy then VERIFY, and the verify is what decides:
 #   - `rclone copy --checksum` compares ETag/size and only transfers what
 #     differs, so a second pass over an unchanged bucket moves nothing;
-#   - `rclone check --one-way` re-reads BOTH sides and exits non-zero on any
-#     missing or differing object. `rclone size` on an absent bucket exits 3,
-#     so neither side can be silently empty;
+#   - `rclone check --one-way --download` re-reads BOTH sides BYTE BY BYTE and
+#     exits non-zero on any missing or differing object. `rclone size` on an
+#     absent bucket exits 3, so neither side can be silently empty;
 #   - object count and byte total are printed for both sides.
 #
 # It does NOT delete anything on MinIO: retiring MinIO is a separate, later
@@ -124,13 +124,44 @@ spec:
               rclone copy "src:${BUCKET}" "dst:${BUCKET}" \
                 --checksum --transfers={{ .Values.seaweedfs.migrate.transfers }} \
                 --checkers={{ .Values.seaweedfs.migrate.checkers }} \
-                --stats=30s --stats-one-line --log-level INFO
+                --stats=30s --stats-one-line --log-level INFO \
+                {{ join " " .Values.seaweedfs.migrate.extraFlags }}
 
               echo "== verify: every source object present and identical =="
+              # --download, not --checksum. MEASURED: `rclone check --checksum`
+              # cannot hash a MULTIPART object (composite ETag) and reports it
+              # as "N hashes could not be checked" -- a NOTICE, not a failure.
+              # A 300 000-byte object whose every byte was replaced by zeros,
+              # same size, passed with "0 differences found" and exit 0. rclone
+              # creates multipart objects above --s3-upload-cutoff (200 MiB by
+              # default), so the gap is reachable here.
+              #
+              # --download re-reads BOTH sides and compares bytes: the same
+              # corrupted object gave "1 differences found" and exit 1, and
+              # exit 0 with no unhashable object once repaired. It costs one
+              # full read of each side, which is the price of a verification
+              # that can fail.
+              #
               # --one-way: objects that exist only on the destination (written
               # there by the app after cutover) are not a failure; a source
-              # object that is missing or differs IS.
-              rclone check "src:${BUCKET}" "dst:${BUCKET}" --one-way --checksum
+              # object that is missing IS.
+              #
+              # On the post-cutover sweep the copy runs with --ignore-existing,
+              # so a key the app has since rewritten on SeaweedFS legitimately
+              # DIFFERS from MinIO's copy. --missing-on-dst is then the check
+              # that matters: it must be empty. Differences are printed but do
+              # not fail, because on that pass a difference means "newer on the
+              # destination", which is the point.
+              {{- if has "--ignore-existing" .Values.seaweedfs.migrate.extraFlags }}
+              rclone check "src:${BUCKET}" "dst:${BUCKET}" --one-way --download \
+                --missing-on-dst /tmp/missing.txt || true
+              if [ -s /tmp/missing.txt ]; then
+                echo "FAIL: source objects absent from the destination:"; cat /tmp/missing.txt; exit 1
+              fi
+              echo "no source object is missing from the destination"
+              {{- else }}
+              rclone check "src:${BUCKET}" "dst:${BUCKET}" --one-way --download
+              {{- end }}
 
               echo "== after: source =="
               rclone size "src:${BUCKET}"
