@@ -1021,3 +1021,9 @@ seaweedfs:
     runId: "1"
     transfers: 8
     checkers: 16
+    # Extra rclone flags for the copy. The POST-cutover sweep, which picks up
+    # the objects MinIO took during the endpoint rollout, MUST run with
+    # `--ignore-existing`: without it `--checksum` would overwrite an object
+    # the app has already written on SeaweedFS with MinIO's older copy of the
+    # same key (PutIRBlob and PutBackendSession do replace bytes).
+    extraFlags: []
