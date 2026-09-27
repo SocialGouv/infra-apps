@@ -201,7 +201,7 @@ iterion:
     #   docker buildx imagetools inspect <image>:<tag>        -> index digest
     #   ... --raw, then the linux/amd64 child                 -> per-arch digest
     #   ... --format '{{json .Image.Config.Labels}}'          -> version+revision
-    image: ghcr.io/socialgouv/iterion-runner-devbox@sha256:5518088d43f15cab4321e23009a03fa8e7bcb58b5e49be579681e23ea3c57afe # v3.204.1
+    image: ghcr.io/socialgouv/iterion-runner-devbox@sha256:49a12610972409ce57b8154a713665d9846b5e250ad657ee41cbe66205412afe # v3.204.2
     podSecurityContext:
       runAsUser: 1000
       runAsGroup: 1000
