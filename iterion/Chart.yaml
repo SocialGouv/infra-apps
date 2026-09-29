@@ -89,20 +89,13 @@ dependencies:
   # 2 S3 gateways. Buckets are NOT created by the chart's own hook (see
   # templates/seaweedfs-mkbucket.ovh-prod.job.yaml for why).
   #
-  # ⚠ charts/seaweedfs-4.48.0.tgz is the upstream archive MINUS
-  # templates/shared/security-configmap.yaml. That template calls `fromToml`,
-  # which only Helm >= 3.17 knows; ArgoCD-SRE (v2.14) renders with Helm 3.16.3,
-  # parses every template of a loaded subchart even when it renders nothing,
-  # and fails the whole iterion-prod app on it. With jwtSigning off the
-  # template renders nothing here. `helm dependency update` (or a Renovate
-  # bump) restores the pristine archive: re-apply before committing —
-  #   tar -xzf charts/seaweedfs-4.48.0.tgz -C "$tmp" \
-  #     && rm "$tmp/seaweedfs/templates/shared/security-configmap.yaml" \
-  #     && tar -czf charts/seaweedfs-4.48.0.tgz -C "$tmp" seaweedfs
-  # and render with ArgoCD's own helm (quay.io/argoproj/argocd:<version>)
-  # before pushing.
+  # Vendored and patched in vendor-charts/seaweedfs (see its PATCHED.md): the
+  # upstream chart minus templates/shared/security-configmap.yaml, whose
+  # `fromToml` Helm 3.16.3 (ArgoCD-SRE) cannot parse — the whole iterion-prod
+  # app failed to render on it. `helm dependency update` packages that
+  # directory, so the patch survives it.
   - name: seaweedfs
-    repository: https://seaweedfs.github.io/seaweedfs/helm
+    repository: file://vendor-charts/seaweedfs
     version: 4.48.0
     condition: seaweedfs.enabled
   # Dedicated Valkey (Sentinel) holding the SeaweedFS filers' metadata — a

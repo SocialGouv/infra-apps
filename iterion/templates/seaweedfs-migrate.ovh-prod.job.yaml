@@ -1,3 +1,45 @@
+{{- /*
+MinIO <-> SeaweedFS bucket reconciliation, as a PLAIN resource — never a hook:
+an Argo CD PostSync hook waits for EVERY resource of the app to be Healthy, and
+one unhealthy resource anywhere would leave it, and the sync, hanging.
+
+  forward  MinIO -> SeaweedFS: before the cutover, again during the runners'
+           drain and once it is over.
+  reverse  SeaweedFS -> MinIO: rollback.
+
+The newer write of a key wins, by rclone's modtime: an object rclone copied
+carries its source's modtime as metadata, an object the app wrote carries the
+server's LastModified — whole seconds on SeaweedFS. So:
+  - identical modtimes: the destination is a copy of THIS source version, and
+    if the bytes differ it is corrupt: taken from the source;
+  - one side newer by at least a second: that side wins;
+  - same second, different modtimes: the two writes cannot be ordered — a
+    conflict, listed, and the run FAILS for an operator to decide.
+
+MIRROR: when the destination is not the store the app writes to
+(iterion.config.s3.endpoint), nothing but these runs writes there, so a key
+the source no longer has was deleted since the last run: it is deleted on the
+destination too (listed). When the destination IS the live store, nothing is
+deleted: its extra keys are app writes, or source deletions a run cannot tell
+apart — they are listed, as are the keys copied because the destination lacked
+them (which, after the cutover, includes keys the app has deleted since).
+
+Sequence: bulk `copy --update` (ties within a second skipped); byte-for-byte
+check (`--download`: `--checksum` cannot hash a multipart object and lets a
+zeroed one through); one repair pass re-copying, unconditionally, every
+missing key and every differing key the rule gives to the source; a second
+check that decides; the mirror step; an independent comparison of the two key
+sets. A check counts as trustworthy only with exit 0/1, its summary line, as
+many differences as listed keys, and no error beyond them (a subtree rclone
+could not list shows only as an extra error). Unicode normalization is off:
+rclone would otherwise fold two keys differing only by NFC/NFD into one.
+
+The Job name carries direction, runId and a hash of its own spec, and there is
+no Replace/Force: Argo CD applies an unchanged Job as a no-op (a sync never
+restarts a running or finished copy), a changed spec gets a new name (the old
+Job is pruned), and bumping runId runs the same spec again. The completed Job
+stays until migrate.enabled goes back to false.
+*/}}
 {{- if and (eq .Values.cluster "ovh-prod") .Values.seaweedfs.migrate.enabled }}
 {{- $m := .Values.seaweedfs.migrate }}
 {{- if not (has $m.direction (list "forward" "reverse")) }}
@@ -6,238 +48,256 @@
 {{- if has "--ignore-existing" $m.extraFlags }}
 {{- fail "seaweedfs.migrate.extraFlags: --ignore-existing keeps a stale destination copy of any key rewritten on the source after an earlier copy; every run already keeps the newer copy" }}
 {{- end }}
-# MinIO <-> SeaweedFS bucket reconciliation, as a PLAIN resource — never a hook:
-# an Argo CD PostSync hook waits for EVERY resource of the app to be Healthy,
-# and one unhealthy resource anywhere would leave it, and the sync, hanging.
-#
-#   forward  MinIO -> SeaweedFS: before the cutover, and after it to pick up
-#            what draining runners still wrote to MinIO.
-#   reverse  SeaweedFS -> MinIO: rollback.
-#
-# The newer write of a key wins, in both directions, by rclone's modtime: an
-# object rclone copied carries its source's modtime as metadata, an object the
-# app wrote carries the server's LastModified. So a destination copy made by
-# an earlier run is never "newer" than a source rewritten since (nor is a
-# corrupted copy), while an object the app wrote on the destination after a
-# cutover is. A key deleted on the destination but still on the source is
-# copied back (an orphan nothing references) and listed in the log.
-#
-# Sequence: `copy --update`; byte-for-byte check (`--download`: `--checksum`
-# cannot hash a multipart object and lets a zeroed one through); one repair
-# pass re-copying, unconditionally, every missing key and every differing key
-# whose destination copy is not strictly newer; a second byte-for-byte check,
-# which decides — a differing key passes only with a strictly newer destination
-# copy. `rclone size` exits 3 on an absent bucket, so neither side can be
-# silently empty. Unicode normalization is off: rclone would otherwise fold two
-# keys differing only by NFC/NFD into one, and verify the result. Lists go
-# through --files-from-raw: --files-from strips leading/trailing spaces.
-#
-# The Job name carries direction and runId: bumping runId runs a new one (a Job
-# spec is immutable). The completed Job stays until migrate.enabled goes back
-# to false, which prunes it.
+{{- $minio := "http://iterion-minio:9000" }}
+{{- $swfs := "http://iterion-seaweedfs-s3:8333" }}
+{{- $dst := ternary $minio $swfs (eq $m.direction "reverse") }}
+{{- $mirror := ne .Values.iterion.config.s3.endpoint $dst }}
+{{- $spec := include "iterion.seaweedfsMigrateJobSpec" (dict "Values" .Values "m" $m "minio" $minio "swfs" $swfs "mirror" $mirror) }}
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: iterion-seaweedfs-migrate-{{ $m.direction }}-{{ $m.runId }}
+  name: iterion-seaweedfs-migrate-{{ $m.direction }}-{{ $m.runId }}-{{ $spec | sha256sum | trunc 8 }}
   namespace: iterion
-  annotations:
-    argocd.argoproj.io/sync-options: Replace=true,Force=true
 spec:
-  backoffLimit: 3
-  template:
-    metadata:
-      labels:
-        # Admitted by the S3 gateway's NetworkPolicy (seaweedfs.networkPolicy).
-        app.kubernetes.io/name: iterion-seaweedfs-job
-        app.kubernetes.io/instance: iterion
-        app.kubernetes.io/component: migrate
-    spec:
-      restartPolicy: Never
-      securityContext:
-        fsGroup: 1000
-        runAsGroup: 1000
-        runAsUser: 1000
-        runAsNonRoot: true
-        seccompProfile:
-          type: RuntimeDefault
-      containers:
-        - name: copy
-          # rclone, pinned by digest (same image as the mkbucket Job).
-          image: rclone/rclone@sha256:d5971950c2b370fb04dd3292541b5bda6d9103143fd7e345aeb435a399388afc
-          imagePullPolicy: IfNotPresent
-          securityContext:
-            allowPrivilegeEscalation: false
-            privileged: false
-            readOnlyRootFilesystem: true
-            runAsNonRoot: true
-            runAsUser: 1000
-            runAsGroup: 1000
-            capabilities:
-              drop:
-                - ALL
-            seccompProfile:
-              type: RuntimeDefault
-          env:
-            # Both stores answer to the same key pair: iterion-storage.
-            - name: RCLONE_CONFIG_MINIO_TYPE
-              value: s3
-            - name: RCLONE_CONFIG_MINIO_PROVIDER
-              value: Minio
-            - name: RCLONE_CONFIG_MINIO_ENDPOINT
-              value: http://iterion-minio:9000
-            - name: RCLONE_CONFIG_MINIO_REGION
-              value: "{{ .Values.iterion.config.s3.region }}"
-            - name: RCLONE_CONFIG_MINIO_FORCE_PATH_STYLE
-              value: "true"
-            - name: RCLONE_CONFIG_MINIO_ACCESS_KEY_ID
-              valueFrom:
-                secretKeyRef:
-                  name: iterion-storage
-                  key: ITERION_S3_ACCESS_KEY_ID
-            - name: RCLONE_CONFIG_MINIO_SECRET_ACCESS_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: iterion-storage
-                  key: ITERION_S3_SECRET_ACCESS_KEY
-            - name: RCLONE_CONFIG_SWFS_TYPE
-              value: s3
-            - name: RCLONE_CONFIG_SWFS_PROVIDER
-              value: Other
-            - name: RCLONE_CONFIG_SWFS_ENDPOINT
-              value: http://iterion-seaweedfs-s3:8333
-            - name: RCLONE_CONFIG_SWFS_REGION
-              value: "{{ .Values.iterion.config.s3.region }}"
-            - name: RCLONE_CONFIG_SWFS_FORCE_PATH_STYLE
-              value: "true"
-            - name: RCLONE_CONFIG_SWFS_ACCESS_KEY_ID
-              valueFrom:
-                secretKeyRef:
-                  name: iterion-storage
-                  key: ITERION_S3_ACCESS_KEY_ID
-            - name: RCLONE_CONFIG_SWFS_SECRET_ACCESS_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: iterion-storage
-                  key: ITERION_S3_SECRET_ACCESS_KEY
-            - name: DIRECTION
-              value: {{ $m.direction | quote }}
-            - name: SRC
-              value: {{ ternary "swfs" "minio" (eq $m.direction "reverse") | quote }}
-            - name: DST
-              value: {{ ternary "minio" "swfs" (eq $m.direction "reverse") | quote }}
-            - name: BUCKET
-              value: "{{ .Values.iterion.config.s3.bucket }}"
-            - name: TZ
-              value: UTC
-            - name: RCLONE_NO_UNICODE_NORMALIZATION
-              value: "true"
-            - name: HOME
-              value: /tmp
-            - name: RCLONE_CONFIG
-              value: /tmp/rclone.conf
-          volumeMounts:
-            - name: tmp
-              mountPath: /tmp
-          command:
-            - /bin/sh
-            - -eu
-            - -c
-            - |
-              TF='2006-01-02T15:04:05.000000000Z07:00'
-              TAB=$(printf '\t')
-              FLAGS="--transfers={{ $m.transfers }} --checkers={{ $m.checkers }} --stats=30s --stats-one-line --log-level INFO {{ join " " $m.extraFlags }}"
-              fail() { echo "FAIL: $1"; if [ -n "${2:-}" ] && [ -s "$2" ]; then head -n 200 "$2"; fi; exit 1; }
-              # check PREFIX: byte-for-byte one-way check; writes PREFIX.{missing,differ,errors,log},
-              # sets RC, ND (differences) and NE (errors). A subtree rclone could not list is
-              # dropped from the check and shows only as an error with no listed difference.
-              check() {
-                set +e
-                rclone check "${SRC}:${BUCKET}" "${DST}:${BUCKET}" --one-way --download \
-                  --checkers={{ $m.checkers }} \
-                  --missing-on-dst "$1.missing" --differ "$1.differ" --error "$1.errors" > "$1.log" 2>&1
-                RC=$?
-                set -e
-                cat "$1.log"
-                touch "$1.missing" "$1.differ" "$1.errors"
-                ND=$(sed -n 's/.*: \([0-9]*\) differences found$/\1/p' "$1.log" | tail -n 1)
-                NE=$(sed -n 's/.*: \([0-9]*\) errors while checking$/\1/p' "$1.log" | tail -n 1)
-                ND=${ND:-0}
-                NE=${NE:-0}
-              }
-              # modtimes REMOTE LIST OUT: "key<TAB>modtime" (rclone's modtime) for the listed keys.
-              modtimes() {
-                rclone lsf -R "$1:${BUCKET}" --files-from-raw "$2" --files-only --format pt \
-                  --separator "$TAB" --time-format "$TF" > "$3"
-              }
-              # not_newer DIFFER OUT: the differing keys whose destination copy is not
-              # strictly newer than the source's — or whose modtime could not be read.
-              not_newer() {
-                modtimes "$SRC" "$1" /tmp/src.times
-                modtimes "$DST" "$1" /tmp/dst.times
-                awk -F "$TAB" '
-                  FILENAME == ARGV[1] { src[$1] = $2; next }
-                  FILENAME == ARGV[2] { dst[$1] = $2; next }
-                  !($0 in src) || !($0 in dst) || !(dst[$0] > src[$0]) { print $0 }
-                ' /tmp/src.times /tmp/dst.times "$1" > "$2"
-              }
+{{ $spec | indent 2 }}
+{{- end }}
 
-              echo "== ${DIRECTION}: ${SRC}:${BUCKET} -> ${DST}:${BUCKET} =="
-              echo "== before: source =="
-              rclone size "${SRC}:${BUCKET}"
-              echo "== before: destination =="
-              rclone size "${DST}:${BUCKET}"
+{{- define "iterion.seaweedfsMigrateJobSpec" -}}
+{{- $m := .m -}}
+backoffLimit: 3
+template:
+  metadata:
+    labels:
+      # Admitted by the S3 gateway's NetworkPolicy (seaweedfs.networkPolicy).
+      app.kubernetes.io/name: iterion-seaweedfs-job
+      app.kubernetes.io/instance: iterion
+      app.kubernetes.io/component: migrate
+  spec:
+    restartPolicy: Never
+    securityContext:
+      fsGroup: 1000
+      runAsGroup: 1000
+      runAsUser: 1000
+      runAsNonRoot: true
+      seccompProfile:
+        type: RuntimeDefault
+    containers:
+      - name: copy
+        # rclone, pinned by digest (same image as the mkbucket Job).
+        image: rclone/rclone@sha256:d5971950c2b370fb04dd3292541b5bda6d9103143fd7e345aeb435a399388afc
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          allowPrivilegeEscalation: false
+          privileged: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1000
+          runAsGroup: 1000
+          capabilities:
+            drop:
+              - ALL
+          seccompProfile:
+            type: RuntimeDefault
+        env:
+          # Both stores answer to the same key pair: iterion-storage.
+          - name: RCLONE_CONFIG_MINIO_TYPE
+            value: s3
+          - name: RCLONE_CONFIG_MINIO_PROVIDER
+            value: Minio
+          - name: RCLONE_CONFIG_MINIO_ENDPOINT
+            value: {{ .minio | quote }}
+          - name: RCLONE_CONFIG_MINIO_REGION
+            value: {{ .Values.iterion.config.s3.region | quote }}
+          - name: RCLONE_CONFIG_MINIO_FORCE_PATH_STYLE
+            value: "true"
+          - name: RCLONE_CONFIG_MINIO_ACCESS_KEY_ID
+            valueFrom:
+              secretKeyRef:
+                name: iterion-storage
+                key: ITERION_S3_ACCESS_KEY_ID
+          - name: RCLONE_CONFIG_MINIO_SECRET_ACCESS_KEY
+            valueFrom:
+              secretKeyRef:
+                name: iterion-storage
+                key: ITERION_S3_SECRET_ACCESS_KEY
+          - name: RCLONE_CONFIG_SWFS_TYPE
+            value: s3
+          - name: RCLONE_CONFIG_SWFS_PROVIDER
+            value: Other
+          - name: RCLONE_CONFIG_SWFS_ENDPOINT
+            value: {{ .swfs | quote }}
+          - name: RCLONE_CONFIG_SWFS_REGION
+            value: {{ .Values.iterion.config.s3.region | quote }}
+          - name: RCLONE_CONFIG_SWFS_FORCE_PATH_STYLE
+            value: "true"
+          - name: RCLONE_CONFIG_SWFS_ACCESS_KEY_ID
+            valueFrom:
+              secretKeyRef:
+                name: iterion-storage
+                key: ITERION_S3_ACCESS_KEY_ID
+          - name: RCLONE_CONFIG_SWFS_SECRET_ACCESS_KEY
+            valueFrom:
+              secretKeyRef:
+                name: iterion-storage
+                key: ITERION_S3_SECRET_ACCESS_KEY
+          - name: DIRECTION
+            value: {{ $m.direction | quote }}
+          - name: SRC
+            value: {{ ternary "swfs" "minio" (eq $m.direction "reverse") | quote }}
+          - name: DST
+            value: {{ ternary "minio" "swfs" (eq $m.direction "reverse") | quote }}
+          - name: MIRROR
+            value: {{ .mirror | quote }}
+          - name: BUCKET
+            value: {{ .Values.iterion.config.s3.bucket | quote }}
+          - name: TZ
+            value: UTC
+          - name: RCLONE_NO_UNICODE_NORMALIZATION
+            value: "true"
+          - name: HOME
+            value: /tmp
+          - name: RCLONE_CONFIG
+            value: /tmp/rclone.conf
+        volumeMounts:
+          - name: tmp
+            mountPath: /tmp
+        command:
+          - /bin/sh
+          - -eu
+          - -c
+          - |
+            TF='2006-01-02T15:04:05.000000000Z07:00'
+            TAB=$(printf '\t')
+            FLAGS="--transfers={{ $m.transfers }} --checkers={{ $m.checkers }} --stats=30s --stats-one-line --log-level INFO {{ join " " $m.extraFlags }}"
+            fail() { echo "FAIL: $1"; if [ -n "${2:-}" ] && [ -s "$2" ]; then head -n 200 "$2"; fi; exit 1; }
+            # show TITLE FILE: a bounded listing of a key list.
+            show() {
+              n=$(wc -l < "$2")
+              echo "$1: $n"
+              head -n 200 "$2"
+              if [ "$n" -gt 200 ]; then echo "... and $((n - 200)) more"; fi
+            }
+            # keys REMOTE OUT: every key of the bucket, raw (a listing failure aborts: set -e).
+            keys() { rclone lsf -R --files-only "$1:${BUCKET}" > "$2"; }
+            # minus A B OUT: the lines of A absent from B.
+            minus() { awk 'NR == FNR { b[$0] = 1; next } !($0 in b)' "$2" "$1" > "$3"; }
+            # check PREFIX: byte-for-byte one-way check, trusted only when its own
+            # accounting adds up. Writes PREFIX.{missing,differ,errors,log}.
+            check() {
+              set +e
+              rclone check "${SRC}:${BUCKET}" "${DST}:${BUCKET}" --one-way --download \
+                --checkers={{ $m.checkers }} \
+                --missing-on-dst "$1.missing" --differ "$1.differ" --error "$1.errors" > "$1.log" 2>&1
+              RC=$?
+              set -e
+              cat "$1.log"
+              touch "$1.missing" "$1.differ" "$1.errors"
+              [ "$RC" -le 1 ] || fail "rclone check exited $RC"
+              grep -q ' differences found$' "$1.log" || fail "rclone check printed no summary"
+              ND=$(sed -n 's/.*: \([0-9]*\) differences found$/\1/p' "$1.log" | tail -n 1)
+              NE=$(sed -n 's/.*: \([0-9]*\) errors while checking$/\1/p' "$1.log" | tail -n 1)
+              NE=${NE:-0}
+              NM=$(wc -l < "$1.missing")
+              NDIFF=$(wc -l < "$1.differ")
+              [ "$ND" -eq $((NM + NDIFF)) ] || fail "rclone check counted $ND differences but listed $NM missing and $NDIFF differing"
+              [ "$NE" -eq "$ND" ] || fail "rclone check counted $NE errors for $ND differences (a listing or a read failed)" "$1.errors"
+            }
+            # modtimes REMOTE LIST OUT: "key<TAB>modtime" (rclone's modtime) for the
+            # listed keys. A modtime rclone could not read comes back as "now":
+            # any such notice fails the run instead.
+            modtimes() {
+              rclone lsf -R "$1:${BUCKET}" --files-from-raw "$2" --files-only --format pt \
+                --separator "$TAB" --time-format "$TF" > "$3" 2> "$3.err" || fail "listing modtimes on $1 failed" "$3.err"
+              if grep -q -i 'failed' "$3.err"; then fail "modtimes on $1 could not all be read" "$3.err"; fi
+            }
+            # rule DIFFER TAKE CONFLICT KEPT: split the differing keys — taken from the
+            # source (identical modtimes, i.e. a corrupt copy; or source newer by at
+            # least a second), in conflict (same second, different modtimes, or a
+            # modtime missing), or kept (destination newer by at least a second).
+            rule() {
+              modtimes "$SRC" "$1" /tmp/src.times
+              modtimes "$DST" "$1" /tmp/dst.times
+              awk -F "$TAB" -v take="$2" -v conflict="$3" -v kept="$4" '
+                FILENAME == ARGV[1] { src[$1] = $2; next }
+                FILENAME == ARGV[2] { dst[$1] = $2; next }
+                {
+                  k = $0
+                  if (!(k in src) || !(k in dst)) { print k > conflict; next }
+                  s = src[k]; d = dst[k]
+                  if (s == d) { print k > take; next }
+                  s1 = substr(s, 1, 19); d1 = substr(d, 1, 19)
+                  if (s1 > d1) print k > take
+                  else if (d1 > s1) print k > kept
+                  else print k > conflict
+                }
+              ' /tmp/src.times /tmp/dst.times "$1"
+              touch "$2" "$3" "$4"
+            }
 
-              echo "== copy (newer write wins) =="
-              rclone copy "${SRC}:${BUCKET}" "${DST}:${BUCKET}" --update $FLAGS
+            echo "== ${DIRECTION}: ${SRC}:${BUCKET} -> ${DST}:${BUCKET} (mirror: ${MIRROR}) =="
+            rclone size "${SRC}:${BUCKET}"
+            rclone size "${DST}:${BUCKET}"
+            keys "$SRC" /tmp/src.before
+            keys "$DST" /tmp/dst.before
+            minus /tmp/src.before /tmp/dst.before /tmp/absent.before
 
-              echo "== check 1 =="
-              check /tmp/c1
-              [ -s /tmp/c1.errors ] && fail "objects that could not be checked:" /tmp/c1.errors
-              cp /tmp/c1.missing /tmp/recopy
-              if [ -s /tmp/c1.differ ]; then
-                not_newer /tmp/c1.differ /tmp/c1.take
-                cat /tmp/c1.take >> /tmp/recopy
+            echo "== copy (newer write wins; same-second writes left to the check) =="
+            rclone copy "${SRC}:${BUCKET}" "${DST}:${BUCKET}" --update --modify-window 1s --ignore-size $FLAGS
+            show "copied because the destination lacked them (new on the source; after the cutover also keys the app deleted since)" /tmp/absent.before
+
+            echo "== check 1 =="
+            check /tmp/c1
+            [ -s /tmp/c1.errors ] && fail "objects that could not be checked:" /tmp/c1.errors
+            cp /tmp/c1.missing /tmp/recopy
+            if [ -s /tmp/c1.differ ]; then
+              rule /tmp/c1.differ /tmp/c1.take /tmp/c1.conflict /tmp/c1.kept
+              cat /tmp/c1.take >> /tmp/recopy
+            fi
+            if [ -s /tmp/recopy ]; then
+              show "repair: keys taken from ${SRC}" /tmp/recopy
+              rclone copy "${SRC}:${BUCKET}" "${DST}:${BUCKET}" --files-from-raw /tmp/recopy \
+                --ignore-times --no-traverse $FLAGS
+            fi
+
+            echo "== check 2 (decides) =="
+            check /tmp/c2
+            [ -s /tmp/c2.errors ] && fail "objects that could not be checked:" /tmp/c2.errors
+            [ -s /tmp/c2.missing ] && fail "source objects absent from the destination:" /tmp/c2.missing
+            if [ -s /tmp/c2.differ ]; then
+              rule /tmp/c2.differ /tmp/c2.take /tmp/c2.conflict /tmp/c2.kept
+              [ -s /tmp/c2.conflict ] && fail "writes on both sides within the same second (or unreadable modtimes) — decide by hand:" /tmp/c2.conflict
+              [ -s /tmp/c2.take ] && fail "destination copies still differing and not newer than the source:" /tmp/c2.take
+              show "kept, newer on the destination by at least a second" /tmp/c2.kept
+            fi
+
+            echo "== key sets =="
+            keys "$SRC" /tmp/src.keys
+            keys "$DST" /tmp/dst.keys
+            minus /tmp/src.keys /tmp/dst.keys /tmp/absent.keys
+            [ -s /tmp/absent.keys ] && fail "source keys absent from the destination listing:" /tmp/absent.keys
+            minus /tmp/dst.keys /tmp/src.keys /tmp/extra.keys
+            if [ -s /tmp/extra.keys ]; then
+              if [ "$MIRROR" = true ]; then
+                show "deleted on the destination: gone from the source since an earlier run" /tmp/extra.keys
+                rclone delete "${DST}:${BUCKET}" --files-from-raw /tmp/extra.keys $FLAGS
+                keys "$DST" /tmp/dst.keys
+                minus /tmp/dst.keys /tmp/src.keys /tmp/extra.after
+                [ -s /tmp/extra.after ] && fail "destination keys still absent from the source after the mirror delete:" /tmp/extra.after
+              else
+                show "destination-only keys, kept (app writes on the live store, or source deletions a run cannot tell apart)" /tmp/extra.keys
               fi
-              if [ -s /tmp/recopy ]; then
-                echo "== repair: $(wc -l < /tmp/recopy) key(s) taken from ${SRC} =="
-                cat /tmp/recopy
-                rclone copy "${SRC}:${BUCKET}" "${DST}:${BUCKET}" --files-from-raw /tmp/recopy \
-                  --ignore-times --no-traverse $FLAGS
-              fi
-
-              echo "== check 2 (decides) =="
-              check /tmp/c2
-              [ -s /tmp/c2.errors ] && fail "objects that could not be checked:" /tmp/c2.errors
-              [ -s /tmp/c2.missing ] && fail "source objects absent from the destination:" /tmp/c2.missing
-              [ "$NE" -eq "$ND" ] || fail "rclone check counted $NE errors for $ND differences (a listing failed)"
-              if [ -s /tmp/c2.differ ]; then
-                not_newer /tmp/c2.differ /tmp/c2.violations
-                [ -s /tmp/c2.violations ] && fail "destination copies that differ without being newer than the source:" /tmp/c2.violations
-                echo "kept, newer on the destination than on the source:"
-                cat /tmp/c2.differ
-              elif [ "$RC" -ne 0 ]; then
-                fail "rclone check exited $RC with nothing missing, differing or errored"
-              fi
-
-              echo "== key sets: every source key present on the destination =="
-              rclone lsf -R --files-only "${SRC}:${BUCKET}" > /tmp/src.keys
-              rclone lsf -R --files-only "${DST}:${BUCKET}" > /tmp/dst.keys
-              awk 'NR == FNR { d[$0] = 1; next } !($0 in d)' /tmp/dst.keys /tmp/src.keys > /tmp/absent.keys
-              [ -s /tmp/absent.keys ] && fail "source keys absent from the destination listing:" /tmp/absent.keys
-              echo "$(wc -l < /tmp/src.keys) source keys, all listed on the destination"
-
-              echo "== after: source =="
-              rclone size "${SRC}:${BUCKET}"
-              echo "== after: destination =="
-              rclone size "${DST}:${BUCKET}"
-              echo "MIGRATION VERIFIED (${DIRECTION}) for bucket ${BUCKET}"
-          resources:
-            requests:
-              cpu: 200m
-              memory: 256Mi
-            limits:
-              memory: 1Gi
-      volumes:
-        - name: tmp
-          emptyDir: {}
+            fi
+            echo "$(wc -l < /tmp/src.keys) source keys, all present on the destination"
+            rclone size "${SRC}:${BUCKET}"
+            rclone size "${DST}:${BUCKET}"
+            echo "MIGRATION VERIFIED (${DIRECTION}) for bucket ${BUCKET}"
+        resources:
+          requests:
+            cpu: 200m
+            memory: 256Mi
+          limits:
+            memory: 1Gi
+    volumes:
+      - name: tmp
+        emptyDir: {}
 {{- end }}

@@ -890,11 +890,16 @@ seaweedfs:
     # until someone repairs it, and the filer's metadata log grows forever.
     # No ec.* (erasure coding would replace the 3-copy replication) and no
     # volume.balance (moves data around on its own).
+    # -doDelete=false: when a volume server comes back after its volumes were
+    # re-replicated elsewhere, a volume has 4 copies, and fix.replication
+    # deletes the SMALLEST — after a vacuum that is the fresh copy, and the
+    # returning stale one is kept (measured: 9 objects lost). Surplus copies
+    # stay; trim them by hand after `volume.check.disk` has reconciled them.
     config: |-
       [master.maintenance]
       scripts = """
         lock
-        volume.fix.replication -apply
+        volume.fix.replication -apply -doDelete=false
         volume.deleteEmpty -quietFor=24h -apply
         s3.clean.uploads -timeAgo=24h
         fs.log.purge -daysAgo=7
@@ -1161,7 +1166,11 @@ valkeyfiler:
     masterName: filermeta
     quorum: 2
     downAfterMilliseconds: 1500
-    failoverTimeout: 15000
+    # With min-replicas-to-write 1 the new master refuses writes until a
+    # replica is repointed at it, which Sentinel does only within
+    # failoverTimeout: 15 s of refused S3 writes on every handover at 15000,
+    # about 5 s at 3000 (measured on a rollout under write load).
+    failoverTimeout: 3000
     parallelSyncs: 1
     service:
       type: ClusterIP
@@ -1170,9 +1179,13 @@ valkeyfiler:
     fsGroup: 1000
     seccompProfile:
       type: RuntimeDefault
-  # At most one pod evicted at a time. After a restart of all three, the
-  # chart elects pod-0 master whatever its data (no Sentinel left to ask), so
-  # evictions must never take them down together.
+  # At most one pod EVICTED at a time. It cannot cover involuntary losses:
+  # after a restart of all three, the chart elects pod-0 master whatever its
+  # data (no Sentinel left to ask, OrderedReady starts pod-0 first), so if
+  # pod-0 was down while the others kept taking writes, those writes are
+  # flushed from every replica. Recovery when pod-0 went down first and the
+  # others followed: scale the StatefulSet to 0, copy /data (appendonlydir) of
+  # the pod that was master last onto pod-0's PVC, then scale back to 3.
   pdb:
     enabled: true
     minAvailable: 2
