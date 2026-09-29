@@ -3,29 +3,38 @@
 {{- if not (has $m.direction (list "forward" "reverse")) }}
 {{- fail (printf "seaweedfs.migrate.direction must be \"forward\" or \"reverse\", got %q" $m.direction) }}
 {{- end }}
-{{- $ignoreExisting := has "--ignore-existing" $m.extraFlags }}
-# MinIO <-> SeaweedFS bucket copy, as a PLAIN resource — never a hook: an Argo
-# CD PostSync hook waits for EVERY resource of the app to be Healthy, and one
-# unhealthy resource anywhere would leave it, and the sync, hanging.
+{{- if has "--ignore-existing" $m.extraFlags }}
+{{- fail "seaweedfs.migrate.extraFlags: --ignore-existing keeps a stale destination copy of any key rewritten on the source after an earlier copy; every run already keeps the newer copy" }}
+{{- end }}
+# MinIO <-> SeaweedFS bucket reconciliation, as a PLAIN resource — never a hook:
+# an Argo CD PostSync hook waits for EVERY resource of the app to be Healthy,
+# and one unhealthy resource anywhere would leave it, and the sync, hanging.
 #
-#   forward  MinIO -> SeaweedFS: the copy before the endpoint cutover, and the
-#            sweeps after it (with --ignore-existing, see the values).
-#   reverse  SeaweedFS -> MinIO: rollback. SeaweedFS is then the source of
-#            truth, so its version of a key overwrites MinIO's.
+#   forward  MinIO -> SeaweedFS: before the cutover, and after it to pick up
+#            what draining runners still wrote to MinIO.
+#   reverse  SeaweedFS -> MinIO: rollback.
 #
-# The Job name carries direction and runId: bumping runId runs a new copy (a
-# Job spec is immutable). The completed Job stays until migrate.enabled goes
-# back to false, which prunes it.
+# The newer write of a key wins, in both directions, by rclone's modtime: an
+# object rclone copied carries its source's modtime as metadata, an object the
+# app wrote carries the server's LastModified. So a destination copy made by
+# an earlier run is never "newer" than a source rewritten since (nor is a
+# corrupted copy), while an object the app wrote on the destination after a
+# cutover is. A key deleted on the destination but still on the source is
+# copied back (an orphan nothing references) and listed in the log.
 #
-# The verify decides, not the copy:
-#   - `rclone check --one-way --download` re-reads BOTH sides byte by byte.
-#     `--checksum` would not do: rclone cannot hash a multipart object
-#     (composite ETag), reports it as a NOTICE and exits 0 — a 300 000-byte
-#     object zeroed out, same size, passed that way.
-#   - With --ignore-existing a differing object means "newer on the
-#     destination", so there only the missing and the errored objects fail.
-#   - `rclone size` exits 3 on an absent bucket: neither side can be silently
-#     empty. Object count and bytes are printed for both sides.
+# Sequence: `copy --update`; byte-for-byte check (`--download`: `--checksum`
+# cannot hash a multipart object and lets a zeroed one through); one repair
+# pass re-copying, unconditionally, every missing key and every differing key
+# whose destination copy is not strictly newer; a second byte-for-byte check,
+# which decides — a differing key passes only with a strictly newer destination
+# copy. `rclone size` exits 3 on an absent bucket, so neither side can be
+# silently empty. Unicode normalization is off: rclone would otherwise fold two
+# keys differing only by NFC/NFD into one, and verify the result. Lists go
+# through --files-from-raw: --files-from strips leading/trailing spaces.
+#
+# The Job name carries direction and runId: bumping runId runs a new one (a Job
+# spec is immutable). The completed Job stays until migrate.enabled goes back
+# to false, which prunes it.
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -118,6 +127,10 @@ spec:
               value: {{ ternary "minio" "swfs" (eq $m.direction "reverse") | quote }}
             - name: BUCKET
               value: "{{ .Values.iterion.config.s3.bucket }}"
+            - name: TZ
+              value: UTC
+            - name: RCLONE_NO_UNICODE_NORMALIZATION
+              value: "true"
             - name: HOME
               value: /tmp
             - name: RCLONE_CONFIG
@@ -130,41 +143,88 @@ spec:
             - -eu
             - -c
             - |
+              TF='2006-01-02T15:04:05.000000000Z07:00'
+              TAB=$(printf '\t')
+              FLAGS="--transfers={{ $m.transfers }} --checkers={{ $m.checkers }} --stats=30s --stats-one-line --log-level INFO {{ join " " $m.extraFlags }}"
+              fail() { echo "FAIL: $1"; if [ -n "${2:-}" ] && [ -s "$2" ]; then head -n 200 "$2"; fi; exit 1; }
+              # check PREFIX: byte-for-byte one-way check; writes PREFIX.{missing,differ,errors,log},
+              # sets RC, ND (differences) and NE (errors). A subtree rclone could not list is
+              # dropped from the check and shows only as an error with no listed difference.
+              check() {
+                set +e
+                rclone check "${SRC}:${BUCKET}" "${DST}:${BUCKET}" --one-way --download \
+                  --checkers={{ $m.checkers }} \
+                  --missing-on-dst "$1.missing" --differ "$1.differ" --error "$1.errors" > "$1.log" 2>&1
+                RC=$?
+                set -e
+                cat "$1.log"
+                touch "$1.missing" "$1.differ" "$1.errors"
+                ND=$(sed -n 's/.*: \([0-9]*\) differences found$/\1/p' "$1.log" | tail -n 1)
+                NE=$(sed -n 's/.*: \([0-9]*\) errors while checking$/\1/p' "$1.log" | tail -n 1)
+                ND=${ND:-0}
+                NE=${NE:-0}
+              }
+              # modtimes REMOTE LIST OUT: "key<TAB>modtime" (rclone's modtime) for the listed keys.
+              modtimes() {
+                rclone lsf -R "$1:${BUCKET}" --files-from-raw "$2" --files-only --format pt \
+                  --separator "$TAB" --time-format "$TF" > "$3"
+              }
+              # not_newer DIFFER OUT: the differing keys whose destination copy is not
+              # strictly newer than the source's — or whose modtime could not be read.
+              not_newer() {
+                modtimes "$SRC" "$1" /tmp/src.times
+                modtimes "$DST" "$1" /tmp/dst.times
+                awk -F "$TAB" '
+                  FILENAME == ARGV[1] { src[$1] = $2; next }
+                  FILENAME == ARGV[2] { dst[$1] = $2; next }
+                  !($0 in src) || !($0 in dst) || !(dst[$0] > src[$0]) { print $0 }
+                ' /tmp/src.times /tmp/dst.times "$1" > "$2"
+              }
+
               echo "== ${DIRECTION}: ${SRC}:${BUCKET} -> ${DST}:${BUCKET} =="
               echo "== before: source =="
               rclone size "${SRC}:${BUCKET}"
               echo "== before: destination =="
               rclone size "${DST}:${BUCKET}"
 
-              echo "== copy =="
-              rclone copy "${SRC}:${BUCKET}" "${DST}:${BUCKET}" \
-                --checksum --transfers={{ $m.transfers }} \
-                --checkers={{ $m.checkers }} \
-                --stats=30s --stats-one-line --log-level INFO \
-                {{ join " " $m.extraFlags }}
+              echo "== copy (newer write wins) =="
+              rclone copy "${SRC}:${BUCKET}" "${DST}:${BUCKET}" --update $FLAGS
 
-              echo "== verify =="
-              {{- if $ignoreExisting }}
-              set +e
-              rclone check "${SRC}:${BUCKET}" "${DST}:${BUCKET}" --one-way --download \
-                --missing-on-dst /tmp/missing.txt --differ /tmp/differ.txt --error /tmp/errors.txt
-              rc=$?
-              set -e
-              if [ -s /tmp/errors.txt ]; then
-                echo "FAIL: objects that could not be checked:"; cat /tmp/errors.txt; exit 1
+              echo "== check 1 =="
+              check /tmp/c1
+              [ -s /tmp/c1.errors ] && fail "objects that could not be checked:" /tmp/c1.errors
+              cp /tmp/c1.missing /tmp/recopy
+              if [ -s /tmp/c1.differ ]; then
+                not_newer /tmp/c1.differ /tmp/c1.take
+                cat /tmp/c1.take >> /tmp/recopy
               fi
-              if [ -s /tmp/missing.txt ]; then
-                echo "FAIL: source objects absent from the destination:"; cat /tmp/missing.txt; exit 1
+              if [ -s /tmp/recopy ]; then
+                echo "== repair: $(wc -l < /tmp/recopy) key(s) taken from ${SRC} =="
+                cat /tmp/recopy
+                rclone copy "${SRC}:${BUCKET}" "${DST}:${BUCKET}" --files-from-raw /tmp/recopy \
+                  --ignore-times --no-traverse $FLAGS
               fi
-              if [ -s /tmp/differ.txt ]; then
-                echo "newer on the destination (kept, expected with --ignore-existing):"; cat /tmp/differ.txt
-              elif [ "$rc" -ne 0 ]; then
-                echo "FAIL: rclone check exited $rc with nothing missing, differing or errored"; exit 1
+
+              echo "== check 2 (decides) =="
+              check /tmp/c2
+              [ -s /tmp/c2.errors ] && fail "objects that could not be checked:" /tmp/c2.errors
+              [ -s /tmp/c2.missing ] && fail "source objects absent from the destination:" /tmp/c2.missing
+              [ "$NE" -eq "$ND" ] || fail "rclone check counted $NE errors for $ND differences (a listing failed)"
+              if [ -s /tmp/c2.differ ]; then
+                not_newer /tmp/c2.differ /tmp/c2.violations
+                [ -s /tmp/c2.violations ] && fail "destination copies that differ without being newer than the source:" /tmp/c2.violations
+                echo "kept, newer on the destination than on the source:"
+                cat /tmp/c2.differ
+              elif [ "$RC" -ne 0 ]; then
+                fail "rclone check exited $RC with nothing missing, differing or errored"
               fi
-              echo "no source object is missing from the destination"
-              {{- else }}
-              rclone check "${SRC}:${BUCKET}" "${DST}:${BUCKET}" --one-way --download
-              {{- end }}
+
+              echo "== key sets: every source key present on the destination =="
+              rclone lsf -R --files-only "${SRC}:${BUCKET}" > /tmp/src.keys
+              rclone lsf -R --files-only "${DST}:${BUCKET}" > /tmp/dst.keys
+              awk 'NR == FNR { d[$0] = 1; next } !($0 in d)' /tmp/dst.keys /tmp/src.keys > /tmp/absent.keys
+              [ -s /tmp/absent.keys ] && fail "source keys absent from the destination listing:" /tmp/absent.keys
+              echo "$(wc -l < /tmp/src.keys) source keys, all listed on the destination"
 
               echo "== after: source =="
               rclone size "${SRC}:${BUCKET}"

@@ -16,6 +16,6 @@ dependencies:
   version: 4.48.0
 - name: valkey
   repository: https://cloudpirates-io.github.io/helm-charts
-  version: 0.10.3
-digest: sha256:ce071aa0dbe62f6a46bc3b7008038e4474d15f71b8d70d221cac7d679da0b4e3
-generated: "2026-09-29T14:13:18.201575581+02:00"
+  version: 0.25.11
+digest: sha256:9471aba7ae66391556da22973f0fe54ac222af016c3b44fc88dc470a078685df
+generated: "2026-09-29T15:54:33.284985329+02:00"
