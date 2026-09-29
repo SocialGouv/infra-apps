@@ -175,3 +175,26 @@ follows upstream's runner through Renovate as well); move `runner` and
 Rollback is the previous pin on both containers — or upstream's
 `ghcr.io/actions/actions-runner:<version>` on both, which loses `-race` (cgo)
 on ARC and nothing else.
+
+## Privileged images are pinned by digest
+
+`dind` and `configure-inotify` run privileged: each owns the node it lands on.
+OVH forces `AlwaysPullImages`, so a floating tag is resolved again by every
+pod at its own start, and an upstream push would run privileged, unreviewed,
+on the next job — the merge queue's required checks included. Both carry a
+version **and** its digest, and `python arc-runners/tests/privileged_images.py`
+refuses any privileged container of the rendered PodSpec that does not.
+
+Bump `dind` by resolving the tag's digest anonymously right before writing it:
+
+```sh
+tok=$(curl -fsS "https://auth.docker.io/token?service=registry.docker.io&scope=repository:library/docker:pull" | jq -r .token)
+curl -fsSI -H "Authorization: Bearer $tok" \
+  -H 'Accept: application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.list.v2+json' \
+  https://registry-1.docker.io/v2/library/docker/manifests/<version>-dind | grep -i docker-content-digest
+```
+
+`configure-inotify` keeps upstream's runner image at the version and digest the
+iterion CI image is built `FROM` (`ci/arc-runner/Dockerfile` in
+SocialGouv/iterion); the ghcr command above resolves it with
+`repository:actions/actions-runner:pull`.
