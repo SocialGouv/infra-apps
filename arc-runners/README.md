@@ -198,3 +198,47 @@ curl -fsSI -H "Authorization: Bearer $tok" \
 iterion CI image is built `FROM` (`ci/arc-runner/Dockerfile` in
 SocialGouv/iterion); the ghcr command above resolves it with
 `repository:actions/actions-runner:pull`.
+
+## CPU and memory requests
+
+Measured on SocialGouv/iterion's CI on 2026-09-29, 14:56-15:41Z: a sample
+every 30 s of `kubectl top pod --containers`, 39 runner pods, the runner
+container's usage per job.
+
+| Job | Mean CPU per pod (median / max) | Peak CPU | Peak memory |
+|---|---|---|---|
+| test | 3.1 / 4.7 cores | 11.6 | 4.6 GiB |
+| golangci | 2.7 / 3.7 | 11.7 | 5.3 GiB |
+| fmt-check | 1.5 / 1.8 | 4.9 | 1.3 GiB |
+| docs-build | 1.1 / 1.2 | 1.9 | 2.6 GiB |
+| nats-conformance | 1.1 / 1.5 | 7.1 | 2.1 GiB |
+| desktop-vet-cross | 0.7 / 1.3 | 3.7 | 2.9 GiB |
+| govulncheck | 0.6 / 0.8 | 2.1 | 0.8 GiB |
+| vendor-check | 0.3 / 0.4 | 0.6 | 0.6 GiB |
+
+`dind` used 25-32 MiB idle and 68 MiB with a NATS broker inside. At the
+busiest sample, 11 runner pods used 21.7 cores and 15 GiB together — 2 cores
+per pod, where the requests counted 1 (500m for the runner, 500m for dind).
+
+So the runner requests **2 CPU and 4 GiB** — the per-pod average at the
+peak, and the memory of the heavy jobs — `dind` 100m / 512Mi (a job's
+containers run in its cgroup: a mongod for iterion's `mongo-conformance`),
+and the externals copy 100m / 128Mi (it runs before the other two, never
+beside them). A pod requests 2.1 CPU and 4.5 GiB; when the nodes are full,
+pods wait and the worker pool's autoscaler adds nodes. There is no limit: a
+burst uses the node's idle cores.
+
+Not measured yet: iterion's `race` job on the scale set (`-race` multiplies
+memory 5-10x). Revisit the memory request once it has run here.
+
+### Docker Hub mirror
+
+`docker run` and `services:` in a job pull through the `dind` daemon, not
+through kubelet, so kube-image-keeper never sees those pulls; they leave the
+cluster anonymously, and Docker Hub rate-limits anonymous pulls per IP
+(`ratelimit-limit: 100;w=3600` on 2026-09-29). iterion's jobs alone start
+up to ~30 such pulls an hour at their peak once `mongo-conformance` runs here
+(an estimate from that day's job counts), on an egress other workloads
+share. `dockerd --registry-mirror=https://mirror.gcr.io` asks Google's mirror
+of Docker Hub first (it serves `mongo:8.0` at Docker Hub's digest) and falls
+back to Docker Hub on its own when the mirror does not have an image.
