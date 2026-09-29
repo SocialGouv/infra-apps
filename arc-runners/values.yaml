@@ -108,10 +108,12 @@ gha-runner-scale-set:
           volumeMounts:
             - name: dind-externals
               mountPath: /home/runner/tmpDir
+          # A copy of a few files, done before dind and the runner start: it
+          # never runs beside them, so it adds nothing to the pod's request.
           resources:
             requests:
-              cpu: 500m
-              memory: 2Gi
+              cpu: 100m
+              memory: 128Mi
         - name: dind
           # Privileged: pinned by version and digest like every privileged
           # container here (tests/privileged_images.py). A floating tag is
@@ -130,14 +132,23 @@ gha-runner-scale-set:
             periodSeconds: 5
             timeoutSeconds: 5
             failureThreshold: 24
+          # The daemon itself idles at ~30Mi; the containers a job starts run
+          # in ITS cgroup (a mongod for iterion's mongo-conformance), hence
+          # 512Mi. See README "CPU and memory requests".
           resources:
             requests:
-              cpu: 500m
-              memory: 2Gi
+              cpu: 100m
+              memory: 512Mi
           args:
             - dockerd
             - --host=unix:///run/docker/docker.sock
             - --group=$(DOCKER_GROUP_GID)
+            # Docker Hub pulls made by jobs (docker run, services:) leave the
+            # cluster anonymously from a shared egress, which Docker Hub
+            # rate-limits per IP; kube-image-keeper does not see them. The
+            # daemon asks this mirror of Docker Hub first and falls back to
+            # Docker Hub on its own.
+            - --registry-mirror=https://mirror.gcr.io
           env:
             - name: DOCKER_GROUP_GID
               value: "123"
@@ -157,10 +168,16 @@ gha-runner-scale-set:
           image: ghcr.io/socialgouv/iterion-ci-runner:1.5.1@sha256:a01629900c9d7902dce3315b94aea7063fbe97af6f1f08a9652ab073c378f123
           imagePullPolicy: Always
           command: ["/home/runner/run.sh"]
+          # Measured on iterion's CI (2026-09-29, 45 min, 39 runner pods): a
+          # pod's mean CPU runs from 0.3 core (vendor-check) to 3-4.7 cores
+          # (test, golangci), with bursts to 11+; at the busiest sample 11 pods
+          # used 21.7 cores together — 2 per pod, where the scheduler counted
+          # 1 (500m here + 500m for dind). No limit: a burst uses a node's
+          # idle cores. See README "CPU and memory requests".
           resources:
             requests:
-              cpu: 500m
-              memory: 2Gi
+              cpu: "2"
+              memory: 4Gi
           env:
             - name: DOCKER_HOST
               value: unix:///run/docker/docker.sock
