@@ -3,60 +3,131 @@ MinIO <-> SeaweedFS bucket reconciliation, as a PLAIN resource — never a hook:
 an Argo CD PostSync hook waits for EVERY resource of the app to be Healthy, and
 one unhealthy resource anywhere would leave it, and the sync, hanging.
 
-  forward  MinIO -> SeaweedFS: before the cutover, again during the runners'
-           drain and once it is over.
-  reverse  SeaweedFS -> MinIO: rollback.
+Two modes, always chosen explicitly (seaweedfs.migrate.mode):
+
+  mirror   make the destination equal to the source: copy, then delete the
+           destination keys the source no longer has — only the ones a
+           migration run put there (they carry rclone's `mtime` metadata; the
+           app's PutObject never sets any), the others are listed, never
+           deleted. Refused when the destination is the store the app writes to.
+  catchup  copy the source's app writes (objects without rclone's metadata)
+           modified at or after `since` (UTC); a migration copy on the source
+           came from the destination, which decides its fate. For a
+           destination the app writes to: after the cutover (forward) or after
+           a rollback (reverse). Each successful run prints the `since` of the
+           next one, and catchups chain them: a key the app deleted on the
+           destination comes back only if the source rewrote it after the
+           previous run began (less 5 min). It deletes nothing, except
+           with deleteGone: the migration copies of keys the source deleted
+           after they were copied — never an app write.
+
+Nothing but this Job may write either bucket with rclone: rclone's `mtime`
+metadata is what marks a migration copy (the app's PutObject sets none).
 
 The newer write of a key wins, by rclone's modtime: an object rclone copied
 carries its source's modtime as metadata, an object the app wrote carries the
-server's LastModified — whole seconds on SeaweedFS. So:
-  - identical modtimes: the destination is a copy of THIS source version, and
-    if the bytes differ it is corrupt: taken from the source;
-  - one side newer by at least a second: that side wins;
-  - same second, different modtimes: the two writes cannot be ordered — a
+server's LastModified — whole seconds on SeaweedFS. So, for a key whose bytes
+differ:
+  - the source newer by at least a second: the source wins;
+  - the destination is a migration copy (it carries rclone's `mtime` metadata,
+    which any PUT by the app drops) and is not older by a second: it is stale
+    or corrupt — a copy of an earlier write in the same second (a copy stamps
+    the whole second a HEAD returns), or damaged bytes. The source wins;
+  - otherwise the destination holds an app write: newer by at least a second,
+    it is kept; within the same second, the two writes cannot be ordered — a
     conflict, listed, and the run FAILS for an operator to decide.
 
-MIRROR: when the destination is not the store the app writes to
-(iterion.config.s3.endpoint), nothing but these runs writes there, so a key
-the source no longer has was deleted since the last run: it is deleted on the
-destination too (listed). When the destination IS the live store, nothing is
-deleted: its extra keys are app writes, or source deletions a run cannot tell
-apart — they are listed, as are the keys copied because the destination lacked
-them (which, after the cutover, includes keys the app has deleted since).
+The source may be written while a run goes (MinIO before the cutover): a run
+works on the keys listed at its start, and a key that changes, comes back, is
+created or is deleted on the source after that start is listed and left to the
+next one; the last line then says EXCEPT. The decisive run is the one after every writer of
+the source stopped, and it has no EXCEPT.
 
-Sequence: bulk `copy --update` (ties within a second skipped); byte-for-byte
-check (`--download`: `--checksum` cannot hash a multipart object and lets a
-zeroed one through); one repair pass re-copying, unconditionally, every
-missing key and every differing key the rule gives to the source; a second
-check that decides; the mirror step; an independent comparison of the two key
-sets. A check counts as trustworthy only with exit 0/1, its summary line, as
-many differences as listed keys, and no error beyond them (a subtree rclone
-could not list shows only as an extra error). Unicode normalization is off:
-rclone would otherwise fold two keys differing only by NFC/NFD into one.
+No copy replaces a destination object newer than the source (--update). How
+the destination is read depends on the mode:
+  - mirror: nothing writes there, so one bulk copy compares against a listing
+    of it, and a listing error fails the copy;
+  - catchup: the app writes there, so keys are copied one at a time (`rclone
+    copyto`): each destination object is looked up right before its own PUT,
+    and a lookup error other than "not found" fails the run. A bulk copy with
+    --no-traverse would take ANY lookup error for "absent" and write blind,
+    and it looks objects up about a hundred keys ahead of their PUT. The race
+    left is one object's lookup-to-PUT.
+
+Sequence: copy; byte-for-byte check (`--download`: `--checksum` cannot hash a
+multipart object and lets a zeroed one through); one repair pass; a second
+check that decides; the key sets; the deletions. A check is trusted by
+coverage: every key in scope still on the source must come back with a status,
+so a subtree rclone could not list fails the run. An unreadable key is looked
+up again: deleted on the source meanwhile, it is dropped; on the destination, it
+counts as missing; still on both sides, the run fails. Every per-key lookup
+(--no-traverse) skips a key that is gone and fails the run on any other error. Unicode normalization is off: rclone would otherwise fold two
+keys differing only by NFC/NFD into one.
 
 The Job name carries direction, runId and a hash of its own spec, and there is
 no Replace/Force: Argo CD applies an unchanged Job as a no-op (a sync never
 restarts a running or finished copy), a changed spec gets a new name (the old
-Job is pruned), and bumping runId runs the same spec again. The completed Job
+Job is pruned), and bumping runId runs the same spec again. The spec does not
+depend on the live endpoint, so swapping it starts no run. The completed Job
 stays until migrate.enabled goes back to false.
 */}}
 {{- if and (eq .Values.cluster "ovh-prod") .Values.seaweedfs.migrate.enabled }}
 {{- $m := .Values.seaweedfs.migrate }}
 {{- if not (has $m.direction (list "forward" "reverse")) }}
-{{- fail (printf "seaweedfs.migrate.direction must be \"forward\" or \"reverse\", got %q" $m.direction) }}
+{{- fail (printf "seaweedfs.migrate.direction must be \"forward\" or \"reverse\", got %q" (toString $m.direction)) }}
 {{- end }}
-{{- if has "--ignore-existing" $m.extraFlags }}
-{{- fail "seaweedfs.migrate.extraFlags: --ignore-existing keeps a stale destination copy of any key rewritten on the source after an earlier copy; every run already keeps the newer copy" }}
+{{- if not (has $m.mode (list "mirror" "catchup")) }}
+{{- fail (printf "seaweedfs.migrate.mode must be \"mirror\" or \"catchup\" (templates/seaweedfs-migrate.ovh-prod.job.yaml says which), got %q" (toString $m.mode)) }}
+{{- end }}
+{{- $runId := toString $m.runId }}
+{{- if not (regexMatch "^[a-z0-9]([-a-z0-9]{0,18}[a-z0-9])?$" $runId) }}
+{{- fail (printf "seaweedfs.migrate.runId must be 1 to 20 of [a-z0-9-], starting and ending with a letter or digit (it is part of the Job name), got %q" $runId) }}
+{{- end }}
+{{- range $k := list "transfers" "checkers" }}
+{{- if not (regexMatch "^[1-9][0-9]{0,2}$" (toString (index $m $k))) }}
+{{- fail (printf "seaweedfs.migrate.%s must be an integer from 1 to 999, got %q" $k (toString (index $m $k))) }}
+{{- end }}
+{{- end }}
+{{- if not (has (toString (default false $m.deleteGone)) (list "true" "false")) }}
+{{- fail (printf "seaweedfs.migrate.deleteGone must be true or false, got %q" (toString $m.deleteGone)) }}
 {{- end }}
 {{- $minio := "http://iterion-minio:9000" }}
 {{- $swfs := "http://iterion-seaweedfs-s3:8333" }}
 {{- $dst := ternary $minio $swfs (eq $m.direction "reverse") }}
-{{- $mirror := ne .Values.iterion.config.s3.endpoint $dst }}
-{{- $spec := include "iterion.seaweedfsMigrateJobSpec" (dict "Values" .Values "m" $m "minio" $minio "swfs" $swfs "mirror" $mirror) }}
+{{- $since := toString (default "" $m.since) }}
+{{- if eq $m.mode "mirror" }}
+{{- if eq .Values.iterion.config.s3.endpoint $dst }}
+{{- fail (printf "seaweedfs.migrate: mode mirror deletes destination keys, and the destination (%s) is the store the app writes to (iterion.config.s3.endpoint): use mode catchup" $dst) }}
+{{- end }}
+{{- if $since }}
+{{- fail "seaweedfs.migrate.since only applies to mode catchup" }}
+{{- end }}
+{{- if $m.deleteGone }}
+{{- fail "seaweedfs.migrate.deleteGone only applies to mode catchup (a mirror always deletes the migration copies the source no longer has)" }}
+{{- end }}
+{{- else if not (regexMatch "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$" $since) }}
+{{- fail (printf "seaweedfs.migrate.since: mode catchup copies the source keys modified at or after this UTC instant, as YYYY-MM-DDTHH:MM:SSZ (a mirror run prints the value to use), got %q" $since) }}
+{{- end }}
+{{- /* Tuning only: a flag that changes what is copied or how it is compared
+       (--ignore-times, --no-check-dest, --size-only, --ignore-existing …)
+       would let a run print VERIFIED over a lost write. */}}
+{{- $tuning := list "--bwlimit=" "--tpslimit=" "--tpslimit-burst=" "--retries=" "--retries-sleep=" "--low-level-retries=" "--timeout=" "--contimeout=" "--buffer-size=" "--s3-upload-concurrency=" "--s3-chunk-size=" "--s3-list-chunk=" "--multi-thread-streams=" "--multi-thread-cutoff=" "--fast-list" "--use-mmap" }}
+{{- range $flag := $m.extraFlags }}
+{{- $ok := false }}
+{{- range $t := $tuning }}
+{{- if or (eq $flag $t) (and (hasSuffix "=" $t) (hasPrefix $t $flag) (regexMatch "^--[a-z0-9-]+=[A-Za-z0-9._:,+-]+$" $flag)) }}
+{{- $ok = true }}
+{{- end }}
+{{- end }}
+{{- if not $ok }}
+{{- fail (printf "seaweedfs.migrate.extraFlags: %q is not one of the tuning flags this Job accepts (%s), as --flag=value with a value of [A-Za-z0-9._:,+-]" (toString $flag) (join " " $tuning)) }}
+{{- end }}
+{{- end }}
+{{- $spec := include "iterion.seaweedfsMigrateJobSpec" (dict "Values" .Values "m" $m "minio" $minio "swfs" $swfs "since" $since) }}
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: iterion-seaweedfs-migrate-{{ $m.direction }}-{{ $m.runId }}-{{ $spec | sha256sum | trunc 8 }}
+  name: iterion-seaweedfs-migrate-{{ $m.direction }}-{{ $runId }}-{{ $spec | sha256sum | trunc 8 }}
   namespace: iterion
 spec:
 {{ $spec | indent 2 }}
@@ -146,8 +217,12 @@ template:
             value: {{ ternary "swfs" "minio" (eq $m.direction "reverse") | quote }}
           - name: DST
             value: {{ ternary "minio" "swfs" (eq $m.direction "reverse") | quote }}
-          - name: MIRROR
-            value: {{ .mirror | quote }}
+          - name: MODE
+            value: {{ $m.mode | quote }}
+          - name: SINCE
+            value: {{ .since | quote }}
+          - name: DELETE_GONE
+            value: {{ default false $m.deleteGone | toString | quote }}
           - name: BUCKET
             value: {{ .Values.iterion.config.s3.bucket | quote }}
           - name: TZ
@@ -168,7 +243,17 @@ template:
           - |
             TF='2006-01-02T15:04:05.000000000Z07:00'
             TAB=$(printf '\t')
-            FLAGS="--transfers={{ $m.transfers }} --checkers={{ $m.checkers }} --stats=30s --stats-one-line --log-level INFO {{ join " " $m.extraFlags }}"
+            TUNING="{{ join " " $m.extraFlags }}"
+            FLAGS="--transfers={{ $m.transfers }} --checkers={{ $m.checkers }} --stats=30s --stats-one-line --log-level INFO $TUNING"
+            # The newer write wins, a newer destination object is never replaced, a
+            # same-second pair is left to the check, and no object's metadata is ever
+            # rewritten in place: rclone would otherwise re-stamp a same-content
+            # object with a server-side copy onto itself, and an app write landing in
+            # between would then look like a migration copy.
+            NEWER="--update --modify-window 1s --ignore-size --no-update-modtime"
+            # A stale migration copy: within the same second, the checksums decide; a
+            # destination object newer than the source is still never replaced.
+            STALE="--update --modify-window 1s --checksum --no-update-modtime"
             fail() { echo "FAIL: $1"; if [ -n "${2:-}" ] && [ -s "$2" ]; then head -n 200 "$2"; fi; exit 1; }
             # show TITLE FILE: a bounded listing of a key list.
             show() {
@@ -178,119 +263,295 @@ template:
               if [ "$n" -gt 200 ]; then echo "... and $((n - 200)) more"; fi
             }
             # keys REMOTE OUT: every key of the bucket, raw (a listing failure aborts: set -e).
-            keys() { rclone lsf -R --files-only "$1:${BUCKET}" > "$2"; }
-            # minus A B OUT: the lines of A absent from B.
-            minus() { awk 'NR == FNR { b[$0] = 1; next } !($0 in b)' "$2" "$1" > "$3"; }
-            # check PREFIX: byte-for-byte one-way check, trusted only when its own
-            # accounting adds up. Writes PREFIX.{missing,differ,errors,log}.
+            keys() { rclone lsf -R --files-only $TUNING "$1:${BUCKET}" > "$2"; }
+            # minus A B OUT: the lines of A absent from B (either may be empty).
+            minus() { awk 'FILENAME == ARGV[1] { b[$0] = 1; next } !($0 in b)' "$2" "$1" > "$3"; }
+            # both A B OUT: the lines of A also in B.
+            both() { awk 'FILENAME == ARGV[1] { b[$0] = 1; next } ($0 in b)' "$2" "$1" > "$3"; }
+            # lookup REMOTE LIST OUT [FORMAT]: the listed keys still on REMOTE, one lookup
+            # each (--no-traverse), as lsf FORMAT (default: the key). A key gone is
+            # skipped; any other lookup error fails the run. A modtime rclone could not
+            # read comes back as "now": any such notice fails the run too.
+            lookup() {
+              rclone lsf -R "$1:${BUCKET}" --files-from-raw "$2" --files-only --no-traverse \
+                --format "${4:-p}" --separator "$TAB" --time-format "$TF" $TUNING > "$3" 2> "$3.err" \
+                || fail "looking keys up on $1 failed" "$3.err"
+              if grep -q -i -E 'error|failed' "$3.err"; then fail "looking keys up on $1 failed" "$3.err"; fi
+            }
+            # copies LIST OUT: the listed destination keys that are migration copies —
+            # they carry rclone's mtime metadata, which any PUT by the app drops.
+            copies() {
+              lookup "$DST" "$1" "$2.meta" pM
+              awk -F "$TAB" '$1 != "" && index($2, "\"mtime\":") { print $1 }' "$2.meta" > "$2"
+            }
+            # copy_keys LIST FLAGSET: copy the listed keys — in bulk against a listing of
+            # the destination (mirror), or one `copyto` per key (catchup), whose
+            # destination lookup fails the copy on any error but "not found". A catchup
+            # key counts as handled only when copyto's report holds a status for it
+            # (copied, differs, or left as is): rclone takes ANY error on the SOURCE
+            # lookup for "a directory", copies nothing from it and exits 0. A key not
+            # handled is looked up again on the source: gone from it, it is listed;
+            # still there, the run fails.
+            copy_keys() {
+              if [ "$MODE" = mirror ]; then
+                rclone copy "${SRC}:${BUCKET}" "${DST}:${BUCKET}" --files-from-raw "$1" $2 $FLAGS
+                return 0
+              fi
+              : > /tmp/one.log
+              while IFS= read -r k; do
+                : > /tmp/one.report
+                if rclone copyto "${SRC}:${BUCKET}/${k}" "${DST}:${BUCKET}/${k}" $2 --combined /tmp/one.report \
+                    --s3-no-check-bucket --log-level INFO $TUNING >> /tmp/one.log 2>&1 \
+                  && grep -q -x -F -e "+ ${k##*/}" -e "* ${k##*/}" -e "= ${k##*/}" /tmp/one.report; then
+                  continue
+                fi
+                printf '%s\n' "$k" > /tmp/one.key
+                lookup "$SRC" /tmp/one.key /tmp/one.src
+                if [ -s /tmp/one.src ]; then
+                  tail -n 20 /tmp/one.log
+                  fail "copying ${k} failed, or rclone never looked it up as an object (a source lookup error reads as a directory)"
+                fi
+                printf '%s\n' "$k" >> /tmp/one.gone
+              done < "$1"
+              echo "copied one at a time: $(grep -c -E ': (Copied|Updated)' /tmp/one.log || true) of $(wc -l < "$1")"
+            }
+            # check PREFIX: byte-for-byte one-way check of the keys in scope, trusted by
+            # coverage rather than by counts: every scope key still on the source must
+            # come back with a status (match, missing, differs, unreadable). A subtree
+            # rclone could not list leaves its keys without one, and fails the run. An
+            # unreadable key is looked up again: deleted on the source meanwhile, it is
+            # dropped; on the destination, it counts as missing; still on both sides,
+            # the run fails. Writes PREFIX.{missing,differ,log}.
             check() {
               set +e
               rclone check "${SRC}:${BUCKET}" "${DST}:${BUCKET}" --one-way --download \
-                --checkers={{ $m.checkers }} \
-                --missing-on-dst "$1.missing" --differ "$1.differ" --error "$1.errors" > "$1.log" 2>&1
+                --files-from-raw /tmp/scope --checkers={{ $m.checkers }} --combined "$1.combined" $TUNING > "$1.log" 2>&1
               RC=$?
               set -e
               cat "$1.log"
-              touch "$1.missing" "$1.differ" "$1.errors"
               [ "$RC" -le 1 ] || fail "rclone check exited $RC"
               grep -q ' differences found$' "$1.log" || fail "rclone check printed no summary"
-              ND=$(sed -n 's/.*: \([0-9]*\) differences found$/\1/p' "$1.log" | tail -n 1)
-              NE=$(sed -n 's/.*: \([0-9]*\) errors while checking$/\1/p' "$1.log" | tail -n 1)
-              NE=${NE:-0}
-              NM=$(wc -l < "$1.missing")
-              NDIFF=$(wc -l < "$1.differ")
-              [ "$ND" -eq $((NM + NDIFF)) ] || fail "rclone check counted $ND differences but listed $NM missing and $NDIFF differing"
-              [ "$NE" -eq "$ND" ] || fail "rclone check counted $NE errors for $ND differences (a listing or a read failed)" "$1.errors"
+              touch "$1.combined"
+              sed -n 's/^+ //p' "$1.combined" > "$1.missing"
+              sed -n 's/^\* //p' "$1.combined" > "$1.differ"
+              sed -n 's/^! //p' "$1.combined" > "$1.errors"
+              sed 's/^. //' "$1.combined" > "$1.seen"
+              minus /tmp/scope "$1.seen" "$1.unseen"
+              if [ -s "$1.unseen" ]; then
+                lookup "$SRC" "$1.unseen" "$1.unseen.src"
+                [ -s "$1.unseen.src" ] && fail "keys still on ${SRC} that the check never reached (a listing failed):" "$1.unseen.src"
+              fi
+              if [ -s "$1.errors" ]; then
+                lookup "$SRC" "$1.errors" "$1.err.src"
+                lookup "$DST" "$1.errors" "$1.err.dst"
+                both "$1.err.src" "$1.err.dst" "$1.unreadable"
+                [ -s "$1.unreadable" ] && fail "objects on both sides that could not be read:" "$1.unreadable"
+                minus "$1.err.src" "$1.err.dst" "$1.err.missing"
+                cat "$1.err.missing" >> "$1.missing"
+                show "deleted on one side while being checked" "$1.errors"
+              fi
+              return 0
             }
-            # modtimes REMOTE LIST OUT: "key<TAB>modtime" (rclone's modtime) for the
-            # listed keys. A modtime rclone could not read comes back as "now":
-            # any such notice fails the run instead.
-            modtimes() {
-              rclone lsf -R "$1:${BUCKET}" --files-from-raw "$2" --files-only --format pt \
-                --separator "$TAB" --time-format "$TF" > "$3" 2> "$3.err" || fail "listing modtimes on $1 failed" "$3.err"
-              if grep -q -i 'failed' "$3.err"; then fail "modtimes on $1 could not all be read" "$3.err"; fi
-            }
-            # rule DIFFER TAKE CONFLICT KEPT: split the differing keys — taken from the
-            # source (identical modtimes, i.e. a corrupt copy; or source newer by at
-            # least a second), in conflict (same second, different modtimes, or a
-            # modtime missing), or kept (destination newer by at least a second).
+            # rule PREFIX KEYS: split KEYS (missing on, or differing from, the
+            # destination) into PREFIX.gone (no longer on the source), .changed (the
+            # source copy is from this run's start or later: next run), .take (absent
+            # from the destination, or an app write older by at least a second), .stale
+            # (a migration copy that differs: the source wins, the checksums decide
+            # within the window, and a copy newer by a second or more is left alone),
+            # .kept (an app write newer by at least a second) and .conflict (an app
+            # write within the same second).
             rule() {
-              modtimes "$SRC" "$1" /tmp/src.times
-              modtimes "$DST" "$1" /tmp/dst.times
-              awk -F "$TAB" -v take="$2" -v conflict="$3" -v kept="$4" '
+              for f in changed gone take stale kept conflict; do : > "$1.$f"; done
+              [ -s "$2" ] || return 0
+              lookup "$SRC" "$2" /tmp/src.times pt
+              lookup "$DST" "$2" /tmp/dst.times ptM
+              # Times compare at full precision, with rclone's own 1 s window, so a
+              # "take" is a copy `--update` will make (TZ=UTC: mktime reads UTC).
+              awk -F "$TAB" -v p="$1" -v cutoff="$CUTOFF" '
+                function ep(t) { return mktime(substr(t, 1, 4) " " substr(t, 6, 2) " " substr(t, 9, 2) " " substr(t, 12, 2) " " substr(t, 15, 2) " " substr(t, 18, 2)) + substr(t, 20, 10) }
                 FILENAME == ARGV[1] { src[$1] = $2; next }
-                FILENAME == ARGV[2] { dst[$1] = $2; next }
+                FILENAME == ARGV[2] { dst[$1] = $2; copy[$1] = index($3, "\"mtime\":") > 0; next }
                 {
                   k = $0
-                  if (!(k in src) || !(k in dst)) { print k > conflict; next }
-                  s = src[k]; d = dst[k]
-                  if (s == d) { print k > take; next }
-                  s1 = substr(s, 1, 19); d1 = substr(d, 1, 19)
-                  if (s1 > d1) print k > take
-                  else if (d1 > s1) print k > kept
-                  else print k > conflict
+                  if (!(k in src)) { print k > (p ".gone"); next }
+                  if (substr(src[k], 1, 19) >= cutoff) { print k > (p ".changed"); next }
+                  if (!(k in dst)) { print k > (p ".take"); next }
+                  if (copy[k]) { print k > (p ".stale"); next }
+                  dt = ep(src[k]) - ep(dst[k])
+                  if (dt >= 1) print k > (p ".take")
+                  else if (dt <= -1) print k > (p ".kept")
+                  else print k > (p ".conflict")
                 }
-              ' /tmp/src.times /tmp/dst.times "$1"
-              touch "$2" "$3" "$4"
+              ' /tmp/src.times /tmp/dst.times "$2"
             }
 
-            echo "== ${DIRECTION}: ${SRC}:${BUCKET} -> ${DST}:${BUCKET} (mirror: ${MIRROR}) =="
-            rclone size "${SRC}:${BUCKET}"
-            rclone size "${DST}:${BUCKET}"
-            keys "$SRC" /tmp/src.before
+            START=$(date -u +%s)
+            # Keys whose source copy is newer than this (60 s of clock slack between
+            # this node and the store) changed while the run went.
+            CUTOFF=$(date -u -d "@$((START - 60))" +%Y-%m-%dT%H:%M:%S)
+            echo "== ${MODE} ${DIRECTION}: ${SRC}:${BUCKET} -> ${DST}:${BUCKET} =="
+            echo "started $(date -u -d "@${START}" +%Y-%m-%dT%H:%M:%SZ)"
+            rclone size $TUNING "${SRC}:${BUCKET}"
+            rclone size $TUNING "${DST}:${BUCKET}"
+            keys "$SRC" /tmp/src.all
+            [ -s /tmp/src.all ] || fail "the ${SRC} listing is empty: nothing is reconciled against an empty source"
+            if [ "$MODE" = catchup ]; then
+              SINCE_S=$(date -u -d "$(printf '%s' "$SINCE" | sed 's/T/ /; s/Z$//')" +%s) || fail "since ${SINCE} is not a date"
+              [ "$SINCE_S" -le "$START" ] || fail "since ${SINCE} is after this run's start, so nothing would be copied (a local time written with a Z?)"
+              # rclone's modtime (one HEAD per object: extraFlags --tpslimit=… paces
+              # them), not the server's: a migration copy's server time is its copy
+              # time, which would pull back keys the app deleted on the destination.
+              # A HEAD that fails makes rclone date the object "now" — into scope, and
+              # a key the app deleted would be copied back — so any failure but "not
+              # found" (a key gone meanwhile) fails the run.
+              # rclone reads a key up to three times here and dates it "now" whenever a
+              # read fails, so a key --max-age let in is judged again on the "btime"
+              # (the S3 Last-Modified) inside its metadata — the time from the SAME
+              # read as the metadata. A key no read could find ({} metadata) counts as
+              # absent. The not-found notice is matched on rclone's own message at the
+              # end of the line, never on the key.
+              rclone lsf -R --files-only --max-age "$SINCE" --format pM --separator "$TAB" $TUNING \
+                "${SRC}:${BUCKET}" > /tmp/scope.meta 2> /tmp/scope.err || fail "listing the scope on ${SRC} failed" /tmp/scope.err
+              grep -i -E 'error|failed' /tmp/scope.err | grep -v -E ': Failed to read metadata: object not found$' > /tmp/scope.bad || true
+              [ -s /tmp/scope.bad ] && fail "listing the scope on ${SRC} failed (a modtime could not be read)" /tmp/scope.bad
+              # A catchup carries app writes only: a migration copy on the source came
+              # from the destination, which decides its fate (it may have deleted it).
+              awk -F "$TAB" -v since="${SINCE%Z}" -v copies=/tmp/scope.copies '
+                $1 == "" || !match($2, /"btime":"[^"]*"/) { next }
+                substr($2, RSTART + 9, 19) < since { next }
+                index($2, "\"mtime\":") { print $1 > copies; next }
+                { print $1 }
+              ' /tmp/scope.meta > /tmp/scope
+              touch /tmp/scope.copies
+              echo "scope: $(wc -l < /tmp/scope) of $(wc -l < /tmp/src.all) source keys, app writes modified at or after ${SINCE}"
+              show "migration copies modified since then, left to the store they came from" /tmp/scope.copies
+            else
+              cp /tmp/src.all /tmp/scope
+              echo "scope: all $(wc -l < /tmp/scope) source keys"
+            fi
             keys "$DST" /tmp/dst.before
-            minus /tmp/src.before /tmp/dst.before /tmp/absent.before
+            minus /tmp/scope /tmp/dst.before /tmp/absent.before
 
-            echo "== copy (newer write wins; same-second writes left to the check) =="
-            rclone copy "${SRC}:${BUCKET}" "${DST}:${BUCKET}" --update --modify-window 1s --ignore-size $FLAGS
-            show "copied because the destination lacked them (new on the source; after the cutover also keys the app deleted since)" /tmp/absent.before
+            echo "== copy (the newer write wins; same-second writes are left to the check) =="
+            : > /tmp/one.gone
+            copy_keys /tmp/scope "$NEWER"
+            if [ -s /tmp/one.gone ]; then show "gone from the source before their copy" /tmp/one.gone; fi
+            show "keys the destination lacked when listed" /tmp/absent.before
 
             echo "== check 1 =="
             check /tmp/c1
-            [ -s /tmp/c1.errors ] && fail "objects that could not be checked:" /tmp/c1.errors
-            cp /tmp/c1.missing /tmp/recopy
-            if [ -s /tmp/c1.differ ]; then
-              rule /tmp/c1.differ /tmp/c1.take /tmp/c1.conflict /tmp/c1.kept
-              cat /tmp/c1.take >> /tmp/recopy
+            cat /tmp/c1.missing /tmp/c1.differ > /tmp/c1.keys
+            rule /tmp/c1 /tmp/c1.keys
+            cat /tmp/c1.take /tmp/c1.changed > /tmp/recopy
+            if [ "$MODE" = catchup ]; then
+              # On a live destination, a key missing after a successful copy was
+              # deleted there by the app: re-copying it would undo that delete.
+              minus /tmp/recopy /tmp/c1.missing /tmp/recopy.live
+              mv /tmp/recopy.live /tmp/recopy
             fi
             if [ -s /tmp/recopy ]; then
-              show "repair: keys taken from ${SRC}" /tmp/recopy
-              rclone copy "${SRC}:${BUCKET}" "${DST}:${BUCKET}" --files-from-raw /tmp/recopy \
-                --ignore-times --no-traverse $FLAGS
+              show "repair: keys the source still wins" /tmp/recopy
+              copy_keys /tmp/recopy "$NEWER"
+            fi
+            if [ -s /tmp/c1.stale ]; then
+              # No app write since the copy: its PUT would have dropped the metadata.
+              show "repair: migration copies the source no longer matches" /tmp/c1.stale
+              copy_keys /tmp/c1.stale "$STALE"
             fi
 
             echo "== check 2 (decides) =="
             check /tmp/c2
-            [ -s /tmp/c2.errors ] && fail "objects that could not be checked:" /tmp/c2.errors
-            [ -s /tmp/c2.missing ] && fail "source objects absent from the destination:" /tmp/c2.missing
-            if [ -s /tmp/c2.differ ]; then
-              rule /tmp/c2.differ /tmp/c2.take /tmp/c2.conflict /tmp/c2.kept
-              [ -s /tmp/c2.conflict ] && fail "writes on both sides within the same second (or unreadable modtimes) — decide by hand:" /tmp/c2.conflict
-              [ -s /tmp/c2.take ] && fail "destination copies still differing and not newer than the source:" /tmp/c2.take
-              show "kept, newer on the destination by at least a second" /tmp/c2.kept
+            cat /tmp/c2.missing /tmp/c2.differ > /tmp/c2.keys
+            rule /tmp/c2 /tmp/c2.keys
+            [ -s /tmp/c2.conflict ] && fail "app writes on both sides within the same second — decide by hand:" /tmp/c2.conflict
+            [ -s /tmp/c2.stale ] && fail "migration copies still unlike the source after the repair:" /tmp/c2.stale
+            if [ -s /tmp/c2.take ]; then
+              # take = the source wins and the destination lacks it or holds an older write
+              minus /tmp/c2.take /tmp/c2.missing /tmp/c2.older
+              [ -s /tmp/c2.older ] && fail "destination copies still older than the source:" /tmp/c2.older
+              [ "$MODE" = mirror ] && fail "source keys still absent from the destination:" /tmp/c2.take
+              show "absent from the destination after the copy (the app deleted them there since)" /tmp/c2.take
             fi
+            show "changed on the source during this run (left to the next run)" /tmp/c2.changed
+            show "kept, newer on the destination by at least a second" /tmp/c2.kept
 
             echo "== key sets =="
-            keys "$SRC" /tmp/src.keys
-            keys "$DST" /tmp/dst.keys
-            minus /tmp/src.keys /tmp/dst.keys /tmp/absent.keys
-            [ -s /tmp/absent.keys ] && fail "source keys absent from the destination listing:" /tmp/absent.keys
-            minus /tmp/dst.keys /tmp/src.keys /tmp/extra.keys
-            if [ -s /tmp/extra.keys ]; then
-              if [ "$MIRROR" = true ]; then
-                show "deleted on the destination: gone from the source since an earlier run" /tmp/extra.keys
-                rclone delete "${DST}:${BUCKET}" --files-from-raw /tmp/extra.keys $FLAGS
-                keys "$DST" /tmp/dst.keys
-                minus /tmp/dst.keys /tmp/src.keys /tmp/extra.after
-                [ -s /tmp/extra.after ] && fail "destination keys still absent from the source after the mirror delete:" /tmp/extra.after
+            # The server's time, from the listing itself (no HEAD): any source object
+            # written since this run's start (less the clock slack) was checked by
+            # nothing — created, or rewritten out of scope or after its check.
+            rclone lsf -R --files-only --format pt --use-server-modtime --separator "$TAB" --time-format "$TF" $TUNING \
+              "${SRC}:${BUCKET}" > /tmp/src.now.t
+            awk -F "$TAB" '{ print $1 }' /tmp/src.now.t > /tmp/src.now
+            [ -s /tmp/src.now ] || fail "the ${SRC} listing is empty: nothing is reconciled against an empty source"
+            # Keys created on the source after the start listing were checked by nothing.
+            minus /tmp/src.now /tmp/src.all /tmp/src.new
+            show "created on the source during this run (left to the next run)" /tmp/src.new
+            awk -F "$TAB" -v cutoff="$CUTOFF" 'substr($2, 1, 19) >= cutoff { print $1 }' /tmp/src.now.t > /tmp/src.written
+            show "written on the source since this run's start (left to the next run)" /tmp/src.written
+            # A delete is a write too: a source that lost keys during the run was not quiet.
+            minus /tmp/src.all /tmp/src.now /tmp/src.gone
+            show "deleted on the source during this run" /tmp/src.gone
+            keys "$DST" /tmp/dst.now
+            minus /tmp/scope /tmp/dst.now /tmp/absent.now
+            if [ -s /tmp/absent.now ]; then
+              rule /tmp/ks /tmp/absent.now
+              [ "$MODE" = mirror ] && [ -s /tmp/ks.take ] && fail "source keys absent from the destination listing:" /tmp/ks.take
+              show "listed at the start, absent from the destination now: gone from the source since" /tmp/ks.gone
+              show "listed at the start, absent from the destination now: changed on the source during this run" /tmp/ks.changed
+              show "listed at the start, absent from the destination now: the app deleted them there since" /tmp/ks.take
+            fi
+            # Destination-only keys: the migration copies among them are keys deleted on
+            # the source after their copy; the others are app writes, never deleted.
+            minus /tmp/dst.now /tmp/src.now /tmp/extra
+            : > /tmp/gone.copies
+            if [ -s /tmp/extra ]; then copies /tmp/extra /tmp/gone.copies; fi
+            minus /tmp/extra /tmp/gone.copies /tmp/extra.app
+            show "destination-only keys without migration metadata (app writes on the destination; after a rollback, also keys the app deleted on the other store): kept" /tmp/extra.app
+            if [ -s /tmp/gone.copies ]; then
+              # A key the source lists no more but still answers for is a listing gap,
+              # not a delete: the run fails rather than delete it.
+              lookup "$SRC" /tmp/gone.copies /tmp/gone.still
+              [ -s /tmp/gone.still ] && fail "keys missing from the ${SRC} listing but still there:" /tmp/gone.still
+              if [ "$MODE" = mirror ]; then
+                show "deleted on the destination: migration copies of keys gone from the source" /tmp/gone.copies
+                rclone delete "${DST}:${BUCKET}" --files-from-raw /tmp/gone.copies $FLAGS
+              elif [ "$DELETE_GONE" = true ]; then
+                show "deleted on the destination: migration copies of keys deleted on the source after their copy" /tmp/gone.copies
+                # One at a time, each re-checked right before: still a migration copy
+                # (an app write since would have dropped the metadata).
+                while IFS= read -r k; do
+                  printf '%s\n' "$k" > /tmp/one.key
+                  copies /tmp/one.key /tmp/one.copy
+                  if [ -s /tmp/one.copy ]; then
+                    rclone deletefile "${DST}:${BUCKET}/${k}" --log-level INFO $TUNING || fail "deleting ${k} on ${DST} failed"
+                  fi
+                done < /tmp/gone.copies
               else
-                show "destination-only keys, kept (app writes on the live store, or source deletions a run cannot tell apart)" /tmp/extra.keys
+                show "migration copies of keys deleted on the source after their copy (deleteGone: true deletes them)" /tmp/gone.copies
+              fi
+              if [ "$MODE" = mirror ] || [ "$DELETE_GONE" = true ]; then
+                lookup "$DST" /tmp/gone.copies /tmp/undeleted pM
+                awk -F "$TAB" 'index($2, "\"mtime\":") { print $1 }' /tmp/undeleted > /tmp/undeleted.copies
+                [ -s /tmp/undeleted.copies ] && fail "migration copies still on the destination after the delete:" /tmp/undeleted.copies
               fi
             fi
-            echo "$(wc -l < /tmp/src.keys) source keys, all present on the destination"
-            rclone size "${SRC}:${BUCKET}"
-            rclone size "${DST}:${BUCKET}"
-            echo "MIGRATION VERIFIED (${DIRECTION}) for bucket ${BUCKET}"
+            if [ "$MODE" = catchup ]; then
+              cat /tmp/scope /tmp/scope.copies > /tmp/scope.all
+              minus /tmp/src.all /tmp/scope.all /tmp/older
+              minus /tmp/older /tmp/dst.now /tmp/older.absent
+              show "source keys older than ${SINCE}, absent from the destination (deleted there, not copied back)" /tmp/older.absent
+            fi
+            rclone size $TUNING "${SRC}:${BUCKET}"
+            rclone size $TUNING "${DST}:${BUCKET}"
+            # Keys that changed on the source during the run were checked against
+            # nothing: a run is decisive only when there are none.
+            NCH=$(cat /tmp/c2.changed /tmp/ks.changed /tmp/src.new /tmp/src.written /tmp/src.gone 2>/dev/null | sort -u | wc -l)
+            if [ "$NCH" -gt 0 ]; then
+              echo "MIGRATION VERIFIED (${MODE} ${DIRECTION}) for bucket ${BUCKET}, EXCEPT ${NCH} keys changed, created or deleted on the source during the run: not decisive, run again"
+            else
+              echo "MIGRATION VERIFIED (${MODE} ${DIRECTION}) for bucket ${BUCKET}"
+            fi
+            echo "since for the next catchup: $(date -u -d "@$((START - 300))" +%Y-%m-%dT%H:%M:%SZ)"
         resources:
           requests:
             cpu: 200m

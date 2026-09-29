@@ -486,12 +486,16 @@ iterion:
       # ITERION_NATS_STREAM_REPLICAS mapping.
       streamReplicas: 3
     s3:
-      # CUTOVER LINE. Today: MinIO. After the migration Job has printed
-      # "MIGRATION VERIFIED" (templates/seaweedfs-migrate.ovh-prod.job.yaml),
-      # swap the two lines below in their own commit — nothing else changes.
-      # Rolling back is the reverse swap, and it is safe for as long as MinIO
-      # keeps its data: objects written on SeaweedFS after the cutover are the
-      # only ones lost by going back, so the window matters.
+      # CUTOVER LINE. Today: MinIO. Once a mirror run of the migration Job has
+      # printed "MIGRATION VERIFIED" (templates/seaweedfs-migrate.ovh-prod.job.yaml),
+      # swap the two lines below in a commit that also sets
+      # seaweedfs.migrate.enabled: false, then run the catchups described at
+      # seaweedfs.migrate: one right after, the decisive one once the old
+      # runners have drained.
+      # Rolling back swaps them back, alone in its commit, then a reverse
+      # catchup in the next one (see seaweedfs.migrate): what the app wrote on
+      # SeaweedFS since the cutover is copied back to MinIO, which kept
+      # everything else.
       endpoint: http://iterion-minio:9000
       # endpoint: http://iterion-seaweedfs-s3:8333
       region: us-east-1
@@ -1110,20 +1114,63 @@ seaweedfs:
     enabled: false
 
   # MinIO <-> SeaweedFS bucket reconciliation
-  # (templates/seaweedfs-migrate.ovh-prod.job.yaml), off by default. The newer
-  # write of each key wins, so the same run fits every step: `forward` before
-  # the cutover, again during the runners' drain and once it is over,
-  # `reverse` for a rollback. `runId` is part of the Job name: bumping it runs
-  # a new one (a Job spec is immutable).
+  # (templates/seaweedfs-migrate.ovh-prod.job.yaml), off by default, `mode`
+  # always explicit. A successful run prints "since for the next catchup: …"
+  # in UTC; every `since` below is copied from such a line, never derived by
+  # hand from a wall-clock time. Catchups CHAIN them: each takes the since the
+  # previous run in its direction printed, so a key the app deleted on the
+  # destination is not copied back by the next run.
+  #   1. Before the cutover: mode mirror, direction forward. Repeat (bump
+  #      runId) until a run prints MIGRATION VERIFIED — the last one right
+  #      before the cutover. Its since is S0. While the app writes MinIO, an
+  #      EXCEPT is expected here: only the decisive run below must have none.
+  #   2. The cutover commit swaps iterion.config.s3.endpoint AND sets
+  #      enabled: false (a mirror into the store the app writes to fails the
+  #      render). Right after it: a catchup (mode catchup, direction forward,
+  #      since S0) brings over what MinIO received since; more during the
+  #      drain if wanted, each with the since the previous catchup printed.
+  #   3. Once no old runner pod is left (their drain lasts up to 8 h), the
+  #      decisive catchup: mode catchup, direction forward, since from the
+  #      previous catchup (S0 if none), deleteGone true. MinIO has no writer
+  #      left, so its last line must be MIGRATION VERIFIED with no EXCEPT
+  #      (keys changed during a run are only checked by the next one).
+  #      deleteGone deletes the migration copies of keys MinIO deleted after
+  #      they were copied (an attachment of a deleted run, say); app writes
+  #      are never deleted.
+  #   Rollback, TWO commits, so that nothing here can block the swap: first
+  #   the endpoint back to MinIO with enabled: false (a render this template
+  #   refuses fails the whole app); then mode catchup, direction reverse,
+  #   since S0 (the last mirror's, from before the cutover: a forward
+  #   catchup's since would miss what the app wrote on SeaweedFS before that
+  #   catchup). Once the SeaweedFS-era runners have drained, the decisive
+  #   reverse run: bump runId, since from the previous reverse run,
+  #   deleteGone true, no EXCEPT. A rollback does not carry over what the app
+  #   deleted on SeaweedFS: MinIO keeps its copy (listed as destination-only).
+  #   A new cutover after a rollback starts again at step 1 from an EMPTIED
+  #   SeaweedFS bucket: what it kept from the first attempt would otherwise
+  #   bring back keys the app deleted on MinIO meanwhile.
+  # A catchup copies one key at a time (about 50 ms each in kind), app writes
+  # only. rclone's mtime metadata marks a migration copy (a mirror may delete
+  # it, a catchup leaves it to the store it came from), so nothing but this
+  # Job writes either bucket with rclone — except to settle a conflict a run
+  # listed: copy the winning version from the other store with `rclone
+  # copyto --ignore-times` (without it, a same-size same-second conflict is
+  # skipped; the copy then is a migration copy of it), or delete the loser.
+  # `runId` (1 to 20 of [a-z0-9-]) is part of the Job name: bumping it runs a
+  # new one (a Job spec is immutable).
   migrate:
     enabled: false
+    mode: "" # mirror | catchup
+    since: "" # catchup only: YYYY-MM-DDTHH:MM:SSZ, from a run's log
+    deleteGone: false # catchup only, see step 3
     runId: "1"
     direction: forward
     transfers: 8
     checkers: 16
-    # Extra rclone flags for the copies. `--ignore-existing` is refused: it
-    # keeps a stale copy of any key rewritten on the source after an earlier
-    # copy (PutIRBlob, PutBackendSession and run files replace bytes in place).
+    # Tuning flags only, as --flag=value (bandwidth, rate, retries, timeouts,
+    # chunking; the template lists them), passed to every rclone call — e.g.
+    # --tpslimit=… to spare MinIO during the byte-for-byte checks. A flag
+    # that changes what is copied or compared is refused.
     extraFlags: []
 
 # --- valkeyfiler — the SeaweedFS filers' metadata store (ovh-prod) ----------
