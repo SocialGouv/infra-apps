@@ -486,9 +486,18 @@ iterion:
       # ITERION_NATS_STREAM_REPLICAS mapping.
       streamReplicas: 3
     s3:
+      # CUTOVER LINE. Today: MinIO. After the migration Job has printed
+      # "MIGRATION VERIFIED" (templates/seaweedfs-migrate.ovh-prod.job.yaml),
+      # swap the two lines below in their own commit — nothing else changes.
+      # Rolling back is the reverse swap, and it is safe for as long as MinIO
+      # keeps its data: objects written on SeaweedFS after the cutover are the
+      # only ones lost by going back, so the window matters.
       endpoint: http://iterion-minio:9000
+      # endpoint: http://iterion-seaweedfs-s3:8333
       region: us-east-1
       bucket: iterion-artifacts
+      # Both gateways are path-style; SeaweedFS needs it too (virtual-host
+      # style would require s3.domainName and a wildcard DNS entry).
       usePathStyle: true
     # Valkey HA (Sentinel) — shares forge OAuth/CSRF state, board-MCP tokens
     # and auth rate-limit across the x3 server replicas (fixes the GitHub-App
@@ -804,3 +813,394 @@ firecrawl:
   postgres:
     size: 5Gi
     storageClass: csi-cinder-high-speed
+
+# --- SeaweedFS — the S3 object store (ovh-prod) ------------------------------
+#
+# Replaces MinIO, whose images are no longer distributed (quay.io/minio/* 401,
+# Docker Hub repos removed, dl.min.io 410): with AlwaysPullImages on this
+# cluster a restarted MinIO pod cannot come back. Third-party MinIO rebuilds are
+# out of scope by decision.
+#
+# COMPATIBILITY: iterion's whole S3 surface is pkg/store/blob/s3.go
+# (aws-sdk-go-v2, path style, CRC32 checksums on PutObject and DeleteObjects),
+# driven against this topology by pkg/store/blob/s3_gateway_compat_test.go —
+# including a write on one gateway read back on the other.
+#
+# TOPOLOGY: 3 masters (raft), 4 volume servers keeping 3 copies of every
+# needle, 2 filers sharing ONE metadata store (valkeyfiler, below), 2 S3
+# gateways. iterion.config.s3.endpoint decides which store the app talks to.
+seaweedfs:
+  enabled: true
+  fullnameOverride: iterion-seaweedfs
+
+  global:
+    seaweedfs:
+      # No seaweedfs binary talks to the Kubernetes API; the chart's own
+      # networkpolicy.yaml calls this ClusterRole a leftover nothing exercises.
+      createClusterRole: false
+      serviceAccountName: iterion-seaweedfs
+      automountServiceAccountToken: false
+      imagePullPolicy: IfNotPresent
+      # "002" = 3 copies on 3 distinct volume servers: reads survive the loss of
+      # two servers, writes need three live ones (four are deployed). At this
+      # bucket's size (~5 GB) the 33 % usable ratio is irrelevant.
+      enableReplication: true
+      replicationPlacement: "002"
+      # JWT signing keys from the iterion-seaweedfs-jwt SealedSecret, injected
+      # into every component (viper reads jwt.* from WEED_JWT_*). Without them
+      # the volume (:8080) and filer (:8888) HTTP APIs read and write objects for
+      # any pod that reaches them, no credential asked. They are defense in
+      # depth, not the boundary: the master hands a JWT to any caller that
+      # reaches it (/dir/assign, /dir/lookup), so the NetworkPolicies below are
+      # what keeps other pods out. The chart's own securityConfig.jwtSigning
+      # switches stay off: they render security.toml through `lookup` +
+      # `randAlphaNum`, which under Argo CD re-rolls every key on every sync.
+      extraEnvironmentVars:
+        WEED_JWT_SIGNING_KEY:
+          secretKeyRef:
+            name: iterion-seaweedfs-jwt
+            key: volume-write
+        WEED_JWT_SIGNING_READ_KEY:
+          secretKeyRef:
+            name: iterion-seaweedfs-jwt
+            key: volume-read
+        WEED_JWT_FILER_SIGNING_KEY:
+          secretKeyRef:
+            name: iterion-seaweedfs-jwt
+            key: filer-write
+        WEED_JWT_FILER_SIGNING_READ_KEY:
+          secretKeyRef:
+            name: iterion-seaweedfs-jwt
+            key: filer-read
+
+  # Every component pinned BY DIGEST: the chart's `image.tag` is joined with
+  # ":" and cannot hold one, `<component>.imageOverride` is printed verbatim.
+  # chrislusf/seaweedfs:4.48, an OCI index (amd64/arm64/arm-v7/386), identical
+  # on docker.io and ghcr.io; labels org.opencontainers.image.revision =
+  # 530be3e37337488ecc34d58441e0bc476e121c93 = tag 4.48 upstream. Apache-2.0.
+  master:
+    imageOverride: &swImage chrislusf/seaweedfs@sha256:4e61d15fd35994cb1e43e1e553dff106794841fd9a99ade2fc8c8bfce4d7872d
+    enabled: true
+    replicas: 3
+    # Raft needs its log on disk to rejoin with the state it voted on.
+    resumeState: true
+    volumeSizeLimitMB: 1024
+    # The leader runs these every 17 min. Without a [master.maintenance]
+    # section nothing runs at all: a volume that lost a copy stays at 2 of 3
+    # until someone repairs it, and the filer's metadata log grows forever.
+    # No ec.* (erasure coding would replace the 3-copy replication) and no
+    # volume.balance (moves data around on its own).
+    # -doDelete=false: when a volume server comes back after its volumes were
+    # re-replicated elsewhere, a volume has 4 copies, and fix.replication
+    # deletes the SMALLEST — after a vacuum that is the fresh copy, and the
+    # returning stale one is kept (measured: 9 objects lost). Surplus copies
+    # stay; trim them by hand after `volume.check.disk` has reconciled them.
+    config: |-
+      [master.maintenance]
+      scripts = """
+        lock
+        volume.fix.replication -apply -doDelete=false
+        volume.deleteEmpty -quietFor=24h -apply
+        s3.clean.uploads -timeAgo=24h
+        fs.log.purge -daysAgo=7
+        unlock
+      """
+      sleep_minutes = 17
+    # The chart defaults every component to hostPath, which PSA `restricted`
+    # (Kyverno) refuses here: a Retain PVC for anything durable, emptyDir for
+    # logs.
+    data:
+      type: persistentVolumeClaim
+      size: 1Gi
+      storageClass: sc-hspeed-retain
+    logs:
+      type: emptyDir
+    podSecurityContext: &swPodSec
+      enabled: true
+      fsGroup: 1000
+      fsGroupChangePolicy: OnRootMismatch
+      runAsUser: 1000
+      runAsGroup: 1000
+      runAsNonRoot: true
+      seccompProfile:
+        type: RuntimeDefault
+    containerSecurityContext: &swCtrSec
+      enabled: true
+      allowPrivilegeEscalation: false
+      privileged: false
+      runAsUser: 1000
+      runAsGroup: 1000
+      runAsNonRoot: true
+      # The entrypoint writes /data and the filer/volume write scratch files.
+      readOnlyRootFilesystem: false
+      capabilities:
+        drop:
+          - ALL
+      seccompProfile:
+        type: RuntimeDefault
+    resources:
+      requests:
+        cpu: 50m
+        memory: 256Mi
+      limits:
+        memory: 512Mi
+
+  volume:
+    imageOverride: *swImage
+    enabled: true
+    replicas: 4
+    # 4 x 30 Gi raw = 120 Gi; at 3 copies, 40 Gi usable for ~5 GB of data.
+    dataDirs:
+      - name: data1
+        type: persistentVolumeClaim
+        size: 30Gi
+        storageClass: sc-hspeed-retain
+        maxVolumes: 0
+    # A pre-install hook that shells out to kubectl, its command list built from
+    # `lookup`: never rendered under Argo CD, and not wanted here either.
+    resizeHook:
+      enabled: false
+    logs:
+      type: emptyDir
+    podSecurityContext: *swPodSec
+    containerSecurityContext: *swCtrSec
+    resources:
+      requests:
+        cpu: 100m
+        memory: 512Mi
+      limits:
+        memory: 2Gi
+
+  filer:
+    imageOverride: *swImage
+    enabled: true
+    replicas: 2
+    # The filers hold nothing durable: their metadata lives in valkeyfiler.
+    data:
+      type: emptyDir
+    logs:
+      type: emptyDir
+    # filer-0 starts alone. A filer records the store signature on first boot
+    # with a plain get-then-set, so two filers booting together on an empty
+    # store can record two signatures and replay each other's events into it.
+    podManagementPolicy: OrderedReady
+    extraEnvironmentVars:
+      # The image's filer.toml and the chart both enable leveldb2: two enabled
+      # stores is fatal, and a misspelled store falls back to leveldb2 SILENTLY
+      # — the filer log must read "configured filer store to redis2_sentinel".
+      WEED_LEVELDB2_ENABLED: "false"
+      WEED_REDIS2_SENTINEL_ENABLED: "true"
+      # Space-separated: viper splits a list-valued env var on whitespace.
+      WEED_REDIS2_SENTINEL_ADDRESSES: "iterion-valkeyfiler-0.iterion-valkeyfiler-headless:26379 iterion-valkeyfiler-1.iterion-valkeyfiler-headless:26379 iterion-valkeyfiler-2.iterion-valkeyfiler-headless:26379"
+      WEED_REDIS2_SENTINEL_MASTERNAME: "filermeta"
+      WEED_REDIS2_SENTINEL_DATABASE: "0"
+      # Part of every key: never change it once data is written.
+      WEED_REDIS2_SENTINEL_KEYPREFIX: "swfs:"
+      # go-redis waits 3 s on a read and 5 s on a dial by default, and every
+      # pooled connection to a dead master has to time out before a Sentinel
+      # failover is absorbed.
+      WEED_REDIS2_SENTINEL_READ_TIMEOUT_MILLISECOND: "1000"
+      WEED_REDIS2_SENTINEL_WRITE_TIMEOUT_MILLISECOND: "1000"
+      WEED_REDIS2_SENTINEL_DIAL_TIMEOUT_MILLISECOND: "2000"
+    secretExtraEnvironmentVars:
+      WEED_REDIS2_SENTINEL_PASSWORD:
+        secretKeyRef:
+          name: iterion-valkeyfiler-auth
+          key: password
+      # The chart's Sentinels require the same password (requirepass).
+      WEED_REDIS2_SENTINEL_SENTINEL_PASSWORD:
+        secretKeyRef:
+          name: iterion-valkeyfiler-auth
+          key: password
+    # With a filer read-signing key an HTTP probe gets 401: probe the port.
+    livenessProbe:
+      tcpSocket:
+        port: 8888
+    readinessProbe:
+      tcpSocket:
+        port: 8888
+    # The S3 gateway runs as its own Deployment below, not inside the filer.
+    s3:
+      enabled: false
+    podSecurityContext: *swPodSec
+    containerSecurityContext: *swCtrSec
+    resources:
+      requests:
+        cpu: 100m
+        memory: 512Mi
+      limits:
+        memory: 2Gi
+
+  s3:
+    imageOverride: *swImage
+    enabled: true
+    replicas: 2
+    port: 8333
+    # The gateway also serves a Lance Namespace API (9101 by default); iterion
+    # does not use it, and 0 turns it off.
+    lancePort: 0
+    enableAuth: true
+    # SealedSecret holding ONE key, `seaweedfs_s3_config`: the gateway's
+    # identities JSON. Its single identity carries the same key pair as
+    # ITERION_S3_ACCESS_KEY_ID / ITERION_S3_SECRET_ACCESS_KEY in
+    # `iterion-storage`, so switching the endpoint needs no credential change.
+    # Never add an identity named `anonymous`: it is the one way unsigned
+    # requests get served. Naming an existing secret also keeps the chart from
+    # rendering its own `*-s3-secret`, whose keys come from `lookup` +
+    # `randAlphaNum` and would re-roll on every Argo CD sync.
+    existingConfigSecret: iterion-seaweedfs-s3
+    # No `createBuckets`: it renders a post-install hook, i.e. an Argo CD
+    # PostSync hook, which never runs while any resource of the app is
+    # unhealthy. templates/seaweedfs-mkbucket.ovh-prod.job.yaml creates the
+    # bucket as a plain resource instead.
+    # The chart sets no anti-affinity on the gateways: keep the two apart.
+    affinity: |
+      podAntiAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                app.kubernetes.io/name: seaweedfs
+                app.kubernetes.io/instance: iterion
+                app.kubernetes.io/component: s3
+            topologyKey: kubernetes.io/hostname
+    logs:
+      type: emptyDir
+    podSecurityContext: *swPodSec
+    containerSecurityContext: *swCtrSec
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        memory: 1Gi
+
+  # One ingress policy per component, from the chart: each admits the pods of
+  # this SeaweedFS release only. The S3 gateway also admits the iterion server
+  # and runners and the bucket Jobs (label app.kubernetes.io/name:
+  # iterion-seaweedfs-job). Kubelet probes are node traffic, outside these
+  # rules.
+  networkPolicy:
+    enabled: true
+    components:
+      s3:
+        extraIngress:
+          - from:
+              - podSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: iterion
+                    app.kubernetes.io/instance: iterion
+              - podSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: iterion-seaweedfs-job
+            ports:
+              - protocol: TCP
+                port: 8333
+
+  # No ServiceMonitor: the Prometheus-operator CRDs are not confirmed present
+  # on ovh-prod (same reason iterion.metrics.podMonitor stays false above).
+  admin:
+    enabled: false
+  worker:
+    enabled: false
+  sftp:
+    enabled: false
+  cosi:
+    enabled: false
+  allInOne:
+    enabled: false
+
+  # MinIO <-> SeaweedFS bucket reconciliation
+  # (templates/seaweedfs-migrate.ovh-prod.job.yaml), off by default. The newer
+  # write of each key wins, so the same run fits every step: `forward` before
+  # the cutover, again during the runners' drain and once it is over,
+  # `reverse` for a rollback. `runId` is part of the Job name: bumping it runs
+  # a new one (a Job spec is immutable).
+  migrate:
+    enabled: false
+    runId: "1"
+    direction: forward
+    transfers: 8
+    checkers: 16
+    # Extra rclone flags for the copies. `--ignore-existing` is refused: it
+    # keeps a stale copy of any key rewritten on the source after an earlier
+    # copy (PutIRBlob, PutBackendSession and run files replace bytes in place).
+    extraFlags: []
+
+# --- valkeyfiler — the SeaweedFS filers' metadata store (ovh-prod) ----------
+#
+# Losing this store loses every object's key -> needle index: the bytes would
+# still sit on the volume servers, unreachable by key. Hence: AOF on a Retain
+# PVC, no eviction ever, a password, and a NetworkPolicy
+# (templates/valkeyfiler.ovh-prod.networkpolicy.yaml) that admits only its own
+# pods and the SeaweedFS filers.
+valkeyfiler:
+  enabled: true
+  architecture: replication
+  replicaCount: 3
+  auth:
+    enabled: true
+    # SealedSecret iterion-valkeyfiler-auth. Without an existing secret the
+    # chart generates the password through `lookup` + `randAlphaNum`, re-rolled
+    # on every Argo CD sync.
+    existingSecret: iterion-valkeyfiler-auth
+    existingSecretPasswordKey: password
+  config:
+    # An evicted key is a silently lost object. A bounded maxmemory with
+    # noeviction turns "full" into refused writes — visible S3 errors — instead
+    # of an OOM-killed master.
+    maxMemory: "512mb"
+    maxMemoryPolicy: noeviction
+    extraConfig:
+      - appendonly yes
+      - appendfsync everysec
+      # A master cut off from both replicas refuses writes rather than
+      # accepting ones a Sentinel failover would then discard.
+      - min-replicas-to-write 1
+      - min-replicas-max-lag 10
+  persistence:
+    enabled: true
+    size: 5Gi
+    storageClass: sc-hspeed-retain
+  sentinel:
+    enabled: true
+    masterName: filermeta
+    quorum: 2
+    downAfterMilliseconds: 1500
+    # With min-replicas-to-write 1 the new master refuses writes until a
+    # replica is repointed at it, which Sentinel does only within
+    # failoverTimeout: 15 s of refused S3 writes on every handover at 15000,
+    # about 5 s at 3000 (measured on a rollout under write load).
+    failoverTimeout: 3000
+    parallelSyncs: 1
+    service:
+      type: ClusterIP
+      port: 26379
+  podSecurityContext:
+    fsGroup: 1000
+    seccompProfile:
+      type: RuntimeDefault
+  # At most one pod EVICTED at a time. It cannot cover involuntary losses:
+  # after a restart of all three, the chart elects pod-0 master whatever its
+  # data (no Sentinel left to ask, OrderedReady starts pod-0 first), so if
+  # pod-0 was down while the others kept taking writes, those writes are
+  # flushed from every replica. Recovery when pod-0 went down first and the
+  # others followed: scale the StatefulSet to 0, copy /data (appendonlydir) of
+  # the pod that was master last onto pod-0's PVC, then scale back to 3.
+  pdb:
+    enabled: true
+    minAvailable: 2
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        - topologyKey: kubernetes.io/hostname
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: valkeyfiler
+              app.kubernetes.io/instance: iterion
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi

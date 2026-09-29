@@ -1,0 +1,25 @@
+{{- if and (eq .Values.cluster "ovh-prod") .Values.seaweedfs.enabled }}
+{{- /*
+One eviction at a time per SeaweedFS component — the chart ships no
+PodDisruptionBudget. Raft keeps its quorum with 2 masters of 3; every needle
+has 3 copies and a write needs 3 live volume servers of 4; the filers and the
+S3 gateways run two each. Required anti-affinity already puts every replica on
+its own node, so one drain takes at most one pod per component; these keep two
+concurrent drains from taking two.
+*/}}
+{{- range $component := list "master" "volume" "filer" "s3" }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: iterion-seaweedfs-{{ $component }}
+  namespace: iterion
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: seaweedfs
+      app.kubernetes.io/instance: iterion
+      app.kubernetes.io/component: {{ $component }}
+{{- end }}
+{{- end }}

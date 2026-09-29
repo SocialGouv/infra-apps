@@ -11,5 +11,11 @@ dependencies:
 - name: minio
   repository: https://charts.min.io/
   version: 5.4.0
-digest: sha256:a2329ca6e3a0c39eab033d2d6493f82d517212c253054d54d9d525f699dce461
-generated: "2026-09-06T08:52:48.623426174+02:00"
+- name: seaweedfs
+  repository: file://vendor-charts/seaweedfs
+  version: 4.48.0
+- name: valkey
+  repository: https://cloudpirates-io.github.io/helm-charts
+  version: 0.25.11
+digest: sha256:bc3afe625b3d2b3a1802dc73d0b29a69a462053fe773c0c15110ad9ee5a4db65
+generated: "2026-09-29T17:04:50.053012515+02:00"
