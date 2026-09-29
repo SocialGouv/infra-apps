@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Exercise the shipped shell body against an isolated file, never /proc."""
+"""Exercise the shipped shell body against an isolated file, then read-only against /proc."""
 from pathlib import Path
 import os
 import subprocess
@@ -45,6 +45,25 @@ with tempfile.TemporaryDirectory(prefix='arc-inotify-') as tmp:
     result = subprocess.run(['/bin/sh', '-ec', script], env=env, capture_output=True, text=True, timeout=5)
     assert result.returncode != 0 and not missing.exists(), result
     print('PASS: a missing sysctl refuses runner startup')
+
+# A regular file is not a sysctl file: /proc/sys answers only a read at
+# offset 0, so a shell that reads byte by byte (dash, the runner image's
+# /bin/sh) gets the first digit and then EOF. Run the real body against the
+# real file, read-only: with a floor of 1 it never writes, and it must report
+# the kernel's whole value.
+real = Path('/proc/sys/fs/inotify/max_user_instances')
+if real.exists():
+    value = real.read_text().strip()
+    shells = ['/bin/sh'] + [s for s in ('/usr/bin/dash', '/bin/dash') if Path(s).exists()]
+    for shell in dict.fromkeys(shells):
+        env = dict(os.environ, ARC_INOTIFY_MIN_USER_INSTANCES='1')
+        result = subprocess.run([shell, '-ec', source], env=env, capture_output=True, text=True, timeout=5)
+        assert result.returncode == 0, (shell, result.returncode, result.stdout, result.stderr)
+        want = f'ARC node inotify max_user_instances: {value} -> {value} (minimum 1)'
+        assert want in result.stdout, (shell, result.stdout)
+        print(f'PASS: {shell} reads the whole value of the real sysctl file ({value})')
+else:
+    print('SKIP: no /proc/sys/fs/inotify/max_user_instances on this machine')
 
 # Validate the effective PodSpec after the pinned ARC subchart has rendered it.
 rendered = subprocess.check_output(['helm', 'template', 'arc-runners', str(chart), '--namespace', 'arc-runners'], text=True)

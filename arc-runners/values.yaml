@@ -67,11 +67,14 @@ gha-runner-scale-set:
                 exit 0
               fi
               limit_file=/proc/sys/fs/inotify/max_user_instances
-              read -r current < "$limit_file"
+              # cat, not the shell's `read`: a sysctl file answers only a read
+              # at offset 0, and dash reads byte by byte — `read` gets the
+              # first digit, then EOF, and exits 1 without a word under -e.
+              current=$(cat "$limit_file")
               if [ "$current" -lt "$minimum" ]; then
                 printf '%s\n' "$minimum" > "$limit_file"
               fi
-              read -r actual < "$limit_file"
+              actual=$(cat "$limit_file")
               if [ "$actual" -lt "$minimum" ]; then
                 echo "ARC inotify ceiling is still below the requested floor" >&2
                 exit 1
