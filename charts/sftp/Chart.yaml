@@ -3,7 +3,7 @@ name: sftp
 version: 0.0.0
 dependencies:
   - name: sftpgo
-    version: 0.22.0
+    version: 0.24.0
     # https://artifacthub.io/packages/helm/sagikazarmark/sftpgo
     repository: https://charts.sagikazarmark.dev
     condition: sftpgo.enabled
