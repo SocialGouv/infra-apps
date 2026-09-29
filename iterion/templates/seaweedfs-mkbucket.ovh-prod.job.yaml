@@ -1,20 +1,16 @@
 {{- if and (eq .Values.cluster "ovh-prod") .Values.seaweedfs.enabled }}
-# Non-hook bucket provisioner for SeaweedFS — same reason, same shape as
-# templates/minio-mkbucket.ovh-prod.job.yaml, which this replaces.
+# Creates the iterion bucket on SeaweedFS, as a PLAIN resource.
 #
-# The SeaweedFS chart provisions buckets from `s3.createBuckets` through
-# templates/shared/post-install-bucket-hook.yaml, annotated
-# `helm.sh/hook: post-install,post-upgrade`. ArgoCD maps that to a PostSync
-# hook, i.e. it runs only after the app is Healthy — but the iterion server
-# gates /readyz on HeadBucket(iterion-artifacts) (pkg/store/blob/s3.go) and
-# never creates the bucket. Server unhealthy -> sync never completes ->
-# PostSync never runs -> deadlock. So `s3.createBuckets` is deliberately NOT
-# set in values.ovh-prod.yaml and this plain resource does the job DURING the
-# sync, retrying until the gateway answers.
+# Nothing in iterion creates its bucket (pkg/store/blob has no CreateBucket),
+# so it must exist before the first write. The chart's own path,
+# `s3.createBuckets`, renders a post-install Helm hook, which Argo CD runs as a
+# PostSync hook — only once EVERY resource of the app is Healthy. With a single
+# unhealthy resource anywhere in the app it never runs, and the sync operation
+# stays Running behind it, blocking the next ones. A plain resource runs during
+# the sync and retries until the gateway answers.
 #
-# It talks S3, not `weed shell`: one dependency (the S3 Service) instead of the
-# master and filer gRPC ports, and it uses the very credentials the server will
-# use, so a wrong seal fails HERE instead of silently later at /readyz.
+# It talks S3 with the very credentials the server uses, so a seal mismatch
+# between iterion-storage and iterion-seaweedfs-s3 fails HERE, loudly.
 # `rclone mkdir` on an existing bucket exits 0, so re-runs are free.
 apiVersion: batch/v1
 kind: Job
@@ -22,22 +18,20 @@ metadata:
   name: iterion-seaweedfs-mkbucket
   namespace: iterion
   annotations:
-    # Replace ALONE cannot recreate this Job: ttlSecondsAfterFinished deletes it
-    # an hour after success, and `kubectl replace` on an absent Job is validated
-    # as a full update, which demands the spec.selector the API server normally
-    # generates at CREATE time — the sync then fails forever on
-    # "spec.selector: Required value". Force makes it delete + create, correct
-    # whether the Job is absent (the usual case, post-TTL) or present with an
-    # immutable diff.
+    # A Job spec is immutable: when this template changes, Replace + Force
+    # delete and recreate the Job instead of failing the sync on the diff.
+    # No ttlSecondsAfterFinished: the completed Job stays, so Argo CD sees it
+    # in sync instead of recreating (and re-running) it after every expiry.
     argocd.argoproj.io/sync-options: Replace=true,Force=true
 spec:
   backoffLimit: 60 # retry while masters elect, volumes register and the gateway comes up
-  ttlSecondsAfterFinished: 3600
   template:
     metadata:
       labels:
-        app: seaweedfs-job
-        release: iterion
+        # Admitted by the S3 gateway's NetworkPolicy (seaweedfs.networkPolicy).
+        app.kubernetes.io/name: iterion-seaweedfs-job
+        app.kubernetes.io/instance: iterion
+        app.kubernetes.io/component: mkbucket
     spec:
       restartPolicy: OnFailure
       securityContext:
@@ -77,9 +71,7 @@ spec:
               value: "{{ .Values.iterion.config.s3.region }}"
             - name: RCLONE_CONFIG_DST_FORCE_PATH_STYLE
               value: "true"
-            # The very creds the iterion server authenticates with, so a
-            # mismatch between iterion-storage and iterion-seaweedfs-s3 fails
-            # this Job rather than /readyz.
+            # The very creds the iterion server authenticates with.
             - name: RCLONE_CONFIG_DST_ACCESS_KEY_ID
               valueFrom:
                 secretKeyRef:

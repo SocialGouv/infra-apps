@@ -197,6 +197,15 @@ minio:
 # runs a single server replica, so its in-memory stores are fine.
 valkeyha:
   enabled: false
+# SeaweedFS (the S3 object store) and valkeyfiler (its filers' metadata store)
+# — ovh-prod only, switched on in values.ovh-prod.yaml. Helm ENABLES a
+# dependency whose `condition` does not resolve, so both are off explicitly.
+seaweedfs:
+  enabled: false
+  migrate:
+    enabled: false
+valkeyfiler:
+  enabled: false
 
 # SearXNG — sovereign web-search backend (tier 2) for iterion's `web_search`
 # tool (see github.com/SocialGouv/iterion docs/web-search.md). Rendered by

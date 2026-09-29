@@ -80,10 +80,9 @@ dependencies:
     condition: minio.enabled
   # SeaweedFS — the S3 object store that replaces MinIO. MinIO stopped
   # distributing publicly (quay.io/minio/* 401 since 2026-09-24, Docker Hub
-  # repos removed, dl.min.io 410, the GitHub repo archived), so the mkbucket
-  # Job can no longer pull its image and every sync hangs on it, while the
-  # StatefulSet only survives on the nodes' image cache — a rescheduled pod
-  # does not come back.
+  # repos removed, dl.min.io 410, the GitHub repo archived): its images can no
+  # longer be pulled, and with AlwaysPullImages a restarted MinIO pod does not
+  # come back.
   #
   # Upstream chart, from the project's own GitHub Pages repo. Apache-2.0.
   # Components used here: 3 masters (raft), 4 volume servers, 2 filers,
@@ -91,5 +90,15 @@ dependencies:
   # templates/seaweedfs-mkbucket.ovh-prod.job.yaml for why).
   - name: seaweedfs
     repository: https://seaweedfs.github.io/seaweedfs/helm
-    version: 4.47.0
+    version: 4.48.0
     condition: seaweedfs.enabled
+  # Dedicated Valkey (Sentinel) holding the SeaweedFS filers' metadata — a
+  # second instance of the cloudpirates chart above, NOT valkeyha: the two
+  # filers must share one store (iterion reads on one pod what another pod has
+  # just written), and that store has to be durable (AOF) and must never evict,
+  # none of which fits the ephemeral valkeyha.
+  - alias: valkeyfiler
+    name: valkey
+    repository: https://cloudpirates-io.github.io/helm-charts
+    version: 0.10.3
+    condition: valkeyfiler.enabled

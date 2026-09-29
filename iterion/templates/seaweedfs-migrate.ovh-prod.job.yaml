@@ -1,39 +1,47 @@
 {{- if and (eq .Values.cluster "ovh-prod") .Values.seaweedfs.migrate.enabled }}
-# One-shot MinIO -> SeaweedFS bucket copy, run while MinIO is STILL SERVING.
+{{- $m := .Values.seaweedfs.migrate }}
+{{- if not (has $m.direction (list "forward" "reverse")) }}
+{{- fail (printf "seaweedfs.migrate.direction must be \"forward\" or \"reverse\", got %q" $m.direction) }}
+{{- end }}
+{{- $ignoreExisting := has "--ignore-existing" $m.extraFlags }}
+# MinIO <-> SeaweedFS bucket copy, as a PLAIN resource — never a hook: an Argo
+# CD PostSync hook waits for EVERY resource of the app to be Healthy, and one
+# unhealthy resource anywhere would leave it, and the sync, hanging.
 #
-# Gated behind `seaweedfs.migrate.enabled` (default false) and behind a
-# `runId` that is part of the Job's name: bumping the id is what re-runs it.
-# ArgoCD would otherwise see an immutable Job spec and fight it forever.
+#   forward  MinIO -> SeaweedFS: the copy before the endpoint cutover, and the
+#            sweeps after it (with --ignore-existing, see the values).
+#   reverse  SeaweedFS -> MinIO: rollback. SeaweedFS is then the source of
+#            truth, so its version of a key overwrites MinIO's.
 #
-# The Job does copy then VERIFY, and the verify is what decides:
-#   - `rclone copy --checksum` compares ETag/size and only transfers what
-#     differs, so a second pass over an unchanged bucket moves nothing;
-#   - `rclone check --one-way --download` re-reads BOTH sides BYTE BY BYTE and
-#     exits non-zero on any missing or differing object. `rclone size` on an
-#     absent bucket exits 3, so neither side can be silently empty;
-#   - object count and byte total are printed for both sides.
+# The Job name carries direction and runId: bumping runId runs a new copy (a
+# Job spec is immutable). The completed Job stays until migrate.enabled goes
+# back to false, which prunes it.
 #
-# It does NOT delete anything on MinIO: retiring MinIO is a separate, later
-# commit, after the app has run on SeaweedFS.
+# The verify decides, not the copy:
+#   - `rclone check --one-way --download` re-reads BOTH sides byte by byte.
+#     `--checksum` would not do: rclone cannot hash a multipart object
+#     (composite ETag), reports it as a NOTICE and exits 0 — a 300 000-byte
+#     object zeroed out, same size, passed that way.
+#   - With --ignore-existing a differing object means "newer on the
+#     destination", so there only the missing and the errored objects fail.
+#   - `rclone size` exits 3 on an absent bucket: neither side can be silently
+#     empty. Object count and bytes are printed for both sides.
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: iterion-seaweedfs-migrate-{{ .Values.seaweedfs.migrate.runId }}
+  name: iterion-seaweedfs-migrate-{{ $m.direction }}-{{ $m.runId }}
   namespace: iterion
   annotations:
     argocd.argoproj.io/sync-options: Replace=true,Force=true
-    # PostSync: the copy needs the SeaweedFS gateway and its bucket to exist,
-    # and it must not hold up the sync of the app itself.
-    argocd.argoproj.io/hook: PostSync
-    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
 spec:
   backoffLimit: 3
-  ttlSecondsAfterFinished: 86400
   template:
     metadata:
       labels:
-        app: seaweedfs-migrate
-        release: iterion
+        # Admitted by the S3 gateway's NetworkPolicy (seaweedfs.networkPolicy).
+        app.kubernetes.io/name: iterion-seaweedfs-job
+        app.kubernetes.io/instance: iterion
+        app.kubernetes.io/component: migrate
     spec:
       restartPolicy: Never
       securityContext:
@@ -45,6 +53,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: copy
+          # rclone, pinned by digest (same image as the mkbucket Job).
           image: rclone/rclone@sha256:d5971950c2b370fb04dd3292541b5bda6d9103143fd7e345aeb435a399388afc
           imagePullPolicy: IfNotPresent
           securityContext:
@@ -60,48 +69,53 @@ spec:
             seccompProfile:
               type: RuntimeDefault
           env:
-            # SRC = MinIO, still up. Same creds the server uses today.
-            - name: RCLONE_CONFIG_SRC_TYPE
+            # Both stores answer to the same key pair: iterion-storage.
+            - name: RCLONE_CONFIG_MINIO_TYPE
               value: s3
-            - name: RCLONE_CONFIG_SRC_PROVIDER
+            - name: RCLONE_CONFIG_MINIO_PROVIDER
               value: Minio
-            - name: RCLONE_CONFIG_SRC_ENDPOINT
+            - name: RCLONE_CONFIG_MINIO_ENDPOINT
               value: http://iterion-minio:9000
-            - name: RCLONE_CONFIG_SRC_REGION
+            - name: RCLONE_CONFIG_MINIO_REGION
               value: "{{ .Values.iterion.config.s3.region }}"
-            - name: RCLONE_CONFIG_SRC_FORCE_PATH_STYLE
+            - name: RCLONE_CONFIG_MINIO_FORCE_PATH_STYLE
               value: "true"
-            - name: RCLONE_CONFIG_SRC_ACCESS_KEY_ID
+            - name: RCLONE_CONFIG_MINIO_ACCESS_KEY_ID
               valueFrom:
                 secretKeyRef:
                   name: iterion-storage
                   key: ITERION_S3_ACCESS_KEY_ID
-            - name: RCLONE_CONFIG_SRC_SECRET_ACCESS_KEY
+            - name: RCLONE_CONFIG_MINIO_SECRET_ACCESS_KEY
               valueFrom:
                 secretKeyRef:
                   name: iterion-storage
                   key: ITERION_S3_SECRET_ACCESS_KEY
-            # DST = SeaweedFS.
-            - name: RCLONE_CONFIG_DST_TYPE
+            - name: RCLONE_CONFIG_SWFS_TYPE
               value: s3
-            - name: RCLONE_CONFIG_DST_PROVIDER
+            - name: RCLONE_CONFIG_SWFS_PROVIDER
               value: Other
-            - name: RCLONE_CONFIG_DST_ENDPOINT
+            - name: RCLONE_CONFIG_SWFS_ENDPOINT
               value: http://iterion-seaweedfs-s3:8333
-            - name: RCLONE_CONFIG_DST_REGION
+            - name: RCLONE_CONFIG_SWFS_REGION
               value: "{{ .Values.iterion.config.s3.region }}"
-            - name: RCLONE_CONFIG_DST_FORCE_PATH_STYLE
+            - name: RCLONE_CONFIG_SWFS_FORCE_PATH_STYLE
               value: "true"
-            - name: RCLONE_CONFIG_DST_ACCESS_KEY_ID
+            - name: RCLONE_CONFIG_SWFS_ACCESS_KEY_ID
               valueFrom:
                 secretKeyRef:
                   name: iterion-storage
                   key: ITERION_S3_ACCESS_KEY_ID
-            - name: RCLONE_CONFIG_DST_SECRET_ACCESS_KEY
+            - name: RCLONE_CONFIG_SWFS_SECRET_ACCESS_KEY
               valueFrom:
                 secretKeyRef:
                   name: iterion-storage
                   key: ITERION_S3_SECRET_ACCESS_KEY
+            - name: DIRECTION
+              value: {{ $m.direction | quote }}
+            - name: SRC
+              value: {{ ternary "swfs" "minio" (eq $m.direction "reverse") | quote }}
+            - name: DST
+              value: {{ ternary "minio" "swfs" (eq $m.direction "reverse") | quote }}
             - name: BUCKET
               value: "{{ .Values.iterion.config.s3.bucket }}"
             - name: HOME
@@ -113,61 +127,50 @@ spec:
               mountPath: /tmp
           command:
             - /bin/sh
-            - -ec
+            - -eu
+            - -c
             - |
+              echo "== ${DIRECTION}: ${SRC}:${BUCKET} -> ${DST}:${BUCKET} =="
               echo "== before: source =="
-              rclone size "src:${BUCKET}"
+              rclone size "${SRC}:${BUCKET}"
               echo "== before: destination =="
-              rclone size "dst:${BUCKET}"
+              rclone size "${DST}:${BUCKET}"
 
               echo "== copy =="
-              rclone copy "src:${BUCKET}" "dst:${BUCKET}" \
-                --checksum --transfers={{ .Values.seaweedfs.migrate.transfers }} \
-                --checkers={{ .Values.seaweedfs.migrate.checkers }} \
+              rclone copy "${SRC}:${BUCKET}" "${DST}:${BUCKET}" \
+                --checksum --transfers={{ $m.transfers }} \
+                --checkers={{ $m.checkers }} \
                 --stats=30s --stats-one-line --log-level INFO \
-                {{ join " " .Values.seaweedfs.migrate.extraFlags }}
+                {{ join " " $m.extraFlags }}
 
-              echo "== verify: every source object present and identical =="
-              # --download, not --checksum. MEASURED: `rclone check --checksum`
-              # cannot hash a MULTIPART object (composite ETag) and reports it
-              # as "N hashes could not be checked" -- a NOTICE, not a failure.
-              # A 300 000-byte object whose every byte was replaced by zeros,
-              # same size, passed with "0 differences found" and exit 0. rclone
-              # creates multipart objects above --s3-upload-cutoff (200 MiB by
-              # default), so the gap is reachable here.
-              #
-              # --download re-reads BOTH sides and compares bytes: the same
-              # corrupted object gave "1 differences found" and exit 1, and
-              # exit 0 with no unhashable object once repaired. It costs one
-              # full read of each side, which is the price of a verification
-              # that can fail.
-              #
-              # --one-way: objects that exist only on the destination (written
-              # there by the app after cutover) are not a failure; a source
-              # object that is missing IS.
-              #
-              # On the post-cutover sweep the copy runs with --ignore-existing,
-              # so a key the app has since rewritten on SeaweedFS legitimately
-              # DIFFERS from MinIO's copy. --missing-on-dst is then the check
-              # that matters: it must be empty. Differences are printed but do
-              # not fail, because on that pass a difference means "newer on the
-              # destination", which is the point.
-              {{- if has "--ignore-existing" .Values.seaweedfs.migrate.extraFlags }}
-              rclone check "src:${BUCKET}" "dst:${BUCKET}" --one-way --download \
-                --missing-on-dst /tmp/missing.txt || true
+              echo "== verify =="
+              {{- if $ignoreExisting }}
+              set +e
+              rclone check "${SRC}:${BUCKET}" "${DST}:${BUCKET}" --one-way --download \
+                --missing-on-dst /tmp/missing.txt --differ /tmp/differ.txt --error /tmp/errors.txt
+              rc=$?
+              set -e
+              if [ -s /tmp/errors.txt ]; then
+                echo "FAIL: objects that could not be checked:"; cat /tmp/errors.txt; exit 1
+              fi
               if [ -s /tmp/missing.txt ]; then
                 echo "FAIL: source objects absent from the destination:"; cat /tmp/missing.txt; exit 1
               fi
+              if [ -s /tmp/differ.txt ]; then
+                echo "newer on the destination (kept, expected with --ignore-existing):"; cat /tmp/differ.txt
+              elif [ "$rc" -ne 0 ]; then
+                echo "FAIL: rclone check exited $rc with nothing missing, differing or errored"; exit 1
+              fi
               echo "no source object is missing from the destination"
               {{- else }}
-              rclone check "src:${BUCKET}" "dst:${BUCKET}" --one-way --download
+              rclone check "${SRC}:${BUCKET}" "${DST}:${BUCKET}" --one-way --download
               {{- end }}
 
               echo "== after: source =="
-              rclone size "src:${BUCKET}"
+              rclone size "${SRC}:${BUCKET}"
               echo "== after: destination =="
-              rclone size "dst:${BUCKET}"
-              echo "MIGRATION VERIFIED for bucket ${BUCKET}"
+              rclone size "${DST}:${BUCKET}"
+              echo "MIGRATION VERIFIED (${DIRECTION}) for bucket ${BUCKET}"
           resources:
             requests:
               cpu: 200m
