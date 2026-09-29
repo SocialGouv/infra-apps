@@ -45,7 +45,7 @@ gha-runner-scale-set:
         # reject a watcher while ordinary file descriptors remain available.
         # Run before either runner or dind can accept work, not in a CI job.
         - name: configure-inotify
-          image: ghcr.io/actions/actions-runner:2.337.0
+          image: ghcr.io/actions/actions-runner:2.337.0@sha256:e5496277be5d09bc968b3d64911b74e219ac4a3f2edce956a3ecf9271bea1ef4
           command:
             - /bin/sh
             - -ec
@@ -113,7 +113,11 @@ gha-runner-scale-set:
               cpu: 500m
               memory: 2Gi
         - name: dind
-          image: docker:dind
+          # Privileged: pinned by version and digest like every privileged
+          # container here (tests/privileged_images.py). A floating tag is
+          # resolved by each pod at its own start, so a new Docker release
+          # would reach the merge queue's required checks unreviewed.
+          image: docker:29.8.1-dind@sha256:3f3c01aaaebf7cce837356b688b7c059a4749f10bd7660dec7c58fc454a283f0
           # Native sidecar: kubelet waits for the daemon before starting runner.
           # A socket file alone is not evidence that the Docker API is ready.
           restartPolicy: Always
