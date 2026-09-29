@@ -717,6 +717,12 @@ minio:
   # The post-install Job (bucket creation) must also satisfy PSA restricted —
   # enable its securityContext + restrictive containerSecurityContext.
   postJob:
+    # Argo CD skips this Job. Its image (quay.io/minio/mc) is no longer
+    # distributed — quay.io answers 401 — so as a PostSync hook it never
+    # completes and leaves every sync Running, which blocks the next one.
+    # iterion-artifacts already exists; nothing here creates buckets.
+    annotations:
+      argocd.argoproj.io/hook: Skip
     securityContext:
       enabled: true
       runAsUser: 1000
