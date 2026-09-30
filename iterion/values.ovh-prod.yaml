@@ -1165,8 +1165,8 @@ seaweedfs:
   # `runId` (1 to 20 of [a-z0-9-]) is part of the Job name: bumping it runs a
   # new one (a Job spec is immutable).
   migrate:
-    enabled: false
-    mode: "" # mirror | catchup
+    enabled: true
+    mode: mirror # mirror | catchup
     since: "" # catchup only: YYYY-MM-DDTHH:MM:SSZ, from a run's log
     deleteGone: false # catchup only, see step 3
     runId: "1"
