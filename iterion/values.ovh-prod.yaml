@@ -889,6 +889,10 @@ seaweedfs:
     # Raft needs its log on disk to rejoin with the state it voted on.
     resumeState: true
     volumeSizeLimitMB: 1024
+    # The master reports anonymous cluster statistics to telemetry.seaweedfs.com
+    # every 24 h once 10 GiB are stored, unless told not to.
+    extraArgs:
+      - "-telemetry=false"
     # The leader runs these every 17 min. Without a [master.maintenance]
     # section nothing runs at all: a volume that lost a copy stays at 2 of 3
     # until someone repairs it, and the filer's metadata log grows forever.
