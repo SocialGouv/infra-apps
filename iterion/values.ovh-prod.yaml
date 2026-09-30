@@ -1053,6 +1053,12 @@ seaweedfs:
     # rendering its own `*-s3-secret`, whose keys come from `lookup` +
     # `randAlphaNum` and would re-roll on every Argo CD sync.
     existingConfigSecret: iterion-seaweedfs-s3
+    # `weed s3` creates a missing bucket on its first PUT by default, and the
+    # identity above is Admin: a mistyped bucket name would silently get a
+    # bucket of its own. Buckets are created explicitly (CreateBucket still
+    # works with this flag), by templates/seaweedfs-mkbucket.ovh-prod.job.yaml.
+    extraArgs:
+      - "-autoCreateBucket=false"
     # No `createBuckets`: it renders a post-install hook, i.e. an Argo CD
     # PostSync hook, which never runs while any resource of the app is
     # unhealthy. templates/seaweedfs-mkbucket.ovh-prod.job.yaml creates the
