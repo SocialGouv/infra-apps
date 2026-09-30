@@ -18,9 +18,20 @@ gha-runner-scale-set:
   # The scale set served nothing for over a year before anyone looked.
   #
   # ghcr.io/socialgouv/iterion-ci-runner is upstream's image plus gcc and the
-  # libc headers Go's race detector needs (cgo); upstream ships no C compiler
-  # and no other tooling either — a workflow gets Go, Node and kubectl from
-  # its own setup-* steps. SocialGouv/iterion builds it (ci/arc-runner) from a
+  # libc headers Go's race detector needs (cgo) — upstream ships no C compiler
+  # — and, since 1.12.1, iterion's Go (its go.mod version) and Node 24, baked
+  # in the runner's tool cache (/opt/hostedtoolcache, RUNNER_TOOL_CACHE) so
+  # setup-go and setup-node find them instead of downloading them. For EVERY
+  # repository on this scale set, that means:
+  #   - a job asking setup-go/setup-node for a range the baked version
+  #     satisfies (`1.26`, `1.x`, `24`) without `check-latest: true` gets the
+  #     baked version, not the newest patch — ask for an exact version, or set
+  #     check-latest, when the newest patch matters;
+  #   - a `container:` job gets the tool cache mounted from the dind daemon's
+  #     filesystem, where /opt/hostedtoolcache does not exist: an empty,
+  #     root-owned /__t, which a non-root container cannot write to.
+  # Everything else a workflow needs (kubectl, …) still comes from its own
+  # setup-* steps. SocialGouv/iterion builds the image (ci/arc-runner) from a
   # version-and-digest pin of upstream that Renovate follows, proves cgo under
   # -race as the runner user, and publishes only validated main builds, one
   # immutable version 1.<run>.<attempt> each, never a floating tag. Renovate
@@ -98,7 +109,7 @@ gha-runner-scale-set:
               cpu: 100m
               memory: 32Mi
         - name: init-dind-externals
-          image: ghcr.io/socialgouv/iterion-ci-runner:1.5.1@sha256:a01629900c9d7902dce3315b94aea7063fbe97af6f1f08a9652ab073c378f123
+          image: ghcr.io/socialgouv/iterion-ci-runner:1.12.1@sha256:4606f71d1ab9002b94622cec3812f2674b853ef4e8581ba8ea7fe64c9e8aa417
           imagePullPolicy: Always
           command:
             [
@@ -168,7 +179,7 @@ gha-runner-scale-set:
               mountPath: /home/runner/externals
       containers:
         - name: runner
-          image: ghcr.io/socialgouv/iterion-ci-runner:1.5.1@sha256:a01629900c9d7902dce3315b94aea7063fbe97af6f1f08a9652ab073c378f123
+          image: ghcr.io/socialgouv/iterion-ci-runner:1.12.1@sha256:4606f71d1ab9002b94622cec3812f2674b853ef4e8581ba8ea7fe64c9e8aa417
           imagePullPolicy: Always
           command: ["/home/runner/run.sh"]
           # Measured on iterion's CI (2026-09-29, 45 min, 39 runner pods): a
