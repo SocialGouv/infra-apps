@@ -1173,7 +1173,7 @@ seaweedfs:
     mode: mirror # mirror | catchup
     since: "" # catchup only: YYYY-MM-DDTHH:MM:SSZ, from a run's log
     deleteGone: false # catchup only, see step 3
-    runId: "1"
+    runId: "2"
     direction: forward
     transfers: 8
     checkers: 16
