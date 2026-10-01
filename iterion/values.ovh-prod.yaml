@@ -9,10 +9,9 @@
 #     wired via `mongodb.extraEnvSecrets:`, which the chart turns into an
 #     `envFrom: secretRef` on the mongod container — keys
 #     MONGO_INITDB_ROOT_USERNAME / MONGO_INITDB_ROOT_PASSWORD).
-#   - minio: official minio/minio 5.4.0, DISTRIBUTED HA (4 nodes, 1 drive each,
-#     erasure-coded). Values at top-level `minio:`. Root creds come from the
-#     SealedSecret `iterion-minio-creds` (keys `rootUser` / `rootPassword`)
-#     via `minio.existingSecret`.
+#   - minio: RETIRED from prod — `minio.enabled: false` below. iterion reads
+#     and writes SeaweedFS (iterion-seaweedfs-s3:8333). The dependency stays
+#     for ovh-dev (dormant MinIO, ticket #2015).
 #   - nats: UNCHANGED — still the iterion subchart's nats-io chart at
 #     iterion.nats, cluster-3 JetStream fileStore.
 # App tier: server x3 + HPA + soft anti-affinity + auto-PDB; runner x3 +
@@ -23,11 +22,9 @@
 #     them — see the secrets-spec report at handover time):
 #   iterion-mongodb-creds → MONGO_INITDB_ROOT_USERNAME, MONGO_INITDB_ROOT_PASSWORD
 #                          (consumed by the mongod pods at boot)
-#   iterion-minio-creds   → rootUser, rootPassword
-#                          (consumed by the minio pods at boot)
 #   iterion-storage       → ITERION_S3_ACCESS_KEY_ID, ITERION_S3_SECRET_ACCESS_KEY
-#                          (consumed by the iterion server/runner — must MATCH
-#                          iterion-minio-creds so the app can talk to S3)
+#                          (consumed by the iterion server/runner — the same
+#                          pair is seeded into the SeaweedFS S3 identities)
 #   iterion-auth          → existing SealedSecret (JWT + master key + bootstrap
 #                          admin) + also carries ITERION_MONGO_URI = the full
 #                          credentials-bearing replicaset URI. The iterion
@@ -659,97 +656,14 @@ mongodb:
       type: RuntimeDefault
 
 minio:
-  # Official minio/minio 5.4.0 — DISTRIBUTED MULTI-NODE HA (4 nodes, 1 drive
-  # per node = 4 erasure-coded drives, tolerates 2-node loss with the default
-  # EC:2 parity). Single pool (default). The chart's bucket-provisioning
-  # post-install Job creates iterion-artifacts.
-  enabled: true
-  fullnameOverride: iterion-minio
-  mode: distributed
-  replicas: 4
-  drivesPerNode: 1
-  pools: 1
-  # Root creds come from the SealedSecret `iterion-minio-creds` (keys
-  # `rootUser` / `rootPassword` — see secretName/existingSecret in the chart's
-  # secrets.yaml + the env wiring in statefulset.yaml). The matching iterion
-  # access creds live in `iterion-storage`.
-  existingSecret: iterion-minio-creds
-  persistence:
-    enabled: true
-    storageClass: csi-cinder-high-speed
-    size: 20Gi
-    accessMode: ReadWriteOnce
-  # Auto-create the iterion-artifacts bucket via the chart's post-install
-  # Job (mc make-bucket). policy=none = no anonymous access; purge=false so
-  # an upgrade doesn't wipe data.
-  buckets:
-    - name: iterion-artifacts
-      policy: none
-      purge: false
-  # Disable the default `console` admin user the chart provisions out of the
-  # box (its plaintext password lives in values + post-Job env => sealed-only
-  # rule). The MinIO Console still works with the root creds; additional users
-  # can be added via a separate sealed `extraSecret` if needed.
-  users: []
-  # Kyverno-restricted cluster (PSA restricted): the chart's default
-  # securityContext already runs as UID/GID 1000, runAsNonRoot, fsGroup 1000.
-  # We just add seccompProfile RuntimeDefault on the pod and a hardened
-  # containerSecurityContext (drop ALL caps, no privilege escalation,
-  # runAsNonRoot) — the official chart's containerSecurityContext default is
-  # `readOnlyRootFilesystem: false` only, so the other PSA-restricted knobs
-  # must be set here.
-  securityContext:
-    enabled: true
-    runAsUser: 1000
-    runAsGroup: 1000
-    fsGroup: 1000
-    fsGroupChangePolicy: OnRootMismatch
-    runAsNonRoot: true
-    seccompProfile:
-      type: RuntimeDefault
-  containerSecurityContext:
-    allowPrivilegeEscalation: false
-    runAsNonRoot: true
-    runAsUser: 1000
-    runAsGroup: 1000
-    readOnlyRootFilesystem: false # minio writes to /tmp + /export
-    capabilities:
-      drop:
-        - ALL
-    seccompProfile:
-      type: RuntimeDefault
-  # The post-install Job (bucket creation) must also satisfy PSA restricted —
-  # enable its securityContext + restrictive containerSecurityContext.
-  postJob:
-    # Argo CD skips this Job. Its image (quay.io/minio/mc) is no longer
-    # distributed — quay.io answers 401 — so as a PostSync hook it never
-    # completes and leaves every sync Running, which blocks the next one.
-    # iterion-artifacts already exists; nothing here creates buckets.
-    annotations:
-      argocd.argoproj.io/hook: Skip
-    securityContext:
-      enabled: true
-      runAsUser: 1000
-      runAsGroup: 1000
-      fsGroup: 1000
-      runAsNonRoot: true
-      seccompProfile:
-        type: RuntimeDefault
-  makeBucketJob:
-    securityContext:
-      enabled: true
-      runAsUser: 1000
-      runAsGroup: 1000
-    containerSecurityContext:
-      allowPrivilegeEscalation: false
-      runAsNonRoot: true
-      runAsUser: 1000
-      runAsGroup: 1000
-      capabilities:
-        drop:
-          - ALL
-      seccompProfile:
-        type: RuntimeDefault
+  # RETIRED from prod on 2026-10-01: iterion reads and writes SeaweedFS
+  # (iterion-seaweedfs-s3:8333). `enabled: false` prunes the MinIO workloads
+  # from prod via Argo; the export-iterion-minio-* PVCs are NOT pruned (they
+  # come from the sts volumeClaimTemplates and live outside the Helm
+  # manifest) and stay on csi-cinder-high-speed until an explicit go removes
+  # them. Rollback = restore this block from git history (the sts remounts
+  # the retained PVCs), then a reverse migrate catchup.
+  enabled: false
 
 # --- Valkey HA (Sentinel) — distributed ephemeral state (ovh-prod only) -----
 # cloudpirates/valkey, the same chart no-package-malware runs in prod:
