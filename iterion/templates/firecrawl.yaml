@@ -192,6 +192,11 @@ spec:
       containers:
         - name: firecrawl
           image: {{ $fc.image | default "ghcr.io/firecrawl/firecrawl:latest" | quote }}
+          # If this pod ever crashloops on EACCES mkdir '/.cache/node/corepack/v1'
+          # (re-pull of :latest whose start moved to a corepack shim), add
+          # COREPACK_HOME=/tmp/.corepack like the playwright container above —
+          # editing this template triggers a rollout, so re-pull of the new
+          # upstream image happens then anyway.
           env:
             - { name: HOST, value: "0.0.0.0" }
             - { name: PORT, value: "3002" }
