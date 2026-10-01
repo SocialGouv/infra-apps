@@ -718,6 +718,10 @@ valkeyha:
 # web_search tool). Requires the iterion-searxng SealedSecret (SEARXNG_SECRET).
 searxng:
   enabled: true
+  # Pinned by DIGEST. AlwaysPullImages re-resolves a moving tag at every pod
+  # start, so an unpinned image rolls to the upstream of the day on the next
+  # restart — same failure class as the firecrawl pinning story below.
+  image: searxng/searxng@sha256:11ffedd387dc9cf99e881250c67861470384e55194a86f76df76aa0034a28a1a
 
 # --- Firecrawl — web scrape/crawl/extract (tier 3, ovh-prod) ----------------
 # 5 rootless services + Postgres PVC (templates/firecrawl.yaml). Firecrawl's
@@ -726,7 +730,18 @@ searxng:
 # Requires the iterion-firecrawl SealedSecret (POSTGRES_PASSWORD).
 firecrawl:
   enabled: true
+  # All five images pinned by DIGEST to what prod runs (validated). With
+  # AlwaysPullImages a moving tag re-pulls the upstream of the day at every
+  # pod start: on 2026-10-01 the playwright pod was recreated after 79d,
+  # the rebuilt :latest started through a corepack shim that died on
+  # mkdir /.cache as uid 10000 — crashloop until COREPACK_HOME (template).
+  # Bump = resolve the new digest, commit; ArgoCD rolls the deployment.
+  redisImage: redis@sha256:9d317178eceac8454a2284a9e6df2466b93c745529947f0cd42a0fa9609d7005
+  rabbitmqImage: rabbitmq@sha256:e582c0bc7766f3342496d8485efb5a1df782b5ce3886ad017e2eaae442311f69
+  playwrightImage: ghcr.io/firecrawl/playwright-service@sha256:47da52c036b55580d5d0812fa530eacfe03533ebad9449a50858ff697db04f71
+  image: ghcr.io/firecrawl/firecrawl@sha256:651e0c8f73006ad13b0e926ba4eeb3358a953ceffca43b32bd149ee95c3574fe
   postgres:
+    image: ghcr.io/firecrawl/nuq-postgres@sha256:aed86f62858f29bd971abddcdeb301c12888098d2cf5d33c1ba42b053bc460f6
     size: 5Gi
     storageClass: csi-cinder-high-speed
 
