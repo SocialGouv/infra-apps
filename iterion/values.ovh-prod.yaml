@@ -1169,9 +1169,9 @@ seaweedfs:
   migrate:
     enabled: true
     mode: catchup # mirror | catchup
-    since: "2026-10-01T06:48:01Z" # catchup only: YYYY-MM-DDTHH:MM:SSZ, from a run's log
-    deleteGone: false # catchup only, see step 3
-    runId: "3"
+    since: "2026-10-01T10:20:19Z" # catchup only: YYYY-MM-DDTHH:MM:SSZ, from a run's log
+    deleteGone: true # catchup only, see step 3
+    runId: "4"
     direction: forward
     transfers: 8
     checkers: 16

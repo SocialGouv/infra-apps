@@ -138,6 +138,10 @@ spec:
 backoffLimit: 3
 template:
   metadata:
+    annotations:
+      # A scale-down eviction restarts the run from scratch (safe, but every
+      # listing and check is paid again): the node stays until the Job ends.
+      cluster-autoscaler.kubernetes.io/safe-to-evict: "false"
     labels:
       # Admitted by the S3 gateway's NetworkPolicy (seaweedfs.networkPolicy).
       app.kubernetes.io/name: iterion-seaweedfs-job
