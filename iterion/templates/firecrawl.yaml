@@ -158,6 +158,10 @@ spec:
           image: {{ $fc.playwrightImage | default "ghcr.io/firecrawl/playwright-service:latest" | quote }}
           env:
             - { name: PORT, value: "3000" }
+            # Rootless (uid 10000, no passwd entry → HOME=/): corepack resolves
+            # its package-manager cache to $HOME/.cache and dies on mkdir.
+            # Writable dir instead; the pinned pnpm is downloaded there on start.
+            - { name: COREPACK_HOME, value: /tmp/.corepack }
           ports: [{ name: http, containerPort: 3000 }]
           securityContext: {{- toYaml $ctr | nindent 12 }}
           resources: { requests: { cpu: 250m, memory: 512Mi }, limits: { cpu: "2", memory: 2Gi } }
