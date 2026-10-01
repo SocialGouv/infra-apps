@@ -135,3 +135,37 @@ See [arc-systems/README.md](arc-systems/README.md) before changing ARC metrics,
 Prometheus selection or runner availability alerts. The local checker renders
 the pinned chart and tests alert timing; live collection and the established
 Alertmanager receiver must be verified before declaring the scale set monitored.
+
+## OVH API — kube control plane restart
+
+Symptoms of a wedged control plane (dev 2026-07-08, prod 2026-10-01): pod
+deletions hang even without finalizers, CNPG clusters stuck in `Failing over`
+with instances crash-looping in several namespaces, and the OVH cluster status
+reading `USER_WEBHOOK_PREVENTING_OPERATIONS_ERROR`. Check OVH status before
+chasing per-app ghosts.
+
+- Restart the apiserver only: `POST /cloud/project/<serviceName>/kube/<kubeId>/restart`
+  with `{"force": false}` — no workload downtime, status goes
+  `READY → REDEPLOYING → READY` in ~2 min. `force: true` redeploys the whole
+  control plane with a brief apiserver outage — avoid unless OVH support asks.
+- CLI helper: [ovh-api/ovh-kube-restart.sh](ovh-api/ovh-kube-restart.sh)
+  (`names` / `status` / `restart` / `watch`), credentials setup in
+  [ovh-api/README.md](ovh-api/README.md). Fallback without credentials: the
+  console at `https://eu.api.ovh.com/console/?section=%2Fcloud&branch=v1`.
+- Public Cloud project `MINSOC-FABNUM` serviceName: `324650435c1a4ad59048560bd40bc88f`
+
+| cluster | kubeId | region |
+|---|---|---|
+| dev | `4eecd4bf-8520-44ba-9bb1-e292b24b228e` | GRA9 |
+| prod | `64699db8-bef8-4dfd-a107-01e119920ccc` | GRA9 |
+| data-platform-mgmt | `c7e552b3-5851-4c5d-b320-5c28e0d35938` | GRA7 |
+
+After such an incident, CNPG instances can keep crash-looping on a diverged
+timeline (`requested timeline N is not in this server's history`, WAL corruption
+in the startup log). Deleting the pod alone reuses the diverged PVC and loops
+forever — `kubectl cnpg destroy <cluster> <n>` (pod + PVC, rebuild via
+pg_basebackup) is the fix. Check replication slots for orphans afterwards
+(root cause of the 2026-09-24 egapro incident: an orphan slot pinned ~8 GB of
+WAL). Probe failures on `:8000` are the instance manager answering, not a
+NetworkPolicy problem — `pg-allow-operator` already lets the `cnpg` namespace
+in on 8000/5432.

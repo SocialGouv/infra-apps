@@ -2,3 +2,6 @@ repos/
 
 # subcharts packaged from in-repo charts/ — Helm and Argo read the symlinked source
 *-0.0.0.tgz
+
+# local browser-session dumps (may contain OAuth bearer tokens in page snapshots)
+.playwright-mcp/
