@@ -58,7 +58,7 @@ iterion:
     # public hosts down). `kubectl rollout restart` does NOT repair it: ArgoCD
     # self-heal reverts the annotation onto the unchanged template.
     # Deploying = resolve the release digest and commit it, like runner.image.
-    digest: sha256:62d83093fab5121089daca78b8df377aed071f2ac8981d21e8a51b9dc5db6169 # v3.220.1
+    digest: sha256:a16c4b91aa6ada405ea7617c5dabad15d81ade57610da9a769a45443f26ac38d # v3.223.0
     pullPolicy: Always
 
   server:
@@ -198,7 +198,7 @@ iterion:
     #   docker buildx imagetools inspect <image>:<tag>        -> index digest
     #   ... --raw, then the linux/amd64 child                 -> per-arch digest
     #   ... --format '{{json .Image.Config.Labels}}'          -> version+revision
-    image: ghcr.io/socialgouv/iterion-runner-devbox@sha256:559321623843294204f98ac90880103e4f545a7eb4e33a555c5e438306418696 # v3.219.2
+    image: ghcr.io/socialgouv/iterion-runner-devbox@sha256:78d564e987a961defc99dc75fbe916a7a525d34f70f698962fe8fe24d3da1136 # v3.223.0
     podSecurityContext:
       runAsUser: 1000
       runAsGroup: 1000
