@@ -228,41 +228,8 @@ beside them). A pod requests 2.1 CPU and 4.5 GiB; when the nodes are full,
 pods wait and the worker pool's autoscaler adds nodes. There is no limit: a
 burst uses the node's idle cores.
 
-**Raised to 4 CPU / 8 GiB on 2026-10-05**, with the dedicated CI nodepool
-(below): iterion's `race` job — the merge queue's floor — peaks at
-6.2-8.6 GiB against the 4 GiB request (`-race` multiplies memory 5-10x;
-measured by the iterion queue-speed work, ADR-105 era). The scheduler now
-reserves what the critical-path job actually uses instead of borrowing the
-shared pool's spare capacity; one runner pod per ~4 vCPU / 16 Gi node, so
-the pod's bursts still have the node to themselves.
-
-## Dedicated CI nodepool (`ci`) on ovh-dev
-
-Runner pods pin `nodeSelector: nodepool=ci` and tolerate
-`pool=ci:NoSchedule` — the same taint convention as ovh-prod's prod-build
-pool. This keeps the privileged dind and untrusted CI execution off the
-app / control-plane nodes, and the platform's bursts off the merge queue's
-critical path (2026-09-29 peak: 39 runner pods sharing the default worker
-pool with the platform).
-
-Console-side (OVH), before the values that pin it are synced:
-
-1. ovh-dev -> Node pools -> create `ci`: flavor ~4 vCPU / 16 Gi, min 0,
-   max ~12, autoscaling on.
-2. Set the pool's labels `nodepool=ci` and taint `pool=ci:NoSchedule`
-   (mirrors prod-build on ovh-prod).
-3. Then sync the `arc-runners` ArgoCD app. Until the pool exists, every
-   runner pod sits Pending and the merge queue stalls — the values and the
-   pool are one rollout, never two.
-4. `CI_SELF_HOSTED=off` (repo variable on SocialGouv/iterion) remains the
-   emergency lever that routes everything back to ubuntu-latest.
-
-Rollout verification: pods of a queue build land on `ci` nodes
-(`kubectl --context ovh-dev -n arc-runners get pod -o wide`), requests
-rendered at 4/8Gi, and the `oblik` right-sizing webhook does NOT rewrite
-runner pods (its MutatingWebhookConfiguration matches only
-deployments/statefulsets/cronjobs — verify post-deploy with
-`kubectl --context ovh-dev -n arc-runners get mutatingwebhookconfiguration -o yaml | grep -A5 resources`).
+Not measured yet: iterion's `race` job on the scale set (`-race` multiplies
+memory 5-10x). Revisit the memory request once it has run here.
 
 ### Docker Hub mirror
 
