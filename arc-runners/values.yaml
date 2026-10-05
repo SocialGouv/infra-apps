@@ -50,6 +50,21 @@ gha-runner-scale-set:
 
   template:
     spec:
+      # Dedicated CI nodepool on ovh-dev, the mirror of ovh-prod's prod-build
+      # (applications/buildkit-operator.yaml): runners — and their privileged
+      # dind — must never spill onto app / control-plane nodes, and the
+      # platform's bursts must not starve the merge queue's required checks
+      # (2026-09-29 peak: 39 runner pods on the shared default pool).
+      # PREREQUISITE, console-side: the `ci` nodepool must exist on ovh-dev
+      # with label `nodepool=ci` and taint `pool=ci:NoSchedule` (same taint
+      # convention as prod-build) BEFORE this renders — until then every
+      # runner pod sits Pending and the merge queue stalls. Sized one runner
+      # pod per node (4 CPU / 8 Gi requests, no limit — a burst uses the
+      # node's idle cores); autoscale 0 -> ~12.
+      nodeSelector:
+        nodepool: ci
+      tolerations:
+        - { key: pool, operator: Equal, value: ci, effect: NoSchedule }
       initContainers:
         # inotify instances are shared by all processes with the same real UID
         # on a node (the runners use UID 1001). The kernel's default 128 can
@@ -188,10 +203,15 @@ gha-runner-scale-set:
           # used 21.7 cores together — 2 per pod, where the scheduler counted
           # 1 (500m here + 500m for dind). No limit: a burst uses a node's
           # idle cores. See README "CPU and memory requests".
+          # Raised 2026-10-05: 2/4Gi was the per-pod average; the queue's
+          # critical path deserved the peak. iterion's `race` job peaks at
+          # 6.2-8.6 GiB against a 4 GiB request (it had been running on the
+          # shared pool's spare capacity); the scheduler now reserves what
+          # race actually uses.
           resources:
             requests:
-              cpu: "2"
-              memory: 4Gi
+              cpu: "4"
+              memory: 8Gi
           env:
             - name: DOCKER_HOST
               value: unix:///run/docker/docker.sock
