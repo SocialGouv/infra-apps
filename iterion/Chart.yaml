@@ -70,7 +70,11 @@ dependencies:
     # pool's OWN stream pair (the boot's shared-subject stream overlap
     # crash-looped the first pool pod — found in prod, #2278) and accepts
     # the chart's derived stream names.
-    version: 3.250.0
+    # 3.250.1 (2026-10-07 night): the pool pod also takes the
+    # authenticated Mongo URI by key reference (the runner's Mongo
+    # credentials ride the auth Secret; found in prod), and a
+    # chart-managed auth Secret can carry it (secrets.auth.mongoURI).
+    version: 3.250.1
   # Valkey HA (Sentinel) — distributed ephemeral state for the multi-replica
   # server. cloudpirates/valkey (architecture: replication + sentinel), the
   # same chart no-package-malware runs in prod. ovh-prod opts in via
