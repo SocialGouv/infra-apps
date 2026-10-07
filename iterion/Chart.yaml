@@ -63,7 +63,10 @@ dependencies:
     # also closes the run-lease and control-plane identity guards
     # (#2266, #2270). ovh-prod brings its first pool (honorabilite) in
     # the same commit.
-    version: 3.249.0
+    # 3.249.1 (2026-10-07, same day): the pool pod takes ITERION_JWT_SECRET
+    # by key reference — the first pool pod CrashLooped at boot without it
+    # (found in prod, SocialGouv/iterion#2276).
+    version: 3.249.1
   # Valkey HA (Sentinel) — distributed ephemeral state for the multi-replica
   # server. cloudpirates/valkey (architecture: replication + sentinel), the
   # same chart no-package-malware runs in prod. ovh-prod opts in via
