@@ -55,7 +55,15 @@ dependencies:
     # Rides along: `runner.sandbox.scheduling.podReadyTimeout` passthrough
     # (unset here = the driver's 10 m default). Nothing else changed in the
     # templates between 3.102.0 and 3.112.2.
-    version: 3.112.2
+    # 3.249.0 (2026-10-07): `runnerPools[]` — one runner Deployment per
+    # sovereign pool (SocialGouv/iterion#2273, the #2029 chantier): the
+    # pool pod is pinned three ways (ITERION_RUNNER_POOL admission stamp,
+    # its own JetStream stream/DLQ, its regional gateway credential) and
+    # carries the gateway credential only in its env. The engine it ships
+    # also closes the run-lease and control-plane identity guards
+    # (#2266, #2270). ovh-prod brings its first pool (honorabilite) in
+    # the same commit.
+    version: 3.249.0
   # Valkey HA (Sentinel) — distributed ephemeral state for the multi-replica
   # server. cloudpirates/valkey (architecture: replication + sentinel), the
   # same chart no-package-malware runs in prod. ovh-prod opts in via

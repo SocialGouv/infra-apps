@@ -58,7 +58,7 @@ iterion:
     # public hosts down). `kubectl rollout restart` does NOT repair it: ArgoCD
     # self-heal reverts the annotation onto the unchanged template.
     # Deploying = resolve the release digest and commit it, like runner.image.
-    digest: sha256:496da3f4017d41bca9ce30ca71defa1109fe6621d80d05634c6f87dda762c504 # v3.245.0
+    digest: sha256:974659247410b2a409a52e73ac8f04b2747c667c2a288e7522d1b25bf5844447 # v3.249.0
     pullPolicy: Always
 
   server:
@@ -198,7 +198,7 @@ iterion:
     #   docker buildx imagetools inspect <image>:<tag>        -> index digest
     #   ... --raw, then the linux/amd64 child                 -> per-arch digest
     #   ... --format '{{json .Image.Config.Labels}}'          -> version+revision
-    image: ghcr.io/socialgouv/iterion-runner-devbox@sha256:7beb20c0d2e57af9199983cfc302441af91fcbac97930c4344b18000b6ba91e3 # v3.245.0
+    image: ghcr.io/socialgouv/iterion-runner-devbox@sha256:b2da9c6d82f457f5d2add489e30fc4fc873bcf2c0815ca0251eb65006b7f2731 # v3.249.0
     podSecurityContext:
       runAsUser: 1000
       runAsGroup: 1000
@@ -599,6 +599,20 @@ iterion:
       enabled: false # enable once Prometheus-operator CRDs confirmed on ovh-prod
     prometheusRule:
       enabled: false
+
+  # --- Sovereign runner pools (D10') ----------------------------------
+  # The first pool: the Honorabilite team's code reaches ONLY the regional
+  # PLIAGE gateway (5 models on Scaleway) — never a public LLM vendor. The
+  # pool pod carries the gateway credential only in its env; its admission
+  # stamps msg ≡ doc ≡ pod against `honorabilite`. The gateway Secret is
+  # manually managed: iterion-pool-honorabilite-gateway (created 2026-10-07).
+  # The pool name must match the server's runner-pool registry entry.
+  runnerPools:
+    - name: honorabilite
+      replicas: 1
+      gateway:
+        baseUrl: "https://litellm.pliage-prod.socle-ia.data-ia.prod.atlas.fabrique.social.gouv.fr"
+        existingSecret: "iterion-pool-honorabilite-gateway"
 
 # --- Top-level umbrella datastores (ovh-prod only) -------------------------
 # These keys are siblings of `iterion:` because Chart.yaml lists `mongodb` and

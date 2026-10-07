@@ -1,7 +1,7 @@
 dependencies:
 - name: iterion
   repository: oci://ghcr.io/socialgouv/charts
-  version: 3.112.2
+  version: 3.249.0
 - name: valkey
   repository: https://cloudpirates-io.github.io/helm-charts
   version: 0.10.3
@@ -17,5 +17,5 @@ dependencies:
 - name: valkey
   repository: https://cloudpirates-io.github.io/helm-charts
   version: 0.25.11
-digest: sha256:bc3afe625b3d2b3a1802dc73d0b29a69a462053fe773c0c15110ad9ee5a4db65
-generated: "2026-09-29T17:04:50.053012515+02:00"
+digest: sha256:9bb279fbd672a7a77c4c1314139decff7d35aa27dfc1a9aea9573d71e8247f8b
+generated: "2026-10-07T17:54:23.018749251+02:00"
