@@ -632,14 +632,15 @@ iterion:
         # already default to claw).
         ITERION_VIBE_BACKEND_CLAUDE: "claw"
         ITERION_VIBE_BACKEND_CLAUDE_GLANCE: "claw"
-        # Drop the provider hints: an openai_compatible model on a wire
-        # named by a stale hint (zai, anthropic) is refused by the router
-        # ("names another wire"). Empty = no hint, the model spec routes.
-        ITERION_VIBE_PROVIDER_CLAUDE: ""
-        ITERION_VIBE_PROVIDER_CLAUDE_GLANCE: ""
-        ITERION_VIBE_PROVIDER_GPT: ""
-        ITERION_VIBE_PROVIDER_GPT_GLANCE: ""
-        ITERION_VIBE_PROVIDER_EMIT: ""
+        # The provider hints must NAME the gateway wire: the model specs
+        # are openai_compatible/*, so the hints are openai_compatible too
+        # (empty values would fall through ${VAR:-default} to the bot's
+        # stale zai/anthropic hints, which the router refuses).
+        ITERION_VIBE_PROVIDER_CLAUDE: "openai_compatible"
+        ITERION_VIBE_PROVIDER_CLAUDE_GLANCE: "openai_compatible"
+        ITERION_VIBE_PROVIDER_GPT: "openai_compatible"
+        ITERION_VIBE_PROVIDER_GPT_GLANCE: "openai_compatible"
+        ITERION_VIBE_PROVIDER_EMIT: "openai_compatible"
 
 # --- Top-level umbrella datastores (ovh-prod only) -------------------------
 # These keys are siblings of `iterion:` because Chart.yaml lists `mongodb` and
