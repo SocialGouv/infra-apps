@@ -613,6 +613,20 @@ iterion:
       gateway:
         baseUrl: "https://litellm.pliage-prod.socle-ia.data-ia.prod.atlas.fabrique.social.gouv.fr"
         existingSecret: "iterion-pool-honorabilite-gateway"
+      # The pool pins its bots' model slots: the review-pr reviewer fleet
+      # expands ${ITERION_VIBE_MODEL_*:-…} from the RUNNER's environment at
+      # run start, so these literals make every LLM surface of the pool
+      # resolve to the regional gateway (the pool serves openai_compatible
+      # and nothing else — a bot that ignores them fails loud, as the first
+      # boot proved).
+      env:
+        ITERION_VIBE_MODEL_CLAUDE: "openai_compatible/glm-5.2"
+        ITERION_VIBE_MODEL_CLAUDE_GLANCE: "openai_compatible/glm-5.2"
+        ITERION_VIBE_MODEL_CLAUDE_FALLBACK: "openai_compatible/glm-5.2"
+        ITERION_VIBE_MODEL_GPT: "openai_compatible/glm-5.2"
+        ITERION_VIBE_MODEL_GPT_GLANCE: "openai_compatible/glm-5.2"
+        ITERION_VIBE_MODEL_EMIT: "openai_compatible/glm-5.2"
+        ITERION_VIBE_MODEL_SUPERVISOR: "openai_compatible/glm-5.2"
 
 # --- Top-level umbrella datastores (ovh-prod only) -------------------------
 # These keys are siblings of `iterion:` because Chart.yaml lists `mongodb` and
