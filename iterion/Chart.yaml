@@ -74,7 +74,10 @@ dependencies:
     # authenticated Mongo URI by key reference (the runner's Mongo
     # credentials ride the auth Secret; found in prod), and a
     # chart-managed auth Secret can carry it (secrets.auth.mongoURI).
-    version: 3.250.1
+    # 3.253.0 (2026-10-08): review-pr 0.9.13 — the claude slots' backend
+    # is tunable (ITERION_VIBE_BACKEND_CLAUDE), which the honorabilite pool
+    # resolves to claw so the review's LLM calls ride the pool's gateway.
+    version: 3.253.0
   # Valkey HA (Sentinel) — distributed ephemeral state for the multi-replica
   # server. cloudpirates/valkey (architecture: replication + sentinel), the
   # same chart no-package-malware runs in prod. ovh-prod opts in via
