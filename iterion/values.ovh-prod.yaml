@@ -627,6 +627,11 @@ iterion:
         ITERION_VIBE_MODEL_GPT_GLANCE: "openai_compatible/glm-5.2"
         ITERION_VIBE_MODEL_EMIT: "openai_compatible/glm-5.2"
         ITERION_VIBE_MODEL_SUPERVISOR: "openai_compatible/glm-5.2"
+        # review-pr 0.9.13: the claude slots route to claw, the backend
+        # that serves openai_compatible/* routes (the gpt/emit slots
+        # already default to claw).
+        ITERION_VIBE_BACKEND_CLAUDE: "claw"
+        ITERION_VIBE_BACKEND_CLAUDE_GLANCE: "claw"
 
 # --- Top-level umbrella datastores (ovh-prod only) -------------------------
 # These keys are siblings of `iterion:` because Chart.yaml lists `mongodb` and
