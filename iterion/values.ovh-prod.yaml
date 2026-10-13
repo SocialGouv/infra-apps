@@ -649,6 +649,12 @@ iterion:
         # burned its step cap), the output is not cut at 8K, and the spend
         # is priced. The sandbox cannot reach models.dev; the snapshot can.
         OPENAI_COMPATIBLE_CATALOG_PROVIDER: "scaleway"
+        # The operator table takes the id AS IS (the catalog provider lookup
+        # expects a bare models.dev id, but this gateway serves the ids
+        # already prefixed `scaleway/<model>` — the provider lookup logs
+        # `is in no table` and the runner keeps the unknown-model floor).
+        # Values from the models.dev snapshot entry for scaleway/glm-5.2.
+        OPENAI_COMPATIBLE_MODELS: '{"scaleway/glm-5.2":{"context_window":256000,"max_output_tokens":16384,"input_usd_per_mtok":1.8,"output_usd_per_mtok":5.5}}'
 
 # --- Top-level umbrella datastores (ovh-prod only) -------------------------
 # These keys are siblings of `iterion:` because Chart.yaml lists `mongodb` and
