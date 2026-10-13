@@ -641,6 +641,14 @@ iterion:
         ITERION_VIBE_PROVIDER_GPT: "openai_compatible"
         ITERION_VIBE_PROVIDER_GPT_GLANCE: "openai_compatible"
         ITERION_VIBE_PROVIDER_EMIT: "openai_compatible"
+        # The gateway model catalog (#2028 D7): resolves the scaleway/<id>
+        # models from the embedded models.dev snapshot — context window
+        # 256K, max output 16K and the price — so the runner compacts at the
+        # real window instead of the unknown-model 10K floor (measured: a
+        # 59-file review re-read the same files after every compaction and
+        # burned its step cap), the output is not cut at 8K, and the spend
+        # is priced. The sandbox cannot reach models.dev; the snapshot can.
+        OPENAI_COMPATIBLE_CATALOG_PROVIDER: "scaleway"
 
 # --- Top-level umbrella datastores (ovh-prod only) -------------------------
 # These keys are siblings of `iterion:` because Chart.yaml lists `mongodb` and
