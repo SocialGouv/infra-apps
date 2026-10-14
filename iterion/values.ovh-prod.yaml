@@ -58,7 +58,7 @@ iterion:
     # public hosts down). `kubectl rollout restart` does NOT repair it: ArgoCD
     # self-heal reverts the annotation onto the unchanged template.
     # Deploying = resolve the release digest and commit it, like runner.image.
-    digest: sha256:418062b693118991d02d5200fa61e11b5970f517e40218064ab3f02300281da9 # v3.257.2
+    digest: sha256:8f6fcad4c016f85c9eb323bb6707667121f03ea5d92165eece8e2008ed00a56d # v3.264.0
     pullPolicy: Always
 
   server:
@@ -198,7 +198,7 @@ iterion:
     #   docker buildx imagetools inspect <image>:<tag>        -> index digest
     #   ... --raw, then the linux/amd64 child                 -> per-arch digest
     #   ... --format '{{json .Image.Config.Labels}}'          -> version+revision
-    image: ghcr.io/socialgouv/iterion-runner-devbox@sha256:2c5cc542cc0bbcf0ecdbfbb9e050a6d7f924fe99b0d879c7ced75eec947ac8de # v3.257.2
+    image: ghcr.io/socialgouv/iterion-runner-devbox@sha256:f4ab12e425c03483990238ec76bf5c65033f7d312b528b4354b567dcbddebf90 # v3.264.0
     podSecurityContext:
       runAsUser: 1000
       runAsGroup: 1000
@@ -649,11 +649,11 @@ iterion:
         # burned its step cap), the output is not cut at 8K, and the spend
         # is priced. The sandbox cannot reach models.dev; the snapshot can.
         OPENAI_COMPATIBLE_CATALOG_PROVIDER: "scaleway"
-        # The operator table takes the id AS IS (the catalog provider lookup
-        # expects a bare models.dev id, but this gateway serves the ids
-        # already prefixed `scaleway/<model>` — the provider lookup logs
-        # `is in no table` and the runner keeps the unknown-model floor).
-        # Values from the models.dev snapshot entry for scaleway/glm-5.2.
+        # The operator table pins the id AS IS and wins over the catalog.
+        # Since engine v3.263.1 (#2412) the catalog provider resolves the
+        # gateway's provider-first ids (`scaleway/<model>`) by itself; the
+        # table stays as the explicit pin. Values from the models.dev
+        # snapshot entry for scaleway/glm-5.2.
         OPENAI_COMPATIBLE_MODELS: '{"scaleway/glm-5.2":{"context_window":256000,"max_output_tokens":16384,"input_usd_per_mtok":1.8,"output_usd_per_mtok":5.5}}'
 
 # --- Top-level umbrella datastores (ovh-prod only) -------------------------
