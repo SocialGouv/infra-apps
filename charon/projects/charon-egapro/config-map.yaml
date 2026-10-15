@@ -20,7 +20,17 @@ data:
     https://egapro-*.ovh.fabrique.social.gouv.fr
   CHARON_CLIENT_3_PROVIDER: fabriqueKeycloak
   CHARON_CLIENT_4_WILDCARDS: |
-    http://localhost:3000,
+    http://localhost:3000/,
+    http://localhost:3001/,
+    http://localhost:3002/,
+    http://localhost:3003/,
+    http://localhost:3004/,
+    http://localhost:3005/,
+    http://localhost:3006/,
+    http://localhost:3007/,
+    http://localhost:3008/,
+    http://localhost:3009/,
+    http://localhost:3010/,
     https://egapro-*.ovh.fabrique.social.gouv.fr,
     https://egapro-preprod.env-01kvfaqhty48zhd7fjy1bbknx7.dev.atlas-prod.public-cloud.social.gouv.fr,
     https://egapro-review-alpha.env-01kwy7yxhj1b2zweshz3drn9js.dev.atlas-prod.public-cloud.social.gouv.fr,
