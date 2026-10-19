@@ -18,7 +18,7 @@ spec:
         app: charon
     spec:
       containers:
-        - image: ghcr.io/socialgouv/charon:sha-b24aa77
+        - image: ghcr.io/socialgouv/charon:sha-b24aa77@sha256:bc18d1109fe06c9daef12d5347734beb62cb5a3699cd093b5cd04c76feb6f441
           name: app
           ports:
             - containerPort: 3000
