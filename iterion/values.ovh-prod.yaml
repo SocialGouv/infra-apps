@@ -58,7 +58,7 @@ iterion:
     # public hosts down). `kubectl rollout restart` does NOT repair it: ArgoCD
     # self-heal reverts the annotation onto the unchanged template.
     # Deploying = resolve the release digest and commit it, like runner.image.
-    digest: sha256:4b9f6a2983ad3a3cd8dd8f1600f3bf88c272d2be1a7f02a9f6fea6ef7e986d25 # v3.270.1
+    digest: sha256:de3831055cc88346c6e0869254174dce5cebf14d7c22faacc4c7acb27468f89e # v3.277.0
     pullPolicy: Always
 
   server:
@@ -198,7 +198,7 @@ iterion:
     #   docker buildx imagetools inspect <image>:<tag>        -> index digest
     #   ... --raw, then the linux/amd64 child                 -> per-arch digest
     #   ... --format '{{json .Image.Config.Labels}}'          -> version+revision
-    image: ghcr.io/socialgouv/iterion-runner-devbox@sha256:9d01143cc5d634115af92bd1d31c8bbc8b77c7f5fbf03586bd7173b3d94ff46b # v3.270.1
+    image: ghcr.io/socialgouv/iterion-runner-devbox@sha256:c3060cd50cc99a4899210242047965c37f111295e020ac13c5496dc74e99fcfa # v3.277.0
     podSecurityContext:
       runAsUser: 1000
       runAsGroup: 1000
@@ -353,7 +353,12 @@ iterion:
       # without a devcontainer — -full ships git+gh+glab+python3+Go+claude,
       # covering the realigned fleet (bots no longer pin images; devbox.json
       # tops up per-bot tools).
-      ITERION_SANDBOX_DEFAULT_IMAGE: ghcr.io/socialgouv/iterion-sandbox-full:edge
+      # Pinned by the RELEASE digest like server and runner (release-images.yml
+      # publishes iterion-sandbox-full:vX.Y.Z): the engine stamps
+      # imagePullPolicy IfNotPresent on a digest, so every run pod of a release
+      # runs the same sandbox build — `:edge` re-resolved per pod and two runs
+      # of the same day could run two builds, with no trace in git.
+      ITERION_SANDBOX_DEFAULT_IMAGE: ghcr.io/socialgouv/iterion-sandbox-full@sha256:1a46220a6cb56759ebea0b6480c90ad2ad02996db8eb902a09a58ec8eebdf9a8 # v3.277.0
       # Sandbox-by-default for the RUNNER entry point: the runner reads its
       # global default from this env (it does not yet call
       # runtime.ResolveGlobalSandboxDefault — engine-side follow-up); without
@@ -610,6 +615,10 @@ iterion:
   runnerPools:
     - name: honorabilite
       replicas: 1
+      # Without `image` the chart falls back to iterion.image — the lean SERVER
+      # image, not the devbox runner: a pool run that builds or tests had no
+      # toolchain. Same release digest as runner.image above.
+      image: ghcr.io/socialgouv/iterion-runner-devbox@sha256:c3060cd50cc99a4899210242047965c37f111295e020ac13c5496dc74e99fcfa # v3.277.0
       gateway:
         baseUrl: "https://litellm.pliage-prod.socle-ia.data-ia.prod.atlas.fabrique.social.gouv.fr"
         existingSecret: "iterion-pool-honorabilite-gateway"
