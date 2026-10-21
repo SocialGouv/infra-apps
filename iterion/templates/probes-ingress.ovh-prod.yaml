@@ -1,0 +1,46 @@
+{{- if and (eq .Values.cluster "ovh-prod") .Values.iterion.ingress.enabled }}
+{{- /*
+/healthz and /readyz answer without authentication on both public hosts, which
+exposes the dependency state and the version to any Internet caller. The
+kubelet probes hit the pod directly, never the ingress, and the chart's main
+Ingress routes `/` only; this second Ingress owns the two probe paths with a
+source allowlist that nobody matches, so ingress-nginx answers 403 to the
+Internet while the cluster keeps probing. /api/server/info stays public: the
+Studio and the CLI read it before signing in. Decision of the DA v1.1.0
+(cadre 12, bloc 5), 2026-10-21.
+*/}}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: iterion-probes
+  labels:
+    app.kubernetes.io/name: iterion
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: probes-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/whitelist-source-range: "127.0.0.1/32"
+spec:
+  ingressClassName: nginx
+  tls:
+    - secretName: iterion-tls
+      hosts:
+        - iterion.fabrique.social.gouv.fr
+    - secretName: iterion-cloud-tls
+      hosts:
+        - iterion.cloud
+  rules:
+    {{- range $host := list "iterion.fabrique.social.gouv.fr" "iterion.cloud" }}
+    - host: {{ $host }}
+      http:
+        paths:
+          {{- range $path := list "/healthz" "/readyz" }}
+          - path: {{ $path }}
+            pathType: Exact
+            backend:
+              service:
+                name: iterion
+                port:
+                  name: http
+          {{- end }}
+    {{- end }}
+{{- end }}
