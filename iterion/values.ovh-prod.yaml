@@ -640,13 +640,13 @@ iterion:
       # and nothing else — a bot that ignores them fails loud, as the first
       # boot proved).
       env:
-        ITERION_VIBE_MODEL_CLAUDE: "openai_compatible/scaleway/glm-5.2"
-        ITERION_VIBE_MODEL_CLAUDE_GLANCE: "openai_compatible/scaleway/glm-5.2"
-        ITERION_VIBE_MODEL_CLAUDE_FALLBACK: "openai_compatible/scaleway/glm-5.2"
-        ITERION_VIBE_MODEL_GPT: "openai_compatible/scaleway/glm-5.2"
-        ITERION_VIBE_MODEL_GPT_GLANCE: "openai_compatible/scaleway/glm-5.2"
-        ITERION_VIBE_MODEL_EMIT: "openai_compatible/scaleway/glm-5.2"
-        ITERION_VIBE_MODEL_SUPERVISOR: "openai_compatible/scaleway/glm-5.2"
+        ITERION_VIBE_MODEL_CLAUDE: "openai_compatible/scaleway/glm-5.3"
+        ITERION_VIBE_MODEL_CLAUDE_GLANCE: "openai_compatible/scaleway/glm-5.3"
+        ITERION_VIBE_MODEL_CLAUDE_FALLBACK: "openai_compatible/scaleway/glm-5.3"
+        ITERION_VIBE_MODEL_GPT: "openai_compatible/scaleway/glm-5.3"
+        ITERION_VIBE_MODEL_GPT_GLANCE: "openai_compatible/scaleway/glm-5.3"
+        ITERION_VIBE_MODEL_EMIT: "openai_compatible/scaleway/glm-5.3"
+        ITERION_VIBE_MODEL_SUPERVISOR: "openai_compatible/scaleway/glm-5.3"
         # review-pr 0.9.13: the claude slots route to claw, the backend
         # that serves openai_compatible/* routes (the gpt/emit slots
         # already default to claw).
@@ -672,9 +672,33 @@ iterion:
         # The operator table pins the id AS IS and wins over the catalog.
         # Since engine v3.263.1 (#2412) the catalog provider resolves the
         # gateway's provider-first ids (`scaleway/<model>`) by itself; the
-        # table stays as the explicit pin. Values from the models.dev
-        # snapshot entry for scaleway/glm-5.2.
-        OPENAI_COMPATIBLE_MODELS: '{"scaleway/glm-5.2":{"context_window":256000,"max_output_tokens":16384,"input_usd_per_mtok":1.8,"output_usd_per_mtok":5.5}}'
+        # table stays as the explicit pin. Values from models.dev
+        # (scaleway/glm-5.3, read 2026-10-21; glm-5.2 kept for the runs
+        # that still name it).
+        OPENAI_COMPATIBLE_MODELS: '{"scaleway/glm-5.3":{"context_window":256000,"max_output_tokens":16384,"input_usd_per_mtok":2.01,"output_usd_per_mtok":6.15},"scaleway/glm-5.2":{"context_window":256000,"max_output_tokens":16384,"input_usd_per_mtok":1.8,"output_usd_per_mtok":5.5}}'
+    # The second pool: the Egapro team's RGAA audit (rgaa-audit / Acci) on the
+    # same regional PLIAGE gateway with its own key `iterion+rgaa+egapro`
+    # (100 USD budget). The gateway Secret is manually managed:
+    # iterion-pool-egapro-gateway (created 2026-10-21). Revi egapro stays off
+    # this pool until it gets its own key (#2005): mapped to the pool, its
+    # launches are refused by name rather than routed to a public vendor.
+    - name: egapro
+      replicas: 1
+      image: ghcr.io/socialgouv/iterion-runner-devbox@sha256:c3060cd50cc99a4899210242047965c37f111295e020ac13c5496dc74e99fcfa # v3.277.0
+      gateway:
+        baseUrl: "https://litellm.pliage-prod.socle-ia.data-ia.prod.atlas.fabrique.social.gouv.fr"
+        existingSecret: "iterion-pool-egapro-gateway"
+      env:
+        # rgaa-audit dials: the adjudicator, the refuter and the publisher
+        # expand ${ITERION_RGAA_*:-…} from the runner's environment at run
+        # start (the launch pins the same through model_overrides).
+        ITERION_RGAA_BACKEND_ADJUDICATE: "claw"
+        ITERION_RGAA_MODEL_ADJUDICATE: "openai_compatible/scaleway/glm-5.3"
+        ITERION_RGAA_BACKEND_REFUTE: "claw"
+        ITERION_RGAA_MODEL_REFUTE: "openai_compatible/scaleway/glm-5.3"
+        ITERION_RGAA_MODEL_PUBLISH: "openai_compatible/scaleway/glm-5.3"
+        OPENAI_COMPATIBLE_CATALOG_PROVIDER: "scaleway"
+        OPENAI_COMPATIBLE_MODELS: '{"scaleway/glm-5.3":{"context_window":256000,"max_output_tokens":16384,"input_usd_per_mtok":2.01,"output_usd_per_mtok":6.15}}'
 
 # --- Top-level umbrella datastores (ovh-prod only) -------------------------
 # These keys are siblings of `iterion:` because Chart.yaml lists `mongodb` and
