@@ -597,6 +597,17 @@ iterion:
             storageClassName: csi-cinder-high-speed
         memoryStore:
           enabled: false # prod: persistent fileStore, not memory
+    # The subchart ships `resources: {}` (BestEffort): the queue of the platform
+    # was the first pod evicted on a memory-pressured node. Measured 2026-10-21
+    # at ~70 Mi / ~30m per member; bounded with margin.
+    container:
+      resources:
+        requests:
+          cpu: 250m
+          memory: 256Mi
+        limits:
+          cpu: "2"
+          memory: 1Gi
 
   metrics:
     enabled: true
@@ -695,6 +706,17 @@ mongodb:
   storage:
     className: sc-classic-retain # Retain reclaim → data survives PVC deletion
     requestedSize: 20Gi
+  # The chart ships `resources: {}` (BestEffort): the product's database was the
+  # first pod evicted on a memory-pressured node. Measured 2026-10-21: primary
+  # 6.4 cores / 5.7 Gi, secondaries ~0.3 cores / 2.5-2.9 Gi. With a 12Gi limit
+  # WiredTiger sizes its cache at 50 % of (limit - 1Gi) = 5.5Gi.
+  resources:
+    requests:
+      cpu: "2"
+      memory: 4Gi
+    limits:
+      cpu: "8"
+      memory: 12Gi
   # Kyverno-restricted cluster (PSA restricted): override the chart's default
   # UID/GID 999 with the cluster-standard 1000:1000 + add seccompProfile
   # RuntimeDefault (the chart's default securityContext is otherwise compliant:
