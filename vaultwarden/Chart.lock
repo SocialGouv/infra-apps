@@ -1,9 +1,9 @@
 dependencies:
 - name: vaultwarden
   repository: https://guerzon.github.io/vaultwarden
-  version: 0.31.6
+  version: 0.31.8
 - name: cnpg-cluster
   repository: https://socialgouv.github.io/helm-charts
-  version: 1.30.5
-digest: sha256:ed201311f5ac781ff6425834b0f9f7e39dfabfed78034b6bbe5d129eb89d307e
-generated: "2025-02-24T11:16:50.306484745+01:00"
+  version: 1.30.7
+digest: sha256:7edf0f74f418414600e6f806bd1ed89d3e5b0eedbf3b84d8c32cec178e7f5b0c
+generated: "2025-10-07T14:39:08.557734531Z"
