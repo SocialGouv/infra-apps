@@ -58,7 +58,7 @@ iterion:
     # public hosts down). `kubectl rollout restart` does NOT repair it: ArgoCD
     # self-heal reverts the annotation onto the unchanged template.
     # Deploying = resolve the release digest and commit it, like runner.image.
-    digest: sha256:f93ff7d1ae738d281607f67476784854504067c15aecfec173b06b4f5376d0e6 # v3.281.0
+    digest: sha256:47ffa2c74bfaeb978fe452ac900947dee479a9c7cf77e0e2f48f22eb7ad37318 # v3.281.2
     pullPolicy: Always
 
   server:
@@ -198,7 +198,7 @@ iterion:
     #   docker buildx imagetools inspect <image>:<tag>        -> index digest
     #   ... --raw, then the linux/amd64 child                 -> per-arch digest
     #   ... --format '{{json .Image.Config.Labels}}'          -> version+revision
-    image: ghcr.io/socialgouv/iterion-runner-devbox@sha256:ea896bfb47ef4a0867c92ce15ce956bffa75145802739df52950b61f4c6feff8 # v3.281.0
+    image: ghcr.io/socialgouv/iterion-runner-devbox@sha256:f462102e43a6c83cd05fb8be0fe21156179f21667d122c216aadc769ade78382 # v3.281.2
     podSecurityContext:
       runAsUser: 1000
       runAsGroup: 1000
@@ -629,7 +629,7 @@ iterion:
       # Without `image` the chart falls back to iterion.image — the lean SERVER
       # image, not the devbox runner: a pool run that builds or tests had no
       # toolchain. Same release digest as runner.image above.
-      image: ghcr.io/socialgouv/iterion-runner-devbox@sha256:ea896bfb47ef4a0867c92ce15ce956bffa75145802739df52950b61f4c6feff8 # v3.281.0
+      image: ghcr.io/socialgouv/iterion-runner-devbox@sha256:f462102e43a6c83cd05fb8be0fe21156179f21667d122c216aadc769ade78382 # v3.281.2
       gateway:
         baseUrl: "https://litellm.pliage-prod.socle-ia.data-ia.prod.atlas.fabrique.social.gouv.fr"
         existingSecret: "iterion-pool-honorabilite-gateway"
@@ -684,7 +684,7 @@ iterion:
     # launches are refused by name rather than routed to a public vendor.
     - name: egapro
       replicas: 1
-      image: ghcr.io/socialgouv/iterion-runner-devbox@sha256:ea896bfb47ef4a0867c92ce15ce956bffa75145802739df52950b61f4c6feff8 # v3.281.0
+      image: ghcr.io/socialgouv/iterion-runner-devbox@sha256:f462102e43a6c83cd05fb8be0fe21156179f21667d122c216aadc769ade78382 # v3.281.2
       gateway:
         baseUrl: "https://litellm.pliage-prod.socle-ia.data-ia.prod.atlas.fabrique.social.gouv.fr"
         existingSecret: "iterion-pool-egapro-gateway"
@@ -708,7 +708,7 @@ iterion:
     # scaleway/glm-5.3 through the gateway, never a public vendor.
     - name: vao
       replicas: 1
-      image: ghcr.io/socialgouv/iterion-runner-devbox@sha256:ea896bfb47ef4a0867c92ce15ce956bffa75145802739df52950b61f4c6feff8 # v3.281.0
+      image: ghcr.io/socialgouv/iterion-runner-devbox@sha256:f462102e43a6c83cd05fb8be0fe21156179f21667d122c216aadc769ade78382 # v3.281.2
       gateway:
         baseUrl: "https://litellm.pliage-prod.socle-ia.data-ia.prod.atlas.fabrique.social.gouv.fr"
         existingSecret: "iterion-pool-vao-gateway"
