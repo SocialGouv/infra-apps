@@ -700,6 +700,35 @@ iterion:
         OPENAI_COMPATIBLE_CATALOG_PROVIDER: "scaleway"
         OPENAI_COMPATIBLE_MODELS: '{"scaleway/glm-5.3":{"context_window":256000,"max_output_tokens":16384,"input_usd_per_mtok":2.01,"output_usd_per_mtok":6.15}}'
 
+    # The third pool: the VAO team's Revi (review-pr + revi-converse on
+    # socialgouv/produits-dnum/citoyens/vao/vao, PIC) on the same regional
+    # PLIAGE gateway with its own key `iterion+revi+vao`. The gateway Secret is
+    # manually managed: iterion-pool-vao-gateway (created 2026-10-22). Same
+    # model pins as the honorabilite pool: every Revi LLM slot resolves to
+    # scaleway/glm-5.3 through the gateway, never a public vendor.
+    - name: vao
+      replicas: 1
+      image: ghcr.io/socialgouv/iterion-runner-devbox@sha256:ea896bfb47ef4a0867c92ce15ce956bffa75145802739df52950b61f4c6feff8 # v3.281.0
+      gateway:
+        baseUrl: "https://litellm.pliage-prod.socle-ia.data-ia.prod.atlas.fabrique.social.gouv.fr"
+        existingSecret: "iterion-pool-vao-gateway"
+      env:
+        ITERION_VIBE_MODEL_CLAUDE: "openai_compatible/scaleway/glm-5.3"
+        ITERION_VIBE_MODEL_CLAUDE_GLANCE: "openai_compatible/scaleway/glm-5.3"
+        ITERION_VIBE_MODEL_CLAUDE_FALLBACK: "openai_compatible/scaleway/glm-5.3"
+        ITERION_VIBE_MODEL_GPT: "openai_compatible/scaleway/glm-5.3"
+        ITERION_VIBE_MODEL_GPT_GLANCE: "openai_compatible/scaleway/glm-5.3"
+        ITERION_VIBE_MODEL_EMIT: "openai_compatible/scaleway/glm-5.3"
+        ITERION_VIBE_MODEL_SUPERVISOR: "openai_compatible/scaleway/glm-5.3"
+        ITERION_VIBE_BACKEND_CLAUDE: "claw"
+        ITERION_VIBE_BACKEND_CLAUDE_GLANCE: "claw"
+        ITERION_VIBE_PROVIDER_CLAUDE: "openai_compatible"
+        ITERION_VIBE_PROVIDER_CLAUDE_GLANCE: "openai_compatible"
+        ITERION_VIBE_PROVIDER_GPT: "openai_compatible"
+        ITERION_VIBE_PROVIDER_GPT_GLANCE: "openai_compatible"
+        ITERION_VIBE_PROVIDER_EMIT: "openai_compatible"
+        OPENAI_COMPATIBLE_CATALOG_PROVIDER: "scaleway"
+        OPENAI_COMPATIBLE_MODELS: '{"scaleway/glm-5.3":{"context_window":256000,"max_output_tokens":16384,"input_usd_per_mtok":2.01,"output_usd_per_mtok":6.15}}'
 # --- Top-level umbrella datastores (ovh-prod only) -------------------------
 # These keys are siblings of `iterion:` because Chart.yaml lists `mongodb` and
 # `minio` as top-level umbrella deps. The bundled Bitnami subcharts under
