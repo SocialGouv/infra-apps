@@ -640,6 +640,12 @@ iterion:
       # and nothing else — a bot that ignores them fails loud, as the first
       # boot proved).
       env:
+        # The merge step (converge) on claw too: on claude_code a gateway model is
+        # refused, and the review dies after the reviewer spent (#2697).
+        ITERION_VIBE_BACKEND_EMIT: "claw"
+        # Spelled here because the chart prod runs (3.253.0) predates the rendering;
+        # a newer chart renders the union with this spelling (SocialGouv/iterion#2697).
+        ITERION_BOT_VARS_ENV_PINS: "ITERION_VIBE_BACKEND_CLAUDE,ITERION_VIBE_BACKEND_CLAUDE_GLANCE,ITERION_VIBE_BACKEND_EMIT,ITERION_VIBE_MODEL_CLAUDE,ITERION_VIBE_MODEL_CLAUDE_FALLBACK,ITERION_VIBE_MODEL_CLAUDE_GLANCE,ITERION_VIBE_MODEL_EMIT,ITERION_VIBE_MODEL_EMIT_GPT,ITERION_VIBE_MODEL_GPT,ITERION_VIBE_MODEL_GPT_GLANCE,ITERION_VIBE_MODEL_SUPERVISOR,ITERION_VIBE_MODEL_SUPERVISOR_GPT,ITERION_VIBE_PROVIDER_CLAUDE,ITERION_VIBE_PROVIDER_CLAUDE_GLANCE,ITERION_VIBE_PROVIDER_EMIT,ITERION_VIBE_PROVIDER_EMIT_GPT,ITERION_VIBE_PROVIDER_GPT,ITERION_VIBE_PROVIDER_GPT_GLANCE"
         ITERION_VIBE_MODEL_CLAUDE: "openai_compatible/scaleway/glm-5.3"
         ITERION_VIBE_MODEL_CLAUDE_GLANCE: "openai_compatible/scaleway/glm-5.3"
         ITERION_VIBE_MODEL_CLAUDE_FALLBACK: "openai_compatible/scaleway/glm-5.3"
@@ -695,6 +701,9 @@ iterion:
         baseUrl: "https://litellm.pliage-prod.socle-ia.data-ia.prod.atlas.fabrique.social.gouv.fr"
         existingSecret: "iterion-pool-egapro-gateway"
       env:
+        # Spelled here because the chart prod runs (3.253.0) predates the rendering;
+        # a newer chart renders the union with this spelling (SocialGouv/iterion#2697).
+        ITERION_BOT_VARS_ENV_PINS: "ITERION_RGAA_BACKEND_ADJUDICATE,ITERION_RGAA_BACKEND_REFUTE,ITERION_RGAA_MODEL_ADJUDICATE,ITERION_RGAA_MODEL_PUBLISH,ITERION_RGAA_MODEL_REFUTE"
         # rgaa-audit dials: the adjudicator, the refuter and the publisher
         # expand ${ITERION_RGAA_*:-…} from the runner's environment at run
         # start (the launch pins the same through model_overrides).
@@ -719,6 +728,12 @@ iterion:
         baseUrl: "https://litellm.pliage-prod.socle-ia.data-ia.prod.atlas.fabrique.social.gouv.fr"
         existingSecret: "iterion-pool-vao-gateway"
       env:
+        # The merge step (converge) on claw too: on claude_code a gateway model is
+        # refused, and the review dies after the reviewer spent (#2697).
+        ITERION_VIBE_BACKEND_EMIT: "claw"
+        # Spelled here because the chart prod runs (3.253.0) predates the rendering;
+        # a newer chart renders the union with this spelling (SocialGouv/iterion#2697).
+        ITERION_BOT_VARS_ENV_PINS: "ITERION_VIBE_BACKEND_CLAUDE,ITERION_VIBE_BACKEND_CLAUDE_GLANCE,ITERION_VIBE_BACKEND_EMIT,ITERION_VIBE_MODEL_CLAUDE,ITERION_VIBE_MODEL_CLAUDE_FALLBACK,ITERION_VIBE_MODEL_CLAUDE_GLANCE,ITERION_VIBE_MODEL_EMIT,ITERION_VIBE_MODEL_EMIT_GPT,ITERION_VIBE_MODEL_GPT,ITERION_VIBE_MODEL_GPT_GLANCE,ITERION_VIBE_MODEL_SUPERVISOR,ITERION_VIBE_MODEL_SUPERVISOR_GPT,ITERION_VIBE_PROVIDER_CLAUDE,ITERION_VIBE_PROVIDER_CLAUDE_GLANCE,ITERION_VIBE_PROVIDER_EMIT,ITERION_VIBE_PROVIDER_EMIT_GPT,ITERION_VIBE_PROVIDER_GPT,ITERION_VIBE_PROVIDER_GPT_GLANCE"
         ITERION_VIBE_MODEL_CLAUDE: "openai_compatible/scaleway/glm-5.3"
         ITERION_VIBE_MODEL_CLAUDE_GLANCE: "openai_compatible/scaleway/glm-5.3"
         ITERION_VIBE_MODEL_CLAUDE_FALLBACK: "openai_compatible/scaleway/glm-5.3"
