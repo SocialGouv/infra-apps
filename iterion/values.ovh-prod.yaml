@@ -646,7 +646,12 @@ iterion:
         ITERION_VIBE_MODEL_GPT: "openai_compatible/scaleway/glm-5.3"
         ITERION_VIBE_MODEL_GPT_GLANCE: "openai_compatible/scaleway/glm-5.3"
         ITERION_VIBE_MODEL_EMIT: "openai_compatible/scaleway/glm-5.3"
+        ITERION_VIBE_MODEL_EMIT_GPT: "openai_compatible/scaleway/glm-5.3"
         ITERION_VIBE_MODEL_SUPERVISOR: "openai_compatible/scaleway/glm-5.3"
+        ITERION_VIBE_MODEL_SUPERVISOR_GPT: "openai_compatible/scaleway/glm-5.3"
+        # review-pr 0.9.16 (#2467): the mono-GPT merge twin and the GPT pacer
+        # read their own dials (_EMIT_GPT, _SUPERVISOR_GPT), whose defaults name
+        # openai/gpt-6-sol — pinned to the gateway like their neighbours.
         # review-pr 0.9.13: the claude slots route to claw, the backend
         # that serves openai_compatible/* routes (the gpt/emit slots
         # already default to claw).
@@ -661,6 +666,7 @@ iterion:
         ITERION_VIBE_PROVIDER_GPT: "openai_compatible"
         ITERION_VIBE_PROVIDER_GPT_GLANCE: "openai_compatible"
         ITERION_VIBE_PROVIDER_EMIT: "openai_compatible"
+        ITERION_VIBE_PROVIDER_EMIT_GPT: "openai_compatible"
         # The gateway model catalog (#2028 D7): resolves the scaleway/<id>
         # models from the embedded models.dev snapshot — context window
         # 256K, max output 16K and the price — so the runner compacts at the
@@ -719,7 +725,9 @@ iterion:
         ITERION_VIBE_MODEL_GPT: "openai_compatible/scaleway/glm-5.3"
         ITERION_VIBE_MODEL_GPT_GLANCE: "openai_compatible/scaleway/glm-5.3"
         ITERION_VIBE_MODEL_EMIT: "openai_compatible/scaleway/glm-5.3"
+        ITERION_VIBE_MODEL_EMIT_GPT: "openai_compatible/scaleway/glm-5.3"
         ITERION_VIBE_MODEL_SUPERVISOR: "openai_compatible/scaleway/glm-5.3"
+        ITERION_VIBE_MODEL_SUPERVISOR_GPT: "openai_compatible/scaleway/glm-5.3"
         ITERION_VIBE_BACKEND_CLAUDE: "claw"
         ITERION_VIBE_BACKEND_CLAUDE_GLANCE: "claw"
         ITERION_VIBE_PROVIDER_CLAUDE: "openai_compatible"
@@ -727,6 +735,7 @@ iterion:
         ITERION_VIBE_PROVIDER_GPT: "openai_compatible"
         ITERION_VIBE_PROVIDER_GPT_GLANCE: "openai_compatible"
         ITERION_VIBE_PROVIDER_EMIT: "openai_compatible"
+        ITERION_VIBE_PROVIDER_EMIT_GPT: "openai_compatible"
         OPENAI_COMPATIBLE_CATALOG_PROVIDER: "scaleway"
         OPENAI_COMPATIBLE_MODELS: '{"scaleway/glm-5.3":{"context_window":256000,"max_output_tokens":16384,"input_usd_per_mtok":2.01,"output_usd_per_mtok":6.15}}'
 # --- Top-level umbrella datastores (ovh-prod only) -------------------------
