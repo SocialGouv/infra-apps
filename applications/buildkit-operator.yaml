@@ -14,15 +14,15 @@ spec:
     - list:
         elements:
           - name: buildkit-operator-gitops
-            namespace: buildkit-operator
-            cluster: ovh-prod
+            namespace: argocd-sre
+            cluster: in-cluster
   template:
     metadata:
       name: "{{ .name }}"
     spec:
       project: default
       destination:
-        name: "{{ .cluster }}"
+        server: https://kubernetes.default.svc
       source:
         repoURL: git@github.com:socialgouv/buildkit-operator-gitops.git
         targetRevision: main
