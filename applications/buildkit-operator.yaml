@@ -1,177 +1,33 @@
-# buildkit-operator — the distributed-BuildKit control plane (one hot daemon per project+arch), with
-# VM-isolated untrusted forks (Kata/clh) and off-cluster exposure. Sole image-build backend of the
-# fabrique CI, on the prod-build nodepool. Pair with applications/kata.yaml (the runtime).
-#
-# Single source: the Helm chart stays canonical in the operator repo (pulled directly at a commit whose
-# images were published by the `images` workflow); the ovh-prod values are inline below.
-#
-# NOTE (adoption): the operator is deployed by hand on ovh-prod today. `automated` is intentionally
-# OMITTED so the first sync only ADOPTS the live release after you review the diff; flip it on once clean.
-# NOTE (prereqs before first sync): mTLS/auth/S3 Secrets already exist out-of-band. Do not store or
-# inspect their cleartext here; only their names are referenced below. The buildkit-builds namespace is
-# already excluded from add-custom-mas-securitycontext for rootless BuildKit.
+# buildkit-operator — pointer ApplicationSet (app-of-apps). The real Application
+# lives in the PRIVATE deploy repo, which the deploy workflow of
+# SocialGouv/buildkit-operator bumps after every green images build (chart commit
+# + per-component image digests); ArgoCD syncs it automatically.
+# Rollback: `argocd app rollback buildkit-operator-prod` — then revert the bump
+# commit in socialgouv/buildkit-operator-gitops so autosync does not re-apply it.
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
 metadata:
-  name: buildkit-operator
+  name: buildkit-operator-gitops
 spec:
   goTemplate: true
   generators:
     - list:
         elements:
-          - name: buildkit-operator-prod
+          - name: buildkit-operator-gitops
             namespace: buildkit-operator
             cluster: ovh-prod
   template:
     metadata:
       name: "{{ .name }}"
-      annotations:
-        notifications.argoproj.io/subscribe.mattermost: moojipgstjgsixs6mgycxpe5ua
     spec:
       project: default
       destination:
         name: "{{ .cluster }}"
-        namespace: "{{ .namespace }}"
       source:
-        repoURL: https://github.com/socialgouv/buildkit-operator
-        # v0.21.0: drops the plaintext-token compatibility (only the hash of a minted build token is
-        # accepted now) and lets oidc.providers authenticate /route on its own, which is what makes
-        # removing the shared bearer below possible. On top of v0.20.0's per-build release token,
-        # v0.19.0's disruption budgets and gateway drain, and v0.16.0's cloud-agnostic defaults.
-        targetRevision: 42071022f7c68070aeba92e8c30e95d8564eeb53
-        path: deploy/helm/buildkit-operator
-        helm:
-          releaseName: buildkit-operator
-          valuesObject:
-            namespaces:
-              operator: buildkit-operator
-              builds: buildkit-builds
-            # Namespace is provisioned by the platform/Rancher, not owned by this Helm release.
-            createNamespaces: false
-            # Images built and signed by github.com/SocialGouv/buildkit-operator/.github/workflows/images.yml
-            # for the v0.21.0 release. Multi-arch (amd64 + arm64); the daemons stay amd64 here because
-            # prod-build is, and daemonScheduling.pinArch is left off.
-            image: { tag: 0.21.0 }
-            # buildd /route is reached off-cluster through the TLS Ingress below (NOT a plain-HTTP LB):
-            # the L4 LB served the bearer token in cleartext, so the chart now refuses it without an IP
-            # allowlist. ClusterIP + nginx Ingress terminates TLS on 443 (reachable by the PIC egress
-            # proxy). The SNI gateway keeps its own LB (mTLS stays end-to-end, no TLS to terminate there).
-            service: { type: ClusterIP }
-            ingress:
-              enabled: true
-              className: nginx
-              host: buildd.bko.fabrique.social.gouv.fr
-              annotations:
-                cert-manager.io/cluster-issuer: letsencrypt-prod
-                # /route blocks on a cold daemon (PVC provision + image pull) — raise above the 60s default.
-                nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
-              tls:
-                enabled: true
-                secretName: buildd-bko-fabrique-tls
-            # OIDC identity verification is now the ONLY way in: /route binds each build to a
-            # forge-signed repo claim, so a build can no longer claim a repo it cannot prove. The legacy
-            # shared bearer was removed here (see the auth block further down) — it authenticated the
-            # caller but not the project, so any holder could build as, and poison the cache of, any
-            # project. A caller that still sends it now gets 401 and must mint an OIDC token.
-            oidc:
-              providers:
-                - { type: github, issuer: https://token.actions.githubusercontent.com, audience: buildkit-operator }
-                - { type: gitlab, issuer: https://pic.sg.social.gouv.fr, audience: buildkit-operator }
-                # Forgejo Actions: the token issuer is the /api/actions subpath (NOT the instance root, which
-                # is the login IdP). Consumers opt in with `enable-openid-connect: true` + forgejo-runner >v12.5.
-                - { type: forgejo, issuer: https://git.devthefuture.org/api/actions, audience: buildkit-operator }
-              # Hard org gate (verified-but-unlisted repo => 403). Extend as new consumers onboard.
-              repoAllowlist:
-                - github.com/socialgouv/*
-                - pic.sg.social.gouv.fr/socialgouv/*
-                - pic.sg.social.gouv.fr/studio-tech/architecture/*
-                - git.devthefuture.org/devthejo/*
-            # Shared SNI gateway, fronted on 443 (PIC egress proxy reaches it) for two domains. external-dns
-            # publishes the wildcard *.bkod.fabrique.social.gouv.fr at the gateway LB (--source=service).
-            # NOTE: these gateway settings (externalPort/extraDomains/external-dns annotation) were
-            # live-patched onto the hand-deployed release and are captured here so the GitOps matches live.
-            gateway:
-              host: gw.bko.ovh
-              externalPort: 443
-              extraDomains: [bkod.fabrique.social.gouv.fr]
-              image: { tag: 0.21.0 }
-              service:
-                annotations:
-                  external-dns.alpha.kubernetes.io/hostname: "*.bkod.fabrique.social.gouv.fr"
-                  # A build holds ONE long-lived mTLS stream through this LB. The OpenStack CCM's default
-                  # member-data idle timeout (50s) cuts a build that goes quiet (a long RUN with no output),
-                  # so raise it well past the longest expected build. Keys are OVH/OpenStack-specific and
-                  # the chart defaults are cloud-neutral — they only apply because they are declared here.
-                  loadbalancer.openstack.org/timeout-member-data: "600000"
-                  loadbalancer.openstack.org/timeout-client-data: "600000"
-              # Cap pre-auth connections on the public SNI gateway (defence against an unauthenticated flood).
-              maxConns: 1024
-            # No shared bearer: authentication is OIDC only (providers above), and the Secret it used to
-            # read was deleted from the cluster. A caller that gets 401 needs to mint an OIDC token
-            # (permissions.id-token: write + the oidc-audience input), not a token to be handed one.
-            auth:
-              tokenSecret: ""
-            # OVH storage classes. The chart defaults are cloud-neutral (empty = the cluster's default
-            # StorageClass / snapshots disabled), so gen2 high-speed — whose throughput scales with volume
-            # size, which the warm cache depends on — is declared here. defaultStorageClass is stamped onto
-            # every BuildProject buildd creates; existing CRs keep the class already on their spec.
-            defaultStorageClass: csi-cinder-high-speed-gen2
-            snapshotClassName: csi-cinder-snapclass-in-use-v1
-            # Per-project daemon policy. The adaptive keep-warm (chart default: idle scales with the
-            # trailing-24h build cadence, capped at 6h) covers "frequent builders stay warm" for every
-            # repo with zero per-repo config — no tier=hot pinning needed. projectDefaults only seeds
-            # what adaptivity can't infer, at BuildProject creation (create-only; existing CRs keep
-            # their spec — the live iterion daemons predate this and were tuned by hand, see git log
-            # of startups/sre/raw/clusters/ovh-prod/buildkit-operator/).
-            # FIRST MATCH WINS — specific rules before glob rules.
-            projectDefaults:
-              # The finalize daemon builds are a couple of COPY layers whose inputs (bases +
-              # iterion binary) live in GHCR — the S3 cold cache rehydrates nothing for them,
-              # while its per-build export cost 42s and contended with the GHCR layer push.
-              - repo: github.com/socialgouv/iterion
-                name: iterion-sandbox-finalize
-                s3Cache: never
-              # iterion's four sandbox tool bases share one daemon; the four-variant layer chain
-              # needs headroom under buildkitd's 85%-of-volume GC ceiling.
-              - repo: github.com/socialgouv/iterion
-                name: iterion-sandbox-base
-                idleTimeoutSec: 3600
-                cacheVolumeGi: 120
-            # HARD-pin daemons to the prod-build nodepool (was a soft preference): they run rootless
-            # buildkit with seccomp/AppArmor Unconfined + the S3 creds and execute untrusted RUN code, so
-            # they must NEVER spill onto app / control-plane nodes. nodeSelector makes prod-build a
-            # requirement; the toleration matches that pool's taint.
-            daemonScheduling:
-              nodeSelector: { nodepool: prod-build }
-              tolerations:
-                - { key: pool, operator: Equal, value: ci, effect: NoSchedule }
-            # Untrusted fork daemons run as non-rootless privileged buildkit inside a kata-clh microVM —
-            # the VM is their isolation boundary. forkEgressStrict is therefore left OFF: strict egress
-            # would force every fork's base image through a single pull-through mirror (breaking FROMs on
-            # ghcr.io/quay.io/etc), and Kata already contains the untrusted build.
-            networkPolicy:
-              forkEgressStrict: false
-            sandbox:
-              runtimeClass: kata-clh
-            s3:
-              bucket: buildkit-cold-cache
-              region: gra
-              endpoint: https://s3.gra.io.cloud.ovh.net
-              credsSecret: buildkit-operator-s3
-              # Bucket GC (the s3 exporter never deletes): a PostSync hook Job applies the bucket
-              # lifecycle — expire objects after 60d, abort incomplete multipart uploads after 7d.
-              # The PUT is idempotent; the live bucket already carries this exact configuration.
-              lifecycle:
-                enabled: true
-                expireDays: 60
-                abortMultipartDays: 7
-            # Product-prefixed Secret names.
-            certs:
-              daemonSecretName: buildkit-operator-daemon-certs
-              clientSecretName: buildkit-operator-client-certs
+        repoURL: git@github.com:socialgouv/buildkit-operator-gitops.git
+        targetRevision: main
+        path: apps
       syncPolicy:
-        syncOptions:
-          - CreateNamespace=false
-        retry:
-          limit: 5
-          backoff: { duration: 5s, factor: 2, maxDuration: 3m }
+        automated:
+          prune: false
+          selfHeal: false
