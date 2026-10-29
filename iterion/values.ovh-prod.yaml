@@ -778,6 +778,17 @@ iterion:
 mongodb:
   enabled: true
   fullnameOverride: iterion-mongodb
+  # One member per node, required: two of three on the node the autoscaler
+  # drains = no majority (SocialGouv/iterion#2012). The chart renders no
+  # PodDisruptionBudget: templates/mongodb.ovh-prod.pdb.yaml adds one.
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        - topologyKey: kubernetes.io/hostname
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: mongodb
+              app.kubernetes.io/instance: iterion
   # 1 primary + 2 secondaries = RS3, survives one-node loss
   replicaSet:
     enabled: true

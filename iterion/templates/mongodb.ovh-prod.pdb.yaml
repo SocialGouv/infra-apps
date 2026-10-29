@@ -1,0 +1,20 @@
+{{- if and (eq .Values.cluster "ovh-prod") .Values.mongodb.enabled }}
+{{- /*
+One eviction at a time for the MongoDB replica set — the groundhog2k chart
+ships no PodDisruptionBudget. The set keeps its majority with 2 members of
+3; required anti-affinity (values.ovh-prod.yaml, mongodb.affinity) already
+puts every member on its own node, so one drain takes at most one member;
+this keeps two concurrent drains from taking two (SocialGouv/iterion#2012).
+*/}}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: iterion-mongodb
+  namespace: iterion
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: mongodb
+      app.kubernetes.io/instance: iterion
+{{- end }}
