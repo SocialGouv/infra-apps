@@ -584,6 +584,21 @@ iterion:
 
   # --- NATS stays on the bundled subchart (cluster-3 JetStream fileStore). ---
   nats:
+    # One JetStream member per node, required: two of three on the node the
+    # autoscaler drains = no quorum for the R3 streams (SocialGouv/iterion#2012).
+    # The PDB iterion-nats (maxUnavailable 1) bounds the rollout this triggers.
+    podTemplate:
+      merge:
+        spec:
+          affinity:
+            podAntiAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                - topologyKey: kubernetes.io/hostname
+                  labelSelector:
+                    matchLabels:
+                      app.kubernetes.io/name: nats
+                      app.kubernetes.io/instance: iterion
+                      app.kubernetes.io/component: nats
     config:
       cluster:
         enabled: true
