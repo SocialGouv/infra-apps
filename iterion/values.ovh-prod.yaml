@@ -856,6 +856,9 @@ valkeyha:
       type: ClusterIP
       port: 26379
   # Spread Valkey pods across nodes for availability (mirrors no-package-malware).
+  # The pods carry app.kubernetes.io/name=valkeyha (the release's alias name),
+  # never "valkey": a term naming "valkey" matches no pod and the three
+  # replicas may land on one node (SocialGouv/iterion#2012, render gate).
   affinity:
     podAntiAffinity:
       preferredDuringSchedulingIgnoredDuringExecution:
@@ -867,7 +870,7 @@ valkeyha:
                 - key: app.kubernetes.io/name
                   operator: In
                   values:
-                    - valkey
+                    - valkeyha
   resources:
     requests:
       memory: "256Mi"
