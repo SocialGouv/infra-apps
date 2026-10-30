@@ -2,6 +2,11 @@ apiVersion: v2
 name: arc-systems
 version: 0.0.0
 dependencies:
+  # Moves with arc-runners/Chart.yaml, same version: from 0.12 the controller
+  # deletes an AutoscalingRunnerSet whose chart minor differs from its own
+  # (IsVersionAllowed). 0.12 is also the first release that deletes an
+  # EphemeralRunner after five failed pod starts so it is re-created (#4059);
+  # 0.11 kept it Failed and counted it as capacity, so queued jobs starved.
   - name: gha-runner-scale-set-controller
     repository: "oci://ghcr.io/actions/actions-runner-controller-charts"
-    version: 0.11.0
+    version: 0.12.1

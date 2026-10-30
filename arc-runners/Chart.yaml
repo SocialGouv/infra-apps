@@ -2,6 +2,10 @@ apiVersion: v2
 name: arc-runners
 version: 0.0.0
 dependencies:
+  # Moves with arc-systems/Chart.yaml, same version. From 0.12 the controller
+  # deletes an AutoscalingRunnerSet whose chart minor differs from its own
+  # (IsVersionAllowed), its running jobs included: a minor bump recreates the
+  # set whichever app syncs first, so sync both back to back while no job runs.
   - name: gha-runner-scale-set
     repository: "oci://ghcr.io/actions/actions-runner-controller-charts"
-    version: 0.11.0
+    version: 0.12.1

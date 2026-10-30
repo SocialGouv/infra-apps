@@ -15,7 +15,7 @@ gha-runner-scale-set-controller:
       memory: 128Mi
 
 # Collect controller metrics only. Keeping listener metrics disabled avoids
-# changing the 0.11.0 listener contract (which also needs listenerMetrics).
+# changing the listener contract (which since 0.11.0 also needs listenerMetrics).
 # Controller metrics already expose failed/pending runners and live listeners.
   metrics:
     controllerManagerAddr: ":8080"

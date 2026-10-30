@@ -5,12 +5,14 @@ failed runner records keep all capacity occupied. These alerts report that
 failure before the merge queue's 60-minute check deadline. They do not require
 jobs to be running: a healthy idle scale set has zero runners and one listener.
 
-The existing controller 0.11.0 emits the metrics used here. The chart enables
-only its `:8080/metrics` endpoint. Listener metrics stay disabled (`0`), so this
-change does not activate 0.11.0's additional `listenerMetrics` requirement.
+The controller (version in `Chart.yaml`, 0.12.1) emits the metrics used here;
+0.12 keeps 0.11's controller metric names and only adds a `job_workflow_ref`
+label to the listener's job metrics. The chart enables only the controller's
+`:8080/metrics` endpoint. Listener metrics stay disabled (`0`), so this
+change does not activate the listener's `listenerMetrics` requirement (0.11.0+).
 `PodMonitor` uses the actual rendered `gha-rs-controller` pod label and preserves
 ARC's own `namespace` label: `arc-runners` for runner gauges, but
-`arc-systems` for the listener gauge. ARC 0.11 labels a listener with its
+`arc-systems` for the listener gauge. ARC labels a listener with its
 generated `<scale-set>-<namespace-hash>-listener` name. The listener rule
 selects that name pattern in the controller namespace; runner rules select
 the scale-set name and runner namespace.
@@ -129,7 +131,7 @@ pending startup and unrelated runner/listener series. `PROMTOOL=/path/to/promtoo
 binary. No cluster connection or external notification is made by these tests.
 
 Sources: [GitHub's ARC metrics documentation](https://docs.github.com/en/actions/how-tos/manage-runners/use-actions-runner-controller/deploy-runner-scale-sets#enabling-metrics),
-[the installed 0.11.0 metrics definitions](https://github.com/actions/actions-runner-controller/blob/gha-runner-scale-set-0.11.0/controllers/actions.github.com/metrics/metrics.go),
+[the installed 0.12.1 metrics definitions](https://github.com/actions/actions-runner-controller/blob/gha-runner-scale-set-0.12.1/controllers/actions.github.com/metrics/metrics.go),
 and [the 0.11.0 listener change](https://github.com/actions/actions-runner-controller/releases/tag/gha-runner-scale-set-0.11.0).
 
 ## Revi run — 2026-09-13
