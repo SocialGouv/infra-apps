@@ -58,7 +58,7 @@ iterion:
     # public hosts down). `kubectl rollout restart` does NOT repair it: ArgoCD
     # self-heal reverts the annotation onto the unchanged template.
     # Deploying = resolve the release digest and commit it, like runner.image.
-    digest: sha256:88fbe5d886cb6217de4bff52e90ca088a1bc02b763e6e75eb050917fcf9bee22 # v3.285.0
+    digest: sha256:037068471a59e9f57582f678155acd3abc3c9a498ba64684973d9a5fbc36cb57 # v4.7.1
     pullPolicy: Always
 
   server:
@@ -198,7 +198,7 @@ iterion:
     #   docker buildx imagetools inspect <image>:<tag>        -> index digest
     #   ... --raw, then the linux/amd64 child                 -> per-arch digest
     #   ... --format '{{json .Image.Config.Labels}}'          -> version+revision
-    image: ghcr.io/socialgouv/iterion-runner-devbox@sha256:a4dd23ff22293e836ca43422cf97e2b56a5e8485f0335a15b96b7283a38b5699 # v3.285.0
+    image: ghcr.io/socialgouv/iterion-runner-devbox@sha256:9468e06e1df8f0435891f8312d55c0d76aab5b222888002b582c79f480716c05 # v4.7.1
     podSecurityContext:
       runAsUser: 1000
       runAsGroup: 1000
@@ -358,7 +358,7 @@ iterion:
       # imagePullPolicy IfNotPresent on a digest, so every run pod of a release
       # runs the same sandbox build — `:edge` re-resolved per pod and two runs
       # of the same day could run two builds, with no trace in git.
-      ITERION_SANDBOX_DEFAULT_IMAGE: ghcr.io/socialgouv/iterion-sandbox-full@sha256:8b7b5930555a0a48bc1a3a9ea47198769950a456b74c3333e8ff0350e0782738 # v3.285.0
+      ITERION_SANDBOX_DEFAULT_IMAGE: ghcr.io/socialgouv/iterion-sandbox-full@sha256:663d0068e0f086cf52dca026f04cca92c2f440cd2afc1d5641a13b03472674e5 # v4.7.1
       # Sandbox-by-default for the RUNNER entry point: the runner reads its
       # global default from this env (it does not yet call
       # runtime.ResolveGlobalSandboxDefault — engine-side follow-up); without
@@ -644,7 +644,7 @@ iterion:
       # Without `image` the chart falls back to iterion.image — the lean SERVER
       # image, not the devbox runner: a pool run that builds or tests had no
       # toolchain. Same release digest as runner.image above.
-      image: ghcr.io/socialgouv/iterion-runner-devbox@sha256:a4dd23ff22293e836ca43422cf97e2b56a5e8485f0335a15b96b7283a38b5699 # v3.285.0
+      image: ghcr.io/socialgouv/iterion-runner-devbox@sha256:9468e06e1df8f0435891f8312d55c0d76aab5b222888002b582c79f480716c05 # v4.7.1
       gateway:
         baseUrl: "https://litellm.pliage-prod.socle-ia.data-ia.prod.atlas.fabrique.social.gouv.fr"
         existingSecret: "iterion-pool-honorabilite-gateway"
@@ -711,7 +711,7 @@ iterion:
     # launches are refused by name rather than routed to a public vendor.
     - name: egapro
       replicas: 1
-      image: ghcr.io/socialgouv/iterion-runner-devbox@sha256:a4dd23ff22293e836ca43422cf97e2b56a5e8485f0335a15b96b7283a38b5699 # v3.285.0
+      image: ghcr.io/socialgouv/iterion-runner-devbox@sha256:9468e06e1df8f0435891f8312d55c0d76aab5b222888002b582c79f480716c05 # v4.7.1
       gateway:
         baseUrl: "https://litellm.pliage-prod.socle-ia.data-ia.prod.atlas.fabrique.social.gouv.fr"
         existingSecret: "iterion-pool-egapro-gateway"
@@ -738,7 +738,7 @@ iterion:
     # scaleway/glm-5.3 through the gateway, never a public vendor.
     - name: vao
       replicas: 1
-      image: ghcr.io/socialgouv/iterion-runner-devbox@sha256:a4dd23ff22293e836ca43422cf97e2b56a5e8485f0335a15b96b7283a38b5699 # v3.285.0
+      image: ghcr.io/socialgouv/iterion-runner-devbox@sha256:9468e06e1df8f0435891f8312d55c0d76aab5b222888002b582c79f480716c05 # v4.7.1
       gateway:
         baseUrl: "https://litellm.pliage-prod.socle-ia.data-ia.prod.atlas.fabrique.social.gouv.fr"
         existingSecret: "iterion-pool-vao-gateway"
