@@ -1083,7 +1083,14 @@ seaweedfs:
         type: persistentVolumeClaim
         size: 30Gi
         storageClass: sc-hspeed-retain
-        maxVolumes: 0
+        # 0 = auto: SeaweedFS derives ~29 slots per node from a 1 GB-per-volume
+        # heuristic. Real run artifacts average ~500 MB, so the slots ran out
+        # (Free:1 cluster-wide) long before the disks did (51% used) and every
+        # S3 assign failed with "No writable volumes" — all runs wedged at
+        # their first attachment upload (SocialGouv/iterion#2890).
+        # 48 slots x ~500 MB measured density fits the 30 Gi disk; the
+        # minFreeSpacePercent guard still enforces the true disk limit.
+        maxVolumes: 48
     # A pre-install hook that shells out to kubectl, its command list built from
     # `lookup`: never rendered under Argo CD, and not wanted here either.
     resizeHook:
