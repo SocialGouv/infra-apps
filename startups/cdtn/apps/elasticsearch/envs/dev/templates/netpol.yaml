@@ -46,3 +46,12 @@ spec:
       ports:
         - port: 9200
           protocol: TCP
+    # Allow from the ECK operator namespace so it can reach the ES API:
+    # health checks, rolling upgrade orchestration and API key management.
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: elastic-system
+      ports:
+        - port: 9200
+          protocol: TCP
