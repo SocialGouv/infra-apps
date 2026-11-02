@@ -700,9 +700,10 @@ iterion:
         # Since engine v3.263.1 (#2412) the catalog provider resolves the
         # gateway's provider-first ids (`scaleway/<model>`) by itself; the
         # table stays as the explicit pin. Values from models.dev
-        # (scaleway/glm-5.3, read 2026-10-21; glm-5.2 kept for the runs
-        # that still name it).
-        OPENAI_COMPATIBLE_MODELS: '{"scaleway/glm-5.3":{"context_window":256000,"max_output_tokens":16384,"input_usd_per_mtok":2.01,"output_usd_per_mtok":6.15},"scaleway/glm-5.2":{"context_window":256000,"max_output_tokens":16384,"input_usd_per_mtok":1.8,"output_usd_per_mtok":5.5}}'
+        # (scaleway/glm-5.3, read 2026-10-21; the EOL glm-5.2 entry was
+        # dropped on 2026-11-02 — every dial names glm-5.3, and Scaleway
+        # routes 5.2 to 5.3 after 2026-11-16 anyway).
+        OPENAI_COMPATIBLE_MODELS: '{"scaleway/glm-5.3":{"context_window":256000,"max_output_tokens":16384,"input_usd_per_mtok":2.01,"output_usd_per_mtok":6.15}}'
     # The second pool: the Egapro team's RGAA audit (rgaa-audit / Acci) on the
     # same regional PLIAGE gateway with its own key `iterion+rgaa+egapro`
     # (100 USD budget). The gateway Secret is manually managed:
