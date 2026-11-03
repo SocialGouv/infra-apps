@@ -1,0 +1,36 @@
+name: Iterion Valkey HA
+
+on:
+  pull_request:
+    paths:
+      - 'iterion/**'
+      - '.github/workflows/iterion-valkeyha.yml'
+  push:
+    branches: [master]
+    paths:
+      - 'iterion/**'
+      - '.github/workflows/iterion-valkeyha.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version: '1.26.2'
+          cache: false
+      - uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4.3.1
+        with:
+          version: v3.20.2
+      - name: Install pinned YAML reader
+        run: go install github.com/mikefarah/yq/v4@v4.53.3
+      - name: Check committed package and bootstrap behavior
+        run: go test -count=1 -v iterion/tests/valkeyha_test.go

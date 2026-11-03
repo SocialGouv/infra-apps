@@ -82,9 +82,11 @@ dependencies:
   # server. cloudpirates/valkey (architecture: replication + sentinel), the
   # same chart no-package-malware runs in prod. ovh-prod opts in via
   # `valkeyha.enabled`; ovh-dev (single replica) stays in-memory.
-  - alias: valkeyha
-    name: valkey
-    repository: https://cloudpirates-io.github.io/helm-charts
+  # The local patch validates both bootstrap readers against ROLE and keeps
+  # observed Sentinel state through retries. Version/image stay pinned; see
+  # vendor-charts/valkeyha/PATCHED.md. valkeyfiler uses its own upstream chart.
+  - name: valkeyha
+    repository: file://vendor-charts/valkeyha
     version: 0.10.3
     condition: valkeyha.enabled
   # --- ovh-prod community datastores (replace the iterion subchart's deprecated
