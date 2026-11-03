@@ -1,0 +1,51 @@
+annotations:
+  artifacthub.io/category: database
+  artifacthub.io/changes: |2
+        - kind: changed
+          description: "[oliver006/redis_exporter] Update charts/valkey/values.yaml oliver006/redis_exporter to v1.80.1 (patch) (#647)"
+          links:
+            - name: "Commit fa2654b"
+              url: "https://github.com/CloudPirates-io/helm-charts/commit/fa2654b"
+  artifacthub.io/containsSecurityUpdates: "false"
+  artifacthub.io/links: |
+    - name: Valkey
+      url: https://valkey.io
+    - name: Helm Chart
+      url: https://github.com/CloudPirates-io/helm-charts/tree/main/charts/valkey
+    - name: Application
+      url: https://github.com/valkey-io/valkey
+    - name: Maintainer CloudPirates
+      url: https://www.cloudpirates.io
+  artifacthub.io/signKey: |
+    fingerprint: 6917f1a88c122cbb1de5aa55457752135bdcf95a
+    url: https://raw.githubusercontent.com/CloudPirates-io/helm-charts/refs/heads/main/cosign.pub
+  license: Apache-2.0
+apiVersion: v2
+appVersion: 9.0.0
+dependencies:
+- name: common
+  repository: oci://registry-1.docker.io/cloudpirates
+  version: 2.x.x
+description: High performance in-memory data structure store, fork of Redis. Valkey
+  is an open-source, high-performance key/value datastore that supports a variety
+  of workloads such as caching, message queues, and can act as a primary database.
+home: https://www.valkey.io
+icon: https://a.storyblok.com/f/143071/512x512/5242c0e31a/valkey-logo.svg
+keywords:
+- valkey
+- redis
+- cache
+- database
+- key-value
+- in-memory
+- nosql
+maintainers:
+- email: hello@cloudpirates.io
+  name: CloudPirates GmbH & Co. KG
+  url: https://www.cloudpirates.io
+name: valkeyha
+sources:
+- https://github.com/CloudPirates-io/helm-charts/tree/main/charts/valkey
+- https://github.com/valkey-io/valkey
+type: application
+version: 0.10.3

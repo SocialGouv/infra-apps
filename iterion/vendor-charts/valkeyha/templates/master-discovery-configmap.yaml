@@ -1,0 +1,12 @@
+{{- if and .Values.sentinel.enabled (eq .Values.architecture "replication") }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "valkey.fullname" . }}-master-discovery
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "valkey.labels" . | nindent 4 }}
+data:
+  discover-master.sh: |
+    {{- .Files.Get "scripts/discover-master.sh" | nindent 4 }}
+{{- end }}
