@@ -227,3 +227,21 @@ firecrawl:
   postgres:
     size: 5Gi
     storageClass: "" # "" → cluster default (csi-cinder-high-speed on ovh-prod)
+
+# Namespace compute ceiling (templates/resource-quota.yaml) — a campaign
+# fan-out multiplies sandbox pods past the runner pool and the cluster's
+# request pool runs near-full at baseline; the ceiling rejects overflow pods
+# at admission instead of starving co-hosted prod apps. Sizing (ovh-prod):
+# fixed infra ~15 CPU / ~50 Gi + 12 runner slots × 2 CPU / 4 Gi + headroom.
+# The graceful load lever is the runner pool size (iterion.runner.keda): pool
+# slots bound run concurrency below the ceiling, quota rejection is the
+# backstop. The LimitRange defaults cover sidecars shipping no requests
+# (mongod exporter, nats reloader, valkeyfiler, searxng); CPU stays
+# limit-free (SocialGouv/iterion#732).
+quota:
+  enabled: true
+  requestsCpu: "64" # sandbox = 2 CPU each; infra ~15 CPU; headroom for HPA + fan-out
+  requestsMemory: 160Gi
+  pods: "150" # ~60 at steady state; the cap is the fan-out ceiling
+  defaultRequestCpu: 100m
+  defaultRequestMemory: 128Mi

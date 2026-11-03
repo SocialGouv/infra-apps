@@ -1,0 +1,48 @@
+{{- /*
+Namespace compute ceiling. A campaign fan-out multiplies sandbox pods past the
+runner pool (subbots spawn their own sibling pods, each 2 CPU / 4 Gi requested),
+and this cluster's request pool runs near-full at baseline — measured
+2026-11-03: an evening run flood left 11 of 14 nodes "Insufficient cpu" and
+starved co-hosted prod apps (probe timeouts, public URLs down) until the flood
+drained. The quota rejects overflow sandbox pods at admission: the run fails
+with a quota error instead of taking prod down with it.
+
+The runner POOL SIZE (iterion.runner.keda) is the graceful lever — pool slots
+bound run concurrency below the ceiling; quota rejection is the backstop, not
+the queue. Pool formula: (namespace allocation − fixed infra) / sandbox
+request, e.g. (64 − 15) / 2 ≈ 12 slots on ovh-prod.
+
+A LimitRange backs the quota: once compute quota is active, admission requires
+every container to carry a request, and several sidecars ship none (mongod
+exporter, nats reloader, valkeyfiler, searxng) — they default to 100m/128Mi.
+CPU stays LIMIT-FREE by design (SocialGouv/iterion#732): `defaultRequest`
+only, no `default`.
+*/ -}}
+{{- if .Values.quota.enabled }}
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: iterion-quota
+  labels:
+    app.kubernetes.io/name: iterion
+    app.kubernetes.io/component: quota
+spec:
+  hard:
+    requests.cpu: {{ .Values.quota.requestsCpu | quote }}
+    requests.memory: {{ .Values.quota.requestsMemory | quote }}
+    pods: {{ .Values.quota.pods | quote }}
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: iterion-default-requests
+  labels:
+    app.kubernetes.io/name: iterion
+    app.kubernetes.io/component: quota
+spec:
+  limits:
+    - type: Container
+      defaultRequest:
+        cpu: {{ .Values.quota.defaultRequestCpu | quote }}
+        memory: {{ .Values.quota.defaultRequestMemory | quote }}
+{{- end }}
