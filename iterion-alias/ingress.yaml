@@ -1,0 +1,56 @@
+# iterion alias: ovh-prod Traefik (NGINX provider, class nginx) proxies these
+# hosts to https://origin.iterion.cloud (matryoshka haproxy, 185.233.100.50).
+# - Host is passed through (Traefik passHostHeader; no upstream-vhost): the
+#   app's canonical 302 for humans and its CSRF origin gate see the real host.
+#   /api is proxied, never redirected (GitLab turns a 301 POST into a GET,
+#   GitHub counts a 3xx as a failed delivery).
+# - Upstream TLS: SNI and verified name origin.iterion.cloud (*.iterion.cloud).
+# - Certificates: HTTP-01 per host, issued while both names resolve here.
+# - /healthz and /readyz: matryoshka's iterion-probes Ingress answers 403.
+# - Paths: J4 anchors (/.iterion-alias/*); commit A adds /api; commit B adds /.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: iterion-alias
+  namespace: rp-rules
+  labels:
+    app.kubernetes.io/name: iterion-alias
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
+    nginx.ingress.kubernetes.io/proxy-ssl-name: "origin.iterion.cloud"
+    nginx.ingress.kubernetes.io/proxy-ssl-server-name: "on"
+    nginx.ingress.kubernetes.io/proxy-ssl-verify: "on"
+    # Traefik v3.7's NGINX provider maps these to the upstream idle read and
+    # write timeouts (1 h); the SRE entryPoint still caps a response at 1800 s.
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+spec:
+  ingressClassName: nginx
+  tls:
+    - secretName: iterion-alias-fabrique-tls
+      hosts:
+        - iterion.fabrique.social.gouv.fr
+    # Bridge for stale DNS caches, removed within 7 days of the DNS switch.
+    - secretName: iterion-alias-cloud-tls
+      hosts:
+        - iterion.cloud
+  rules:
+    - host: iterion.fabrique.social.gouv.fr
+      http:
+        paths:
+          - path: /.iterion-alias/whoami
+            pathType: Exact
+            backend: {service: {name: iterion-alias-origin, port: {number: 443}}}
+          - path: /.iterion-alias/echo
+            pathType: Exact
+            backend: {service: {name: iterion-alias-origin, port: {number: 443}}}
+    - host: iterion.cloud
+      http:
+        paths:
+          - path: /.iterion-alias/whoami
+            pathType: Exact
+            backend: {service: {name: iterion-alias-origin, port: {number: 443}}}
+          - path: /.iterion-alias/echo
+            pathType: Exact
+            backend: {service: {name: iterion-alias-origin, port: {number: 443}}}

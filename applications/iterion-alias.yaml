@@ -1,0 +1,46 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: iterion-alias
+spec:
+  generators:
+    - list:
+        elements:
+          # iterion.cloud moved to matryoshka (rok01, 185.233.100.50). This
+          # alias keeps iterion.fabrique.social.gouv.fr served from ovh-prod
+          # (PIC GitLab hooks and connections are pinned to it, the PIC
+          # allowlist refuses iterion.cloud) until the fabrique domain ends
+          # (end of 2026), and bridges iterion.cloud for stale DNS caches for
+          # 7 days after the switch.
+          - name: iterion-alias-ovh-prod
+            cluster: ovh-prod
+            namespace: rp-rules
+  goTemplate: true
+  template:
+    metadata:
+      name: "{{ .name }}"
+      annotations:
+        argocd.argoproj.io/manifest-generate-paths: .
+    spec:
+      destination:
+        name: "{{ .cluster }}"
+        namespace: "{{ .namespace }}"
+      project: default
+      source:
+        repoURL: https://github.com/SocialGouv/infra-apps.git
+        targetRevision: master
+        # plain manifests: Service (ExternalName) + Ingress
+        path: iterion-alias
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          # rp-rules exists and belongs to the SRE
+          - CreateNamespace=false
+        retry:
+          limit: 5
+          backoff:
+            duration: 5s
+            factor: 2
+            maxDuration: 3m

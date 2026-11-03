@@ -1,0 +1,20 @@
+# Upstream of the iterion alias: matryoshka's haproxy, reached by name.
+# origin.iterion.cloud is an A record to 185.233.100.50 (Infomaniak, J0),
+# covered by the *.iterion.cloud wildcard served there: Traefik connects with
+# that SNI and verifies the certificate. Not iterion.cloud: until the DNS
+# switch it resolves to this very ovh-prod LB (a loop). No static Endpoints.
+apiVersion: v1
+kind: Service
+metadata:
+  name: iterion-alias-origin
+  namespace: rp-rules
+  labels:
+    app.kubernetes.io/name: iterion-alias
+spec:
+  type: ExternalName
+  externalName: origin.iterion.cloud
+  ports:
+    - name: https
+      port: 443
+      targetPort: 443
+      protocol: TCP
