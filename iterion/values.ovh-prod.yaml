@@ -225,7 +225,7 @@ iterion:
       enabled: false
 
   ingress:
-    enabled: true
+    enabled: false
     className: nginx
     annotations:
       # prod TLS: cert-manager issues a per-subdomain Let's Encrypt cert into
