@@ -62,7 +62,7 @@ iterion:
     pullPolicy: Always
 
   server:
-    replicas: 3
+    replicas: 0
     podAnnotations:
       # Reload the Studio after SocialGouv/iterion#1176 reaches the edge image.
       kubectl.kubernetes.io/restartedAt: "2026-09-13T13:06:31Z"
@@ -72,7 +72,7 @@ iterion:
     # their QoS class (requests below limits); run pods carry no class.
     priorityClassName: resource-burstable
     hpa:
-      enabled: true
+      enabled: false
       minReplicas: 3
       maxReplicas: 10
       targetCPUUtilizationPercentage: 70
@@ -99,7 +99,7 @@ iterion:
 
   runner:
     enabled: true
-    replicas: 3
+    replicas: 0
     # Same class as the server, same reason (SocialGouv/iterion#732): the
     # runner outranks the sandboxed run pods it starts.
     priorityClassName: resource-burstable
@@ -138,7 +138,7 @@ iterion:
       # still left only 3 slots for 8 concurrent PR reviews. The headroom is
       # what keeps the instance's own CI alive while a campaign fills the
       # pool; the cluster runs at 8-25% CPU, and a runner requests 500m/1Gi.
-      enabled: true
+      enabled: false
       minReplicas: 12
       maxReplicas: 12
     sandbox:
@@ -640,7 +640,7 @@ iterion:
   # The pool name must match the server's runner-pool registry entry.
   runnerPools:
     - name: honorabilite
-      replicas: 1
+      replicas: 0
       # Without `image` the chart falls back to iterion.image — the lean SERVER
       # image, not the devbox runner: a pool run that builds or tests had no
       # toolchain. Same release digest as runner.image above.
@@ -715,7 +715,7 @@ iterion:
     # this pool until it gets its own key (#2005): mapped to the pool, its
     # launches are refused by name rather than routed to a public vendor.
     - name: egapro
-      replicas: 1
+      replicas: 0
       image: ghcr.io/socialgouv/iterion-runner-devbox@sha256:9468e06e1df8f0435891f8312d55c0d76aab5b222888002b582c79f480716c05 # v4.7.1
       gateway:
         baseUrl: "https://litellm.pliage-prod.socle-ia.data-ia.prod.atlas.fabrique.social.gouv.fr"
@@ -742,7 +742,7 @@ iterion:
     # model pins as the honorabilite pool: every Revi LLM slot resolves to
     # scaleway/glm-5.3 through the gateway, never a public vendor.
     - name: vao
-      replicas: 1
+      replicas: 0
       image: ghcr.io/socialgouv/iterion-runner-devbox@sha256:9468e06e1df8f0435891f8312d55c0d76aab5b222888002b582c79f480716c05 # v4.7.1
       gateway:
         baseUrl: "https://litellm.pliage-prod.socle-ia.data-ia.prod.atlas.fabrique.social.gouv.fr"

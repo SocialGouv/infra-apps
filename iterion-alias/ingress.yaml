@@ -45,6 +45,13 @@ spec:
           - path: /.iterion-alias/echo
             pathType: Exact
             backend: {service: {name: iterion-alias-origin, port: {number: 443}}}
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: iterion-alias-origin
+                port:
+                  number: 443
     - host: iterion.cloud
       http:
         paths:
@@ -54,3 +61,10 @@ spec:
           - path: /.iterion-alias/echo
             pathType: Exact
             backend: {service: {name: iterion-alias-origin, port: {number: 443}}}
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: iterion-alias-origin
+                port:
+                  number: 443
