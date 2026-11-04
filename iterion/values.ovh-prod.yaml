@@ -661,15 +661,15 @@ iterion:
         # Spelled here because the chart prod runs (3.253.0) predates the rendering;
         # a newer chart renders the union with this spelling (SocialGouv/iterion#2697).
         ITERION_BOT_VARS_ENV_PINS: "ITERION_VIBE_BACKEND_CLAUDE,ITERION_VIBE_BACKEND_CLAUDE_GLANCE,ITERION_VIBE_BACKEND_EMIT,ITERION_VIBE_MODEL_CLAUDE,ITERION_VIBE_MODEL_CLAUDE_FALLBACK,ITERION_VIBE_MODEL_CLAUDE_GLANCE,ITERION_VIBE_MODEL_EMIT,ITERION_VIBE_MODEL_EMIT_GPT,ITERION_VIBE_MODEL_GPT,ITERION_VIBE_MODEL_GPT_GLANCE,ITERION_VIBE_MODEL_SUPERVISOR,ITERION_VIBE_MODEL_SUPERVISOR_GPT,ITERION_VIBE_PROVIDER_CLAUDE,ITERION_VIBE_PROVIDER_CLAUDE_GLANCE,ITERION_VIBE_PROVIDER_EMIT,ITERION_VIBE_PROVIDER_EMIT_GPT,ITERION_VIBE_PROVIDER_GPT,ITERION_VIBE_PROVIDER_GPT_GLANCE"
-        ITERION_VIBE_MODEL_CLAUDE: "openai_compatible/scaleway/glm-5.3"
-        ITERION_VIBE_MODEL_CLAUDE_GLANCE: "openai_compatible/scaleway/glm-5.3"
+        ITERION_VIBE_MODEL_CLAUDE: "openai_compatible/scaleway/deepseek-v4.1-flash"
+        ITERION_VIBE_MODEL_CLAUDE_GLANCE: "openai_compatible/scaleway/deepseek-v4.1-flash"
         ITERION_VIBE_MODEL_CLAUDE_FALLBACK: "openai_compatible/scaleway/glm-5.3"
-        ITERION_VIBE_MODEL_GPT: "openai_compatible/scaleway/glm-5.3"
-        ITERION_VIBE_MODEL_GPT_GLANCE: "openai_compatible/scaleway/glm-5.3"
-        ITERION_VIBE_MODEL_EMIT: "openai_compatible/scaleway/glm-5.3"
-        ITERION_VIBE_MODEL_EMIT_GPT: "openai_compatible/scaleway/glm-5.3"
-        ITERION_VIBE_MODEL_SUPERVISOR: "openai_compatible/scaleway/glm-5.3"
-        ITERION_VIBE_MODEL_SUPERVISOR_GPT: "openai_compatible/scaleway/glm-5.3"
+        ITERION_VIBE_MODEL_GPT: "openai_compatible/scaleway/deepseek-v4.1-flash"
+        ITERION_VIBE_MODEL_GPT_GLANCE: "openai_compatible/scaleway/deepseek-v4.1-flash"
+        ITERION_VIBE_MODEL_EMIT: "openai_compatible/scaleway/deepseek-v4.1-flash"
+        ITERION_VIBE_MODEL_EMIT_GPT: "openai_compatible/scaleway/deepseek-v4.1-flash"
+        ITERION_VIBE_MODEL_SUPERVISOR: "openai_compatible/scaleway/deepseek-v4.1-flash"
+        ITERION_VIBE_MODEL_SUPERVISOR_GPT: "openai_compatible/scaleway/deepseek-v4.1-flash"
         # review-pr 0.9.16 (#2467): the mono-GPT merge twin and the GPT pacer
         # read their own dials (_EMIT_GPT, _SUPERVISOR_GPT), whose defaults name
         # openai/gpt-6-sol — pinned to the gateway like their neighbours.
@@ -701,11 +701,15 @@ iterion:
         # gateway's provider-first ids (`scaleway/<model>`) by itself; the
         # table stays as the explicit pin. Values from models.dev
         # (scaleway/glm-5.3, read 2026-10-21; the EOL glm-5.2 entry was
-        # dropped on 2026-11-02 — every dial names glm-5.3, and Scaleway
-        # routes 5.2 to 5.3 after 2026-11-16 anyway).
-        OPENAI_COMPATIBLE_MODELS: '{"scaleway/glm-5.3":{"context_window":256000,"max_output_tokens":16384,"input_usd_per_mtok":2.01,"output_usd_per_mtok":6.15}}'
+        # dropped on 2026-11-02). deepseek-v4.1-flash is the pool's model
+        # since 2026-11-04 (glm-5.3 has no prompt cache at Scaleway): its
+        # entry is REQUIRED because the gateway serves the bare id while
+        # models.dev only knows `scaleway/deepseek-v4.1-flash-1017` (values
+        # from that entry, read 2026-11-04). The CLAUDE_FALLBACK dial keeps
+        # glm-5.3 as the rescue route, so its entry stays.
+        OPENAI_COMPATIBLE_MODELS: '{"scaleway/deepseek-v4.1-flash":{"context_window":256000,"max_output_tokens":32768,"input_usd_per_mtok":0.672,"output_usd_per_mtok":2.016},"scaleway/glm-5.3":{"context_window":256000,"max_output_tokens":16384,"input_usd_per_mtok":2.01,"output_usd_per_mtok":6.15}}'
     # The second pool: the Egapro team's RGAA audit (rgaa-audit / Acci) on the
-    # same regional PLIAGE gateway with its own key `iterion+rgaa+egapro`
+    # same regional PLIAGE gateway with its own key `services/rgaa-audit/audit-egapro` (formerly `iterion+rgaa+egapro-2`)
     # (100 USD budget). The gateway Secret is manually managed:
     # iterion-pool-egapro-gateway (created 2026-10-21). Revi egapro stays off
     # this pool until it gets its own key (#2005): mapped to the pool, its
@@ -733,7 +737,7 @@ iterion:
 
     # The third pool: the VAO team's Revi (review-pr + revi-converse on
     # socialgouv/produits-dnum/citoyens/vao/vao, PIC) on the same regional
-    # PLIAGE gateway with its own key `iterion+revi+vao`. The gateway Secret is
+    # PLIAGE gateway with its own key `services/review-pr/revi-vao` (formerly `iterion+revi+vao`). The gateway Secret is
     # manually managed: iterion-pool-vao-gateway (created 2026-10-22). Same
     # model pins as the honorabilite pool: every Revi LLM slot resolves to
     # scaleway/glm-5.3 through the gateway, never a public vendor.
