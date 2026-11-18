@@ -23,6 +23,7 @@ dbpass:
 
 host:
 certSecretName:
+javaOpts: "-XX:-UseBASE64Intrinsics"
 env: []
 envFrom: []
 secretName: metabase
