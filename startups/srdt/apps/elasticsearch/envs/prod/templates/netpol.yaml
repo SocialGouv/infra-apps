@@ -24,3 +24,10 @@ spec:
               kubernetes.io/metadata.name: srdt
       ports:
         - port: 9200
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: elastic-system
+      ports:
+        - port: 9200
+          protocol: TCP
