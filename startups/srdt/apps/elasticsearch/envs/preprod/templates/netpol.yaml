@@ -30,3 +30,10 @@ spec:
               rancher.projectId: c-m-97jxtvnv-p-h5hd5
       ports:
         - port: 9200
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: elastic-system
+      ports:
+        - port: 9200
+          protocol: TCP
