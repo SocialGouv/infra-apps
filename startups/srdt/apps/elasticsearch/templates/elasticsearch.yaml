@@ -29,5 +29,8 @@ spec:
         spec:
           containers:
             - name: elasticsearch
+              env:
+                - name: ES_JAVA_OPTS
+                  value: "-XX:-UseBASE64Intrinsics"
               resources:
 {{ toYaml .Values.elasticsearch.resources | indent 16 }}
