@@ -1,0 +1,17 @@
+# DNS-only alias: external-dns publishes the two names below as CNAMEs to the
+# internet-facing buildkit-operator on matryoshka (rok01). Nothing is proxied
+# through ovh-prod: PIC runners need a fabrique.social.gouv.fr name because
+# their egress proxy refuses devthefuture.org (CONNECT 403). When ovh-prod
+# goes away these records must be recreated by hand in the Azure zone.
+apiVersion: v1
+kind: Service
+metadata:
+  name: bko-external-alias
+  namespace: rp-rules
+  labels:
+    app.kubernetes.io/name: bko-external-alias
+  annotations:
+    external-dns.alpha.kubernetes.io/hostname: buildd.bk.fabrique.social.gouv.fr,*.bkd.fabrique.social.gouv.fr
+spec:
+  type: ExternalName
+  externalName: bkd.devthefuture.org

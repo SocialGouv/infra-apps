@@ -1,0 +1,42 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: bko-external-alias
+spec:
+  generators:
+    - list:
+        elements:
+          # CNAMEs to the internet-facing buildkit-operator on matryoshka,
+          # for PIC runners (see bko-external-alias/service.yaml).
+          - name: bko-external-alias-ovh-prod
+            cluster: ovh-prod
+            namespace: rp-rules
+  goTemplate: true
+  template:
+    metadata:
+      name: "{{ .name }}"
+      annotations:
+        argocd.argoproj.io/manifest-generate-paths: .
+    spec:
+      destination:
+        name: "{{ .cluster }}"
+        namespace: "{{ .namespace }}"
+      project: default
+      source:
+        repoURL: https://github.com/SocialGouv/infra-apps.git
+        targetRevision: master
+        # plain manifest: one ExternalName Service read by external-dns
+        path: bko-external-alias
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          # rp-rules exists and belongs to the SRE
+          - CreateNamespace=false
+        retry:
+          limit: 5
+          backoff:
+            duration: 5s
+            factor: 2
+            maxDuration: 3m
